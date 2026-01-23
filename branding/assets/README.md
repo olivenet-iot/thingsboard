@@ -6,23 +6,29 @@ Place your brand assets here. These will be copied to the appropriate locations 
 
 | File | Dimensions | Format | Usage |
 |------|------------|--------|-------|
-| `logo_title_white.svg` | ~1500x500px | SVG | Sidebar logo (with text) |
-| `logo_white.svg` | ~100x100px | SVG | Small icon |
+| `logo_title_white.svg` | ~1500x320px | SVG | Sidebar logo (with text) |
+| `logo_white.svg` | 320x320px | SVG | Sidebar icon (collapsed) |
 | `favicon.ico` | 16,32,48,64px | ICO | Browser tab icon |
+
+## Current Status
+
+- [x] `logo_title_white.svg` - Lumosoft branded logo
+- [x] `logo_white.svg` - Placeholder icon (update with actual SignConnect icon)
+- [x] `favicon.ico` - Generated placeholder
 
 ## Specifications
 
 ### logo_title_white.svg
 - Main logo displayed in sidebar header
 - Should include company name/brand text
-- **Color**: White (#FFFFFF) or light color
+- **Color**: White (#FFFFFF) for icon, can use brand colors for text
 - **Background**: Transparent
 - **Format**: SVG (vector, scalable)
-- Will display on dark background
+- Will display on dark primary color background
 
 ### logo_white.svg
 - Square icon-only version
-- Used for compact displays
+- Used in collapsed sidebar
 - **Color**: White (#FFFFFF)
 - **Background**: Transparent
 - **Format**: SVG
@@ -33,9 +39,24 @@ Place your brand assets here. These will be copied to the appropriate locations 
   - 16x16px
   - 32x32px
   - 48x48px
-  - 64x64px (optional)
+  - 64x64px
 
-## Creating Favicon
+## Design Guidelines
+
+### Colors
+- Primary: `#17212b` (Dark Navy)
+- Secondary: `#f9b11d` (Golden Yellow)
+- White text/icons on primary background
+
+## Creating Custom Assets
+
+### From Illustrator/Figma
+1. Export as SVG
+2. Ensure `fill="#fff"` for white elements
+3. Remove any embedded fonts (convert to paths)
+4. Optimize with SVGO if needed
+
+### Creating Favicon
 
 From a PNG source:
 
@@ -45,14 +66,17 @@ convert logo.png -resize 16x16 favicon-16.png
 convert logo.png -resize 32x32 favicon-32.png
 convert logo.png -resize 48x48 favicon-48.png
 convert favicon-16.png favicon-32.png favicon-48.png favicon.ico
-
-# Using online tools
-# - favicon.io
-# - realfavicongenerator.net
 ```
 
-## Current Assets
+Or create with brand colors:
 
-- [x] logo_title_white.svg (Lumosoft logo)
-- [ ] logo_white.svg (TODO)
-- [ ] favicon.ico (TODO)
+```bash
+convert -size 64x64 xc:'#17212b' \
+    -fill '#f9b11d' -font DejaVu-Sans-Bold \
+    -pointsize 36 -gravity center \
+    -annotate 0 "S" favicon.ico
+```
+
+Online tools:
+- [favicon.io](https://favicon.io)
+- [realfavicongenerator.net](https://realfavicongenerator.net)

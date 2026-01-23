@@ -1,0 +1,20 @@
+<svg id="svg2" xmlns="http://www.w3.org/2000/svg" height="320" width="320" version="1.1" viewBox="0 0 320 320.00001">
+  <!-- SignConnect Logo (Sidebar Icon) - White version -->
+  <g id="layer1" stroke-width="28">
+    <g id="main-icon" fill="#fff">
+      <!-- Stylized 'S' mark with connection nodes -->
+      <circle cx="160" cy="80" r="35" fill="#fff"/>
+      <circle cx="80" cy="160" r="25" fill="#fff"/>
+      <circle cx="240" cy="160" r="25" fill="#fff"/>
+      <circle cx="160" cy="240" r="35" fill="#fff"/>
+
+      <!-- Connection lines -->
+      <rect x="155" y="80" width="10" height="160" fill="#fff"/>
+      <rect x="80" y="155" width="160" height="10" fill="#fff"/>
+
+      <!-- Diagonal connections -->
+      <rect x="155" y="115" width="10" height="50" transform="rotate(45 160 140)" fill="#fff"/>
+      <rect x="155" y="155" width="10" height="50" transform="rotate(-45 160 180)" fill="#fff"/>
+    </g>
+  </g>
+</svg>
