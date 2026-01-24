@@ -212,14 +212,15 @@ if docker volume inspect signconnect-data &>/dev/null; then
     else
         log_info "Running database initialization..."
 
+        # Must start PostgreSQL first, then run install, then stop
         if [[ "$LOAD_DEMO" == true ]]; then
             docker run --rm -v signconnect-data:/data \
                 "${DOCKER_REPO}/tb-postgres:${TB_VERSION}" \
-                install-tb.sh --loadDemo
+                bash -c "start-db.sh && install-tb.sh --loadDemo && stop-db.sh"
         else
             docker run --rm -v signconnect-data:/data \
                 "${DOCKER_REPO}/tb-postgres:${TB_VERSION}" \
-                install-tb.sh
+                bash -c "start-db.sh && install-tb.sh && stop-db.sh"
         fi
 
         log_success "Database initialized"
@@ -227,14 +228,15 @@ if docker volume inspect signconnect-data &>/dev/null; then
 else
     log_info "Creating data volume and initializing database..."
 
+    # Must start PostgreSQL first, then run install, then stop
     if [[ "$LOAD_DEMO" == true ]]; then
         docker run --rm -v signconnect-data:/data \
             "${DOCKER_REPO}/tb-postgres:${TB_VERSION}" \
-            install-tb.sh --loadDemo
+            bash -c "start-db.sh && install-tb.sh --loadDemo && stop-db.sh"
     else
         docker run --rm -v signconnect-data:/data \
             "${DOCKER_REPO}/tb-postgres:${TB_VERSION}" \
-            install-tb.sh
+            bash -c "start-db.sh && install-tb.sh && stop-db.sh"
     fi
 
     log_success "Database initialized"
