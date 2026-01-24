@@ -519,24 +519,29 @@ STYLES_FILE="$UI_SRC/styles.scss"
 MARKER="SignConnect Branding CSS Fixes"
 
 if [[ -f "$BRANDING_CSS" ]]; then
-    # Idempotency check
+    # Prepare new CSS content
+    BRANDING_CSS_CONTENT=$(cat "$BRANDING_CSS")
+    if [[ -n "$SECONDARY_COLOR" ]]; then
+        BRANDING_CSS_CONTENT=$(echo "$BRANDING_CSS_CONTENT" | sed "s/#f9b11d/#$SECONDARY_COLOR/g")
+    fi
+
+    # Check if CSS is already injected
     if grep -q "$MARKER" "$STYLES_FILE" 2>/dev/null; then
-        log "CSS fixes already injected (skipping)"
-    else
-        log "Injecting branding CSS fixes..."
+        log "Removing old CSS injection and re-injecting..."
         if ! $DRY_RUN; then
-            # Read CSS and replace color placeholder with config value
-            BRANDING_CSS_CONTENT=$(cat "$BRANDING_CSS")
-            if [[ -n "$SECONDARY_COLOR" ]]; then
-                BRANDING_CSS_CONTENT=$(echo "$BRANDING_CSS_CONTENT" | sed "s/#f9b11d/#$SECONDARY_COLOR/g")
-            fi
-
-            # Append to styles.scss
-            echo "" >> "$STYLES_FILE"
-            echo "$BRANDING_CSS_CONTENT" >> "$STYLES_FILE"
-
-            log "CSS fixes injected successfully"
+            # Remove old injection (between markers)
+            sed -i '/\/\* =\+$/,/\* END SignConnect Branding CSS Fixes/d' "$STYLES_FILE"
+            # Also remove any trailing empty lines at end of file
+            sed -i -e :a -e '/^\s*$/d;N;ba' -e 's/\n$//' "$STYLES_FILE" 2>/dev/null || true
         fi
+    fi
+
+    log "Injecting branding CSS fixes..."
+    if ! $DRY_RUN; then
+        # Append to styles.scss
+        echo "" >> "$STYLES_FILE"
+        echo "$BRANDING_CSS_CONTENT" >> "$STYLES_FILE"
+        log "CSS fixes injected successfully"
     fi
 else
     log "WARNING: Branding CSS file not found: $BRANDING_CSS"
