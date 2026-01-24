@@ -173,6 +173,24 @@ else
     log "Note: Use --git flag to also restore files from git repository"
 fi
 
+# Remove injected CSS if backup doesn't exist
+if [[ ! -f "$BACKUP_PATH/styles.scss" ]]; then
+    log ""
+    log "Removing injected CSS fixes from styles.scss..."
+    STYLES_FILE="$UI_SRC/styles.scss"
+    MARKER_START="SignConnect Branding CSS Fixes"
+    MARKER_END="END SignConnect Branding CSS Fixes"
+
+    if grep -q "$MARKER_START" "$STYLES_FILE" 2>/dev/null; then
+        if $DRY_RUN; then
+            echo "[DRY-RUN] Would remove injected CSS from styles.scss"
+        else
+            sed -i "/$MARKER_START/,/$MARKER_END/d" "$STYLES_FILE"
+            log "Removed injected CSS from styles.scss"
+        fi
+    fi
+fi
+
 log ""
 log "============================================"
 if $DRY_RUN; then

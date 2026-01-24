@@ -1,0 +1,46 @@
+/* ============================================================================
+ * SignConnect Branding CSS Fixes
+ * Injected by apply-branding.sh - DO NOT EDIT MANUALLY
+ * ============================================================================ */
+
+/* FIX 1: Tailwind !hidden class - tb-dark context'inde çalışmıyor */
+.\!hidden {
+  display: none !important;
+}
+
+/* FIX 2: Dark background form field visibility */
+.tb-dark {
+  /* Label colors */
+  --mdc-outlined-text-field-label-text-color: rgba(255, 255, 255, 0.7);
+  --mdc-outlined-text-field-hover-label-text-color: rgba(255, 255, 255, 0.87);
+  --mdc-outlined-text-field-focus-label-text-color: #f9b11d;
+
+  /* Input text colors */
+  --mdc-outlined-text-field-input-text-color: rgba(255, 255, 255, 0.87);
+  --mdc-outlined-text-field-input-text-placeholder-color: rgba(255, 255, 255, 0.5);
+
+  /* Border colors */
+  --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.38);
+  --mdc-outlined-text-field-hover-outline-color: rgba(255, 255, 255, 0.6);
+  --mdc-outlined-text-field-focus-outline-color: #f9b11d;
+
+  /* Caret color */
+  --mdc-outlined-text-field-caret-color: #f9b11d;
+}
+
+/* Login card içindeki form alanları (card arka planı da koyu) */
+.tb-dark .mat-mdc-card {
+  --mdc-outlined-text-field-label-text-color: rgba(255, 255, 255, 0.7);
+  --mdc-outlined-text-field-hover-label-text-color: rgba(255, 255, 255, 0.87);
+  --mdc-outlined-text-field-focus-label-text-color: #f9b11d;
+  --mdc-outlined-text-field-input-text-color: rgba(255, 255, 255, 0.87);
+  --mdc-outlined-text-field-input-text-placeholder-color: rgba(255, 255, 255, 0.5);
+  --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.38);
+  --mdc-outlined-text-field-hover-outline-color: rgba(255, 255, 255, 0.6);
+  --mdc-outlined-text-field-focus-outline-color: #f9b11d;
+  --mdc-outlined-text-field-caret-color: #f9b11d;
+}
+
+/* ============================================================================
+ * END SignConnect Branding CSS Fixes
+ * ============================================================================ */

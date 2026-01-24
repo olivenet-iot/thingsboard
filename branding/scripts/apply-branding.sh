@@ -509,6 +509,40 @@ if [[ -f "$LOGO_TITLE" ]] && [[ -n "$PRIMARY_COLOR" ]] && ! $DRY_RUN; then
 fi
 
 # =============================================================================
+# 17. INJECT BRANDING CSS FIXES
+# =============================================================================
+
+log_section "17. Injecting CSS Fixes"
+
+BRANDING_CSS="$BRANDING_DIR/assets/branding-fixes.css"
+STYLES_FILE="$UI_SRC/styles.scss"
+MARKER="SignConnect Branding CSS Fixes"
+
+if [[ -f "$BRANDING_CSS" ]]; then
+    # Idempotency check
+    if grep -q "$MARKER" "$STYLES_FILE" 2>/dev/null; then
+        log "CSS fixes already injected (skipping)"
+    else
+        log "Injecting branding CSS fixes..."
+        if ! $DRY_RUN; then
+            # Read CSS and replace color placeholder with config value
+            BRANDING_CSS_CONTENT=$(cat "$BRANDING_CSS")
+            if [[ -n "$SECONDARY_COLOR" ]]; then
+                BRANDING_CSS_CONTENT=$(echo "$BRANDING_CSS_CONTENT" | sed "s/#f9b11d/#$SECONDARY_COLOR/g")
+            fi
+
+            # Append to styles.scss
+            echo "" >> "$STYLES_FILE"
+            echo "$BRANDING_CSS_CONTENT" >> "$STYLES_FILE"
+
+            log "CSS fixes injected successfully"
+        fi
+    fi
+else
+    log "WARNING: Branding CSS file not found: $BRANDING_CSS"
+fi
+
+# =============================================================================
 # DONE
 # =============================================================================
 
