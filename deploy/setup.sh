@@ -113,8 +113,14 @@ check_maven() {
 check_gradle() {
     if command -v gradle &>/dev/null; then
         local version=$(gradle --version 2>/dev/null | grep "Gradle" | head -n 1 | awk '{print $2}')
-        log_success "Gradle: $version"
-        return 0
+        local major=$(echo "$version" | cut -d'.' -f1)
+        if [[ "$major" -ge 7 ]]; then
+            log_success "Gradle: $version"
+            return 0
+        else
+            log_warning "Gradle: $version (need 7.x+)"
+            return 1
+        fi
     else
         log_error "Gradle: not found"
         return 1
@@ -236,9 +242,24 @@ install_maven() {
 }
 
 install_gradle() {
-    log_info "Installing Gradle..."
-    sudo apt-get install -y gradle
-    log_success "Gradle installed"
+    log_info "Installing Gradle 8.6..."
+
+    local GRADLE_VERSION="8.6"
+    local GRADLE_HOME="/opt/gradle/gradle-${GRADLE_VERSION}"
+
+    # Remove old apt gradle if exists
+    sudo apt-get remove -y gradle 2>/dev/null || true
+
+    # Download and extract
+    wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle.zip
+    sudo mkdir -p /opt/gradle
+    sudo unzip -q -o /tmp/gradle.zip -d /opt/gradle
+    rm /tmp/gradle.zip
+
+    # Create symlink
+    sudo ln -sf "${GRADLE_HOME}/bin/gradle" /usr/local/bin/gradle
+
+    log_success "Gradle ${GRADLE_VERSION} installed"
 }
 
 install_nodejs() {
