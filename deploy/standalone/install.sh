@@ -145,8 +145,9 @@ if [[ "$BUILD_IMAGE" == true ]]; then
     log_info "Log file: /tmp/signconnect-build.log"
 
     # Step 1: Build entire project first (creates .deb package)
-    log_info "Step 1/2: Building project..."
-    if ! mvn clean install -DskipTests -Dlicense.skip=true 2>&1 | tee /tmp/signconnect-build.log | \
+    # Exclude msa/tb module to avoid dependency issues
+    log_info "Step 1/2: Building project (excluding Docker modules)..."
+    if ! mvn clean install -DskipTests -Dlicense.skip=true -pl '!msa/tb' 2>&1 | tee /tmp/signconnect-build.log | \
         grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE)'; then
         log_error "Project build failed. Check /tmp/signconnect-build.log"
         tail -50 /tmp/signconnect-build.log
@@ -159,6 +160,13 @@ if [[ "$BUILD_IMAGE" == true ]]; then
         exit 1
     fi
 
+    # Verify .deb file was created
+    if ! ls "$PROJECT_ROOT/application/target/"*.deb &>/dev/null; then
+        log_error ".deb package not created. Check build log."
+        exit 1
+    fi
+    log_success ".deb package created"
+
     # Step 2: Build Docker image for standalone (tb-postgres)
     log_info "Step 2/2: Building Docker image..."
     if ! mvn package -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false \
@@ -169,7 +177,7 @@ if [[ "$BUILD_IMAGE" == true ]]; then
         exit 1
     fi
 
-    if grep -q "BUILD FAILURE" /tmp/signconnect-build.log; then
+    if tail -20 /tmp/signconnect-build.log | grep -q "BUILD FAILURE"; then
         log_error "Docker build failed. Check /tmp/signconnect-build.log"
         tail -50 /tmp/signconnect-build.log
         exit 1
