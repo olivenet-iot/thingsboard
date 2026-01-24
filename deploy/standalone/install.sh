@@ -147,7 +147,7 @@ if [[ "$BUILD_IMAGE" == true ]]; then
     # Step 1: Build entire project first (creates .deb package)
     # Exclude entire msa module - Docker modules depend on .deb files
     log_info "Step 1/2: Building project (excluding microservices)..."
-    if ! mvn clean install -DskipTests -Dlicense.skip=true -pl '!msa' 2>&1 | tee /tmp/signconnect-build.log | \
+    if ! mvn clean install -DskipTests -Dlicense.skip=true -Ppackaging -pl '!msa' 2>&1 | tee /tmp/signconnect-build.log | \
         grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE)'; then
         log_error "Project build failed. Check /tmp/signconnect-build.log"
         tail -50 /tmp/signconnect-build.log
@@ -169,7 +169,7 @@ if [[ "$BUILD_IMAGE" == true ]]; then
 
     # Step 2: Build Docker image for standalone (tb-postgres)
     log_info "Step 2/2: Building Docker image..."
-    if ! mvn package -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false \
+    if ! mvn package -DskipTests -Dlicense.skip=true -Ppackaging -Ddockerfile.skip=false \
         -pl msa/tb/docker-postgres 2>&1 | tee -a /tmp/signconnect-build.log | \
         grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE|Successfully)'; then
         log_error "Docker build failed. Check /tmp/signconnect-build.log"

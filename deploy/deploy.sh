@@ -122,7 +122,7 @@ if [[ "$SKIP_BUILD" == false ]]; then
 
     log "Building ThingsBoard (this takes 10-15 minutes)..."
 
-    if mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false 2>&1 | tee /tmp/signconnect-build.log | grep -E '^\[INFO\] (Building |BUILD)'; then
+    if mvn clean install -DskipTests -Dlicense.skip=true -Ppackaging -Ddockerfile.skip=false 2>&1 | tee /tmp/signconnect-build.log | grep -E '^\[INFO\] (Building |BUILD)'; then
         log "Build successful ✓"
     else
         log_error "Build failed. See /tmp/signconnect-build.log"

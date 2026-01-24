@@ -59,10 +59,10 @@ if [[ "$RESTART_ONLY" == false ]]; then
     log_section "Building"
     if [[ "$FULL_BUILD" == true ]]; then
         log "Full build..."
-        mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false
+        mvn clean install -DskipTests -Dlicense.skip=true -Ppackaging -Ddockerfile.skip=false
     else
         log "UI build only..."
-        mvn clean install -DskipTests -Dlicense.skip=true -pl ui-ngx,msa/web-ui
+        mvn clean install -DskipTests -Dlicense.skip=true -Ppackaging -pl ui-ngx,msa/web-ui
     fi
     log "Build complete ✓"
 fi
