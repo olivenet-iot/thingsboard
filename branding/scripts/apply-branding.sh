@@ -363,14 +363,8 @@ fi
 log_section "9. Handling GitHub Badge"
 
 if [[ "$HIDE_GITHUB_BADGE" == "true" ]]; then
-    log "Hiding GitHub badge..."
-
-    HOME_COMPONENT="$UI_SRC/app/modules/home/home.component.html"
-    if [[ -f "$HOME_COMPONENT" ]] && ! $DRY_RUN; then
-        # Comment out the github-badge component
-        sed -i 's|<tb-github-badge|<!-- <tb-github-badge|g' "$HOME_COMPONENT"
-        sed -i 's|></tb-github-badge>|></tb-github-badge> -->|g' "$HOME_COMPONENT"
-    fi
+    log "GitHub badge will be hidden via CSS (branding-fixes.css)"
+    # No HTML modification needed - CSS handles it idempotently
 else
     log "Keeping GitHub badge (disabled)"
 fi
