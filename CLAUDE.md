@@ -29,7 +29,8 @@ cd deploy/standalone
 Multi-container deployment with Kafka, Zookeeper, etc.
 
 ```bash
-./deploy/deploy.sh --demo
+cd deploy/microservices
+./deploy.sh --demo
 ```
 
 **Capacity:** 1M+ devices (requires more resources)
@@ -51,23 +52,26 @@ thingsboard/
 │
 ├── branding/                        ← OUR ADDITIONS
 │   ├── config.env                   # Brand configuration
-│   ├── assets/                      # Logos, favicon
-│   │   └── logo_title_white.svg
+│   ├── assets/                      # Logos, favicon, CSS fixes
+│   │   ├── logo_title_white.svg
+│   │   └── branding-fixes.css
 │   ├── scripts/
 │   │   ├── apply-branding.sh        # Applies branding to source files
 │   │   └── revert-branding.sh       # Restores original files
 │   └── originals/                   # Backups (created at deploy time)
 │
 ├── deploy/                          ← OUR ADDITIONS
-│   ├── standalone/                  # Simple single-container deployment
+│   ├── setup.sh                     # Server prerequisites (Java, Docker, Maven)
+│   ├── upgrade.sh                   # Upstream ThingsBoard upgrade
+│   ├── standalone/                  # Single-container deployment (RECOMMENDED)
 │   │   ├── docker-compose.yml
 │   │   ├── install.sh
 │   │   └── .env
-│   ├── deploy.sh                    # Microservices deployment
-│   ├── install.sh                   # Microservices install
-│   ├── update.sh                    # Quick update script
-│   ├── upgrade.sh                   # Upstream upgrade script
-│   └── README.md
+│   └── microservices/               # Multi-container deployment (for scaling)
+│       ├── deploy.sh
+│       ├── install.sh
+│       ├── update.sh
+│       └── uninstall.sh
 │
 ├── docker/                          ← Original ThingsBoard (microservices)
 │
@@ -141,7 +145,7 @@ cd deploy/standalone
 ./install.sh --build
 
 # Or deploy (microservices)
-./deploy/deploy.sh
+cd deploy/microservices && ./deploy.sh
 ```
 
 ## Architecture
