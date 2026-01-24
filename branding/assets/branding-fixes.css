@@ -3,9 +3,18 @@
  * Injected by apply-branding.sh - DO NOT EDIT MANUALLY
  * ============================================================================ */
 
-/* FIX 1: Tailwind !hidden class - tb-dark context'inde çalışmıyor */
-.\!hidden {
+/* FIX 1: Tailwind !hidden class - Universal override */
+/* Ensures !hidden works regardless of parent container (.tb-default vs .tb-dark) */
+.\!hidden,
+[class*="!hidden"] {
   display: none !important;
+}
+
+/* FIX 1B: Specific override for search container in header toolbar */
+.tb-primary-toolbar .tb-dark.\!hidden,
+.tb-primary-toolbar > div.tb-dark[class*="!hidden"] {
+  display: none !important;
+  visibility: hidden !important;
 }
 
 /* FIX 2: Dark background form field visibility */
