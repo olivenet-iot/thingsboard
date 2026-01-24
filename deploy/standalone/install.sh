@@ -141,21 +141,43 @@ if [[ "$BUILD_IMAGE" == true ]]; then
 
     # Build standalone image
     cd "$PROJECT_ROOT"
-    log_info "Building (this takes 10-15 minutes)..."
+    log_info "Building (this takes 20-30 minutes on first build)..."
+    log_info "Log file: /tmp/signconnect-build.log"
 
-    mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false \
-        -pl msa/tb --also-make 2>&1 | tee /tmp/signconnect-build.log | \
-        grep -E '^\[INFO\] (Building |BUILD)'
-
-    if [[ $? -eq 0 ]]; then
-        log_success "Custom image built"
-        # Update .env to use local image
-        DOCKER_REPO="thingsboard"
-        TB_VERSION="latest"
-    else
-        log_error "Build failed. Check /tmp/signconnect-build.log"
+    # Step 1: Build entire project first (creates .deb package)
+    log_info "Step 1/2: Building project..."
+    if ! mvn clean install -DskipTests -Dlicense.skip=true 2>&1 | tee /tmp/signconnect-build.log | \
+        grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE)'; then
+        log_error "Project build failed. Check /tmp/signconnect-build.log"
+        tail -50 /tmp/signconnect-build.log
         exit 1
     fi
+
+    if ! grep -q "BUILD SUCCESS" /tmp/signconnect-build.log; then
+        log_error "Project build failed. Check /tmp/signconnect-build.log"
+        tail -50 /tmp/signconnect-build.log
+        exit 1
+    fi
+
+    # Step 2: Build Docker image for standalone (tb-postgres)
+    log_info "Step 2/2: Building Docker image..."
+    if ! mvn package -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false \
+        -pl msa/tb/docker-postgres 2>&1 | tee -a /tmp/signconnect-build.log | \
+        grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE|Successfully)'; then
+        log_error "Docker build failed. Check /tmp/signconnect-build.log"
+        tail -50 /tmp/signconnect-build.log
+        exit 1
+    fi
+
+    if grep -q "BUILD FAILURE" /tmp/signconnect-build.log; then
+        log_error "Docker build failed. Check /tmp/signconnect-build.log"
+        tail -50 /tmp/signconnect-build.log
+        exit 1
+    fi
+
+    log_success "Custom image built"
+    DOCKER_REPO="thingsboard"
+    TB_VERSION="latest"
 
     cd "$SCRIPT_DIR"
 else
