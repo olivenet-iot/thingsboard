@@ -17,7 +17,7 @@
 #   - Git, curl, wget, unzip, jq (essentials)
 #   - Java 17 (OpenJDK)
 #   - Maven 3.6+
-#   - Node.js 18 LTS
+#   - Node.js 20 LTS
 #   - Yarn
 #   - Docker Engine
 #   - Docker Compose v2
@@ -113,11 +113,11 @@ check_node() {
     if command -v node &>/dev/null; then
         local version=$(node --version 2>/dev/null)
         local major=$(echo "$version" | sed 's/v//' | cut -d'.' -f1)
-        if [[ "$major" -ge 18 ]]; then
+        if [[ "$major" -ge 20 ]]; then
             log_success "Node.js: $version"
             return 0
         else
-            log_warning "Node.js: $version (need v18+)"
+            log_warning "Node.js: $version (need v20+)"
             return 1
         fi
     else
@@ -224,16 +224,16 @@ install_maven() {
 }
 
 install_nodejs() {
-    log_info "Installing Node.js 18 LTS..."
+    log_info "Installing Node.js 20 LTS..."
 
     # Remove old nodejs if exists
     sudo apt-get remove -y nodejs npm 2>/dev/null || true
 
     # Add NodeSource repository
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 
-    log_success "Node.js 18 installed"
+    log_success "Node.js 20 installed"
 }
 
 install_yarn() {
