@@ -164,13 +164,21 @@ if [[ "$BUILD_IMAGE" == true ]]; then
     log_success ".deb package created"
 
     # Step 2: Build Docker image for standalone (tb-postgres)
+    # Docker build runs at pre-integration-test phase, module is msa/tb
     log_info "Step 2/2: Building Docker image..."
-    mvn package -DskipTests -Dlicense.skip=true -Ppackaging -Ddockerfile.skip=false \
-        -pl msa/tb/docker-postgres 2>&1 | tee -a /tmp/signconnect-build.log | \
-        grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE|Successfully)' || true
+    mvn pre-integration-test -DskipTests -Dlicense.skip=true -Ppackaging -Ddockerfile.skip=false \
+        -pl msa/tb 2>&1 | tee -a /tmp/signconnect-build.log | \
+        grep -E '^\[INFO\] (Building |------|BUILD|SUCCESS|FAILURE|Successfully built)' || true
 
     if tail -30 /tmp/signconnect-build.log | grep -q "BUILD FAILURE"; then
         log_error "Docker build failed. Check /tmp/signconnect-build.log"
+        tail -50 /tmp/signconnect-build.log
+        exit 1
+    fi
+
+    # Verify Docker image was created
+    if ! docker images | grep -q "thingsboard/tb-postgres"; then
+        log_error "Docker image not created. Check /tmp/signconnect-build.log"
         tail -50 /tmp/signconnect-build.log
         exit 1
     fi
