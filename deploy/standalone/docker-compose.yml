@@ -1,0 +1,42 @@
+#
+# SignConnect Standalone Docker Compose
+#
+# Simple single-container deployment with embedded PostgreSQL
+# Suitable for up to 300,000 devices
+#
+# Usage:
+#   docker compose up -d
+#
+# Ports:
+#   8080 - Web UI / REST API
+#   1883 - MQTT
+#   5683 - CoAP (UDP)
+#
+
+services:
+  signconnect:
+    image: "${DOCKER_REPO:-thingsboard}/tb-postgres:${TB_VERSION:-latest}"
+    container_name: signconnect
+    restart: unless-stopped
+    ports:
+      - "${TB_PORT:-8080}:9090"      # Web UI / REST API
+      - "${MQTT_PORT:-1883}:1883"    # MQTT
+      - "${COAP_PORT:-5683}:5683/udp" # CoAP
+    volumes:
+      - signconnect-data:/data
+      - signconnect-logs:/var/log/thingsboard
+    environment:
+      - TB_QUEUE_TYPE=in-memory
+      - JAVA_OPTS=${JAVA_OPTS:--Xms512M -Xmx1024M}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  signconnect-data:
+    name: signconnect-data
+  signconnect-logs:
+    name: signconnect-logs

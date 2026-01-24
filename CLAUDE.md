@@ -11,6 +11,38 @@ Branding is applied at deployment time by scripts in `branding/`. This ensures:
 - No conflicts during upgrades
 - Easy version updates
 
+## Deployment Options
+
+### Standalone (Recommended for most cases)
+
+Single container, simple deployment. No Kafka, no Zookeeper.
+
+```bash
+cd deploy/standalone
+./install.sh --demo
+```
+
+**Capacity:** Up to 300,000 devices, 10,000 messages/second
+
+### Microservices (For large scale)
+
+Multi-container deployment with Kafka, Zookeeper, etc.
+
+```bash
+./deploy/deploy.sh --demo
+```
+
+**Capacity:** 1M+ devices (requires more resources)
+
+### Which to choose?
+
+| Devices | Messages/sec | Recommendation |
+|---------|--------------|----------------|
+| < 1,000 | < 100 | **Standalone** |
+| < 100,000 | < 5,000 | **Standalone** |
+| < 300,000 | < 10,000 | **Standalone** |
+| 1M+ | 10,000+ | Microservices |
+
 ## Directory Structure
 
 ```
@@ -27,10 +59,17 @@ thingsboard/
 │   └── originals/                   # Backups (created at deploy time)
 │
 ├── deploy/                          ← OUR ADDITIONS
-│   ├── deploy.sh                    # Full deployment script
+│   ├── standalone/                  # Simple single-container deployment
+│   │   ├── docker-compose.yml
+│   │   ├── install.sh
+│   │   └── .env
+│   ├── deploy.sh                    # Microservices deployment
+│   ├── install.sh                   # Microservices install
 │   ├── update.sh                    # Quick update script
 │   ├── upgrade.sh                   # Upstream upgrade script
 │   └── README.md
+│
+├── docker/                          ← Original ThingsBoard (microservices)
 │
 ├── .claude/                         ← OUR ADDITIONS
 │   └── skills/
@@ -40,48 +79,42 @@ thingsboard/
 
 ## Quick Reference
 
-### Commands
+### Standalone Commands
 
 ```bash
-# Full deployment (first time or major changes)
-./deploy/deploy.sh --demo
+cd deploy/standalone
 
-# Quick update (branding/UI changes)
-./deploy/update.sh
+# Install with demo data
+./install.sh --demo
 
-# Upgrade to new ThingsBoard version
-./deploy/upgrade.sh v4.4.0
+# Install with custom branding
+./install.sh --demo --build
+
+# View logs
+docker compose logs -f signconnect
+
+# Stop/Start
+docker compose stop
+docker compose start
+
+# Remove (keeps data)
+docker compose down
+
+# Remove completely
+docker compose down -v
 ```
 
 ### Build Commands
 
 ```bash
-# Full build
-mvn clean install -DskipTests -Dlicense.skip=true
+# Standalone image only
+mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false -pl msa/tb --also-make
+
+# Full build (all images)
+mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false
 
 # UI only
 mvn clean install -DskipTests -Dlicense.skip=true -pl ui-ngx,msa/web-ui
-
-# With Docker images
-mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false
-```
-
-### Docker Commands
-
-```bash
-cd docker
-
-# Start
-./docker-start-services.sh
-
-# Stop
-./docker-stop-services.sh
-
-# Logs
-docker compose logs -f tb-core1 tb-core2
-
-# Status
-docker compose ps
 ```
 
 ## Branding Configuration
@@ -103,54 +136,75 @@ When upstream releases a new version:
 # 1. Merge upstream (no conflicts because files are original)
 ./deploy/upgrade.sh v4.4.0
 
-# 2. Deploy on server (branding applied automatically)
+# 2. Deploy (standalone)
+cd deploy/standalone
+./install.sh --build
+
+# Or deploy (microservices)
 ./deploy/deploy.sh
 ```
 
 ## Architecture
 
+### Standalone
+
+```
+┌─────────────────────────────────────────────┐
+│           SINGLE CONTAINER                   │
+│                                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │PostgreSQL│ │ThingsBoard│ │ Web UI  │    │
+│  │(embedded)│ │  (Java)   │ │(Angular)│    │
+│  └──────────┘ └──────────┘ └──────────┘    │
+│                                              │
+│  Ports: 8080 (HTTP) | 1883 (MQTT) | 5683   │
+└─────────────────────────────────────────────┘
+            │
+            ▼
+     /data volume (PostgreSQL + logs)
+```
+
+### Microservices
+
 ```
 ┌─────────────────┐     ┌─────────────────┐
 │   Upstream      │     │   Your Fork     │
 │   ThingsBoard   │────▶│   (clean)       │
-│                 │     │                 │
-│   v4.3.0        │     │  + branding/    │
-│   v4.4.0        │     │  + deploy/      │
-│   ...           │     │  + .claude/     │
 └─────────────────┘     └────────┬────────┘
                                  │
                                  ▼
                         ┌─────────────────┐
                         │  Deploy Script  │
-                        │                 │
                         │ apply-branding  │
                         │ mvn build       │
                         │ docker up       │
                         └────────┬────────┘
                                  │
-                                 ▼
-                        ┌─────────────────┐
-                        │  SignConnect    │
-                        │  (branded)      │
-                        └─────────────────┘
+    ┌────────────────────────────┼────────────────────────────┐
+    │                            │                            │
+    ▼                            ▼                            ▼
+┌──────────┐              ┌──────────┐              ┌──────────┐
+│ Kafka    │              │ TB-Core  │              │ Web UI   │
+│ Zookeeper│              │ TB-Rule  │              │ HAProxy  │
+│ Valkey   │              │ Transport│              │          │
+└──────────┘              └──────────┘              └──────────┘
 ```
 
 ## Technology Stack
 
 - **Backend**: Java 17, Spring Boot 3.4
 - **Frontend**: Angular 18, Material 18
-- **Database**: PostgreSQL 16
-- **Queue**: Kafka
-- **Cache**: Valkey (Redis-compatible)
+- **Database**: PostgreSQL 16 (embedded in standalone)
+- **Queue**: In-memory (standalone) or Kafka (microservices)
+- **Cache**: Embedded (standalone) or Valkey (microservices)
 
 ## Default Ports
 
 | Service | Port |
 |---------|------|
-| Web UI | 80/443 |
+| Web UI / REST API | 8080 |
 | MQTT | 1883 |
-| CoAP | 5683 |
-| HTTP API | 8080 |
+| CoAP | 5683 (UDP) |
 
 ## Default Credentials
 
