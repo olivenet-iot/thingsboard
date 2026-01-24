@@ -569,12 +569,6 @@ else
     [[ "$UPDATE_SWAGGER" == "true" ]] && log "  - Swagger API rebranded"
     log ""
     log "Next steps:"
-    log "  Standalone deployment:"
-    log "    1. Build: mvn clean install -DskipTests -Dlicense.skip=true -Ddockerfile.skip=false -pl msa/tb --also-make"
-    log "    2. Deploy: cd deploy/standalone && docker compose up -d"
-    log ""
-    log "  UI-only rebuild (faster):"
-    log "    1. Build: mvn clean install -DskipTests -Dlicense.skip=true -pl ui-ngx,msa/web-ui"
-    log "    2. Restart: cd deploy/standalone && docker compose restart signconnect"
+    log "  cd deploy/standalone && ./install.sh --demo --build"
 fi
 log "============================================"
