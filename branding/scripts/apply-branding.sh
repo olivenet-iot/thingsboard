@@ -219,6 +219,11 @@ if ! $NO_BACKUP && [[ "$CREATE_BACKUP" == "true" ]]; then
     backup_file "$UI_SRC/app/modules/home/home.component.html"
     backup_file "$UI_SRC/app/modules/home/components/github-badge/github-badge.component.html"
 
+    # Login and connectivity files
+    backup_file "$UI_SRC/app/modules/login/pages/login/login.component.html"
+    backup_file "$UI_SRC/app/modules/home/pages/admin/two-factor-auth-settings.component.ts"
+    backup_file "$UI_SRC/app/modules/home/pages/device/device-check-connectivity-dialog.component.html"
+
     # Backend config
     backup_file "$APP_RESOURCES/thingsboard.yml"
 
@@ -539,6 +544,91 @@ if [[ -f "$BRANDING_CSS" ]]; then
     fi
 else
     log "WARNING: Branding CSS file not found: $BRANDING_CSS"
+fi
+
+# =============================================================================
+# 18. UPDATE LOGIN PAGE LOGO LINK
+# =============================================================================
+
+log_section "18. Updating Login Page"
+
+LOGIN_COMPONENT="$UI_SRC/app/modules/login/pages/login/login.component.html"
+if [[ -n "$WEBSITE_URL" ]]; then
+    modify_file "$LOGIN_COMPONENT" 'link="https://thingsboard.io"' "link=\"$WEBSITE_URL\""
+    log "Updated login logo link to $WEBSITE_URL"
+else
+    log "Skipping login logo link (WEBSITE_URL not set)"
+fi
+
+# =============================================================================
+# 19. UPDATE 2FA ISSUER NAME
+# =============================================================================
+
+log_section "19. Updating 2FA Issuer"
+
+TFA_SETTINGS="$UI_SRC/app/modules/home/pages/admin/two-factor-auth-settings.component.ts"
+modify_file "$TFA_SETTINGS" "{value: 'ThingsBoard'" "{value: '$BRAND_NAME'"
+log "Updated 2FA issuer to $BRAND_NAME"
+
+# =============================================================================
+# 20. UPDATE DEVICE CONNECTIVITY DIALOG
+# =============================================================================
+
+log_section "20. Updating Device Connectivity"
+
+DEVICE_CONNECTIVITY="$UI_SRC/app/modules/home/pages/device/device-check-connectivity-dialog.component.html"
+if [[ -n "$DOCS_URL" ]]; then
+    modify_file "$DEVICE_CONNECTIVITY" "https://thingsboard.io" "$DOCS_URL"
+    log "Updated device connectivity doc links to $DOCS_URL"
+else
+    log "Device connectivity doc links will be hidden via CSS (DOCS_URL not set)"
+fi
+
+# =============================================================================
+# 21. VERIFY BRANDING
+# =============================================================================
+
+log_section "21. Verifying Branding"
+
+verify_branding() {
+    local issues=0
+
+    # Check for remaining ThingsBoard text in critical files
+    if grep -q "ThingsBoard" "$UI_SRC/index.html" 2>/dev/null; then
+        log "WARNING: index.html still contains 'ThingsBoard'"
+        issues=$((issues + 1))
+    fi
+
+    # Check for remaining #305680 colors
+    COLOR_COUNT=$(grep -ri "#305680" "$UI_SRC" --include="*.ts" --include="*.scss" --include="*.svg" 2>/dev/null | wc -l)
+    if [[ $COLOR_COUNT -gt 0 ]]; then
+        log "WARNING: $COLOR_COUNT files still contain '#305680' color"
+        issues=$((issues + 1))
+    fi
+
+    # Check login component for thingsboard.io link
+    if grep -q 'link="https://thingsboard.io"' "$LOGIN_COMPONENT" 2>/dev/null; then
+        log "WARNING: Login page still links to thingsboard.io"
+        issues=$((issues + 1))
+    fi
+
+    # Check 2FA issuer
+    if grep -q "{value: 'ThingsBoard'" "$TFA_SETTINGS" 2>/dev/null; then
+        log "WARNING: 2FA issuer still shows 'ThingsBoard'"
+        issues=$((issues + 1))
+    fi
+
+    if [[ $issues -eq 0 ]]; then
+        log "Verification passed - all branding applied correctly"
+    else
+        log "Verification completed with $issues warnings"
+    fi
+
+    return $issues
+}
+
+if ! $DRY_RUN; then
+    verify_branding
 fi
 
 # =============================================================================

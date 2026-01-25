@@ -20,6 +20,12 @@ tb-github-badge {
   display: none !important;
 }
 
+/* FIX 1D: Hide device connectivity external doc links (when no DOCS_URL configured) */
+/* These are the "Documentation" buttons that link to thingsboard.io */
+tb-device-check-connectivity-dialog a[href*='thingsboard.io'] {
+  display: none !important;
+}
+
 /* FIX 2: Dark background form field visibility */
 .tb-dark {
   /* Label colors */
