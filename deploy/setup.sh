@@ -17,7 +17,6 @@
 #   - Git, curl, wget, unzip, jq (essentials)
 #   - Java 17 (OpenJDK)
 #   - Maven 3.6+
-#   - Gradle (for .deb packaging)
 #   - Node.js 20 LTS
 #   - Yarn
 #   - Docker Engine
@@ -106,23 +105,6 @@ check_maven() {
         fi
     else
         log_error "Maven: not found"
-        return 1
-    fi
-}
-
-check_gradle() {
-    if command -v gradle &>/dev/null; then
-        local version=$(gradle --version 2>/dev/null | grep "Gradle" | head -n 1 | awk '{print $2}')
-        local major=$(echo "$version" | cut -d'.' -f1)
-        if [[ "$major" -ge 7 ]]; then
-            log_success "Gradle: $version"
-            return 0
-        else
-            log_warning "Gradle: $version (need 7.x+)"
-            return 1
-        fi
-    else
-        log_error "Gradle: not found"
         return 1
     fi
 }
@@ -241,27 +223,6 @@ install_maven() {
     log_success "Maven installed"
 }
 
-install_gradle() {
-    log_info "Installing Gradle 8.6..."
-
-    local GRADLE_VERSION="8.6"
-    local GRADLE_HOME="/opt/gradle/gradle-${GRADLE_VERSION}"
-
-    # Remove old apt gradle if exists
-    sudo apt-get remove -y gradle 2>/dev/null || true
-
-    # Download and extract
-    wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle.zip
-    sudo mkdir -p /opt/gradle
-    sudo unzip -q -o /tmp/gradle.zip -d /opt/gradle
-    rm /tmp/gradle.zip
-
-    # Create symlink
-    sudo ln -sf "${GRADLE_HOME}/bin/gradle" /usr/local/bin/gradle
-
-    log_success "Gradle ${GRADLE_VERSION} installed"
-}
-
 install_nodejs() {
     log_info "Installing Node.js 20 LTS..."
 
@@ -333,7 +294,6 @@ ALL_OK=true
 check_essentials || ALL_OK=false
 check_java || ALL_OK=false
 check_maven || ALL_OK=false
-check_gradle || ALL_OK=false
 check_node || ALL_OK=false
 check_yarn || ALL_OK=false
 check_docker || ALL_OK=false
@@ -387,10 +347,6 @@ if ! check_maven &>/dev/null || [[ "$FORCE_INSTALL" == true ]]; then
     install_maven
 fi
 
-if ! check_gradle &>/dev/null || [[ "$FORCE_INSTALL" == true ]]; then
-    install_gradle
-fi
-
 if ! check_node &>/dev/null || [[ "$FORCE_INSTALL" == true ]]; then
     install_nodejs
 fi
@@ -410,7 +366,6 @@ FINAL_OK=true
 check_essentials || FINAL_OK=false
 check_java || FINAL_OK=false
 check_maven || FINAL_OK=false
-check_gradle || FINAL_OK=false
 check_node || FINAL_OK=false
 check_yarn || FINAL_OK=false
 check_docker || FINAL_OK=false
