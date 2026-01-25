@@ -102,7 +102,6 @@ if [[ "$SKIP_BRANDING" == false ]]; then
     log_section "Step 2: Applying Branding"
 
     if [[ -f "$BRANDING_DIR/scripts/apply-branding.sh" ]]; then
-        chmod +x "$BRANDING_DIR/scripts/apply-branding.sh"
         "$BRANDING_DIR/scripts/apply-branding.sh"
     else
         log_warn "Branding script not found, skipping"

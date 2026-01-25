@@ -295,7 +295,6 @@ if [[ "$SKIP_BRANDING" == false ]]; then
     step "Applying Branding"
 
     if [[ -f "$BRANDING_DIR/scripts/apply-branding.sh" ]]; then
-        chmod +x "$BRANDING_DIR/scripts/apply-branding.sh"
         "$BRANDING_DIR/scripts/apply-branding.sh"
         log_success "Branding applied"
     else

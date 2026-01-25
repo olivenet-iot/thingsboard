@@ -135,7 +135,6 @@ if [[ "$BUILD_IMAGE" == true ]]; then
     # Apply branding
     if [[ -f "$BRANDING_DIR/scripts/apply-branding.sh" ]]; then
         log_info "Applying branding..."
-        chmod +x "$BRANDING_DIR/scripts/apply-branding.sh"
         "$BRANDING_DIR/scripts/apply-branding.sh"
     fi
 
