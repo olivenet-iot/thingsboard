@@ -529,7 +529,7 @@ if [[ -f "$BRANDING_CSS" ]]; then
         log "Removing old CSS injection and re-injecting..."
         if ! $DRY_RUN; then
             # Remove old injection (between markers)
-            sed -i '/\/\* =\+$/,/\* END SignConnect Branding CSS Fixes/d' "$STYLES_FILE"
+            sed -i '/\/\* =\+$/,/^ \* =\+\*\/$/d' "$STYLES_FILE"
             # Also remove any trailing empty lines at end of file
             sed -i -e :a -e '/^\s*$/d;N;ba' -e 's/\n$//' "$STYLES_FILE" 2>/dev/null || true
         fi
