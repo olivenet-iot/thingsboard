@@ -59,6 +59,29 @@ tb-device-check-connectivity-dialog a[href*='thingsboard.io'] {
   --mdc-outlined-text-field-caret-color: #f9b11d;
 }
 
+/* FIX 3: Hide Version Info Widget Contact Us link */
+/* This links to thingsboard.io/docs/contact-us/ */
+tb-version-info .tb-contact-us {
+  display: none !important;
+}
+
+/* FIX 4: Hide Doc Links Widget thingsboard.io links */
+/* Title link at top of widget */
+tb-doc-links-widget .tb-title-link[href*='thingsboard.io'] {
+  display: none !important;
+}
+
+/* Default link buttons pointing to thingsboard.io */
+tb-doc-links-widget .tb-link-button[href*='thingsboard.io'] {
+  display: none !important;
+}
+
+/* FIX 5: Hide Getting Started Widget external documentation links */
+/* These are mat-stroked-button links to thingsboard.io */
+tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
+  display: none !important;
+}
+
 /* ============================================================================
  * END SignConnect Branding CSS Fixes
  * ============================================================================ */

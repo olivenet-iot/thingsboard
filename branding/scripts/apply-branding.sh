@@ -632,6 +632,45 @@ if ! $DRY_RUN; then
 fi
 
 # =============================================================================
+# 22. UPDATE BACKEND CONFIGURATION (thingsboard.yml)
+# =============================================================================
+
+log_section "22. Updating Backend Configuration"
+
+THINGSBOARD_YML="$APP_RESOURCES/thingsboard.yml"
+if [[ -f "$THINGSBOARD_YML" ]]; then
+    log "Updating thingsboard.yml backend configuration..."
+
+    if ! $DRY_RUN; then
+        # JWT Token Issuer
+        if [[ -n "$JWT_ISSUER_DOMAIN" ]]; then
+            sed -i "s|JWT_TOKEN_ISSUER:thingsboard.io|JWT_TOKEN_ISSUER:$JWT_ISSUER_DOMAIN|g" "$THINGSBOARD_YML"
+            log "Updated JWT token issuer to $JWT_ISSUER_DOMAIN"
+        fi
+
+        # Swagger Contact URL (use existing WEBSITE_URL)
+        if [[ -n "$WEBSITE_URL" ]]; then
+            sed -i "s|SWAGGER_CONTACT_URL:https://thingsboard.io|SWAGGER_CONTACT_URL:$WEBSITE_URL|g" "$THINGSBOARD_YML"
+            log "Updated Swagger contact URL to $WEBSITE_URL"
+        fi
+
+        # Swagger Contact Email
+        if [[ -n "$SWAGGER_CONTACT_EMAIL" ]]; then
+            sed -i "s|SWAGGER_CONTACT_EMAIL:info@thingsboard.io|SWAGGER_CONTACT_EMAIL:$SWAGGER_CONTACT_EMAIL|g" "$THINGSBOARD_YML"
+            log "Updated Swagger contact email to $SWAGGER_CONTACT_EMAIL"
+        fi
+
+        # Mobile App Domain
+        if [[ -n "$MOBILE_APP_DOMAIN" ]]; then
+            sed -i "s|TB_MOBILE_APP_DOMAIN:demo.thingsboard.io|TB_MOBILE_APP_DOMAIN:$MOBILE_APP_DOMAIN|g" "$THINGSBOARD_YML"
+            log "Updated mobile app domain to $MOBILE_APP_DOMAIN"
+        fi
+    fi
+else
+    log "WARNING: thingsboard.yml not found"
+fi
+
+# =============================================================================
 # DONE
 # =============================================================================
 
