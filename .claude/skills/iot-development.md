@@ -112,6 +112,7 @@ source /opt/thingsboard/.claude/credentials.env
 | [branding.md](branding.md) | You need white-label branding customization |
 | [ttn-lorawan-integration.md](ttn-lorawan-integration.md) | You are integrating with The Things Network (TTN) |
 | [zenopix-dali-reference.md](zenopix-dali-reference.md) | You are working with Zenopix DALI smart lighting |
+| [mcp-integration.md](mcp-integration.md) | You want to use the MCP server for natural language IoT operations |
 
 ### Template Files
 

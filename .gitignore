@@ -38,4 +38,6 @@ rebuild-docker.sh
 .run/**
 .run
 .claude/credentials.env
+.claude/settings.json
+.claude/tools/
 __pycache__/
