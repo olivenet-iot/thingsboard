@@ -1,0 +1,73 @@
+{
+  "_comment": "Minimal 3-node rule chain skeleton for ThingsBoard. Contains Message Type Switch, Save Timeseries, and Save Client Attributes nodes. POST the metadata to /api/ruleChain/metadata (NOT /api/ruleChain/{id}/metadata). First create an empty rule chain via POST /api/ruleChain, then set this metadata.",
+  "_usage": "1. POST /api/ruleChain with {name, type:'CORE'} to create empty chain. 2. Replace ${RULE_CHAIN_ID} with the returned ID. 3. POST this to /api/ruleChain/metadata.",
+  "ruleChainId": {
+    "entityType": "RULE_CHAIN",
+    "id": "${RULE_CHAIN_ID}"
+  },
+  "firstNodeIndex": 0,
+  "nodes": [
+    {
+      "_comment": "Node 0: Message Type Switch. Routes incoming messages by type: 'Post telemetry', 'Post attributes', 'RPC Request to Device', 'Other', etc. This is the entry point (firstNodeIndex=0).",
+      "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+      "name": "Message Type Switch",
+      "debugMode": false,
+      "singletonMode": false,
+      "queueName": null,
+      "configurationVersion": 0,
+      "configuration": {},
+      "additionalInfo": {
+        "layoutX": 400,
+        "layoutY": 200
+      }
+    },
+    {
+      "_comment": "Node 1: Save Timeseries. Persists message body as timeseries data. defaultTTL=0 means no expiry. Connect from Switch via 'Post telemetry' label.",
+      "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+      "name": "Save Timeseries",
+      "debugMode": false,
+      "singletonMode": false,
+      "queueName": null,
+      "configurationVersion": 0,
+      "configuration": {
+        "defaultTTL": 0
+      },
+      "additionalInfo": {
+        "layoutX": 200,
+        "layoutY": 400
+      }
+    },
+    {
+      "_comment": "Node 2: Save Client Attributes. Persists message body as client-scope attributes. configurationVersion=1 is required for the scope field. Change scope to SERVER_SCOPE or SHARED_SCOPE as needed.",
+      "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+      "name": "Save Client Attributes",
+      "debugMode": false,
+      "singletonMode": false,
+      "queueName": null,
+      "configurationVersion": 1,
+      "configuration": {
+        "scope": "CLIENT_SCOPE",
+        "notifyDevice": false
+      },
+      "additionalInfo": {
+        "layoutX": 600,
+        "layoutY": 400
+      }
+    }
+  ],
+  "connections": [
+    {
+      "_comment": "Switch -> Save Timeseries: routes 'Post telemetry' messages to timeseries storage.",
+      "fromIndex": 0,
+      "toIndex": 1,
+      "type": "Post telemetry"
+    },
+    {
+      "_comment": "Switch -> Save Client Attributes: routes 'Post attributes' messages to attribute storage.",
+      "fromIndex": 0,
+      "toIndex": 2,
+      "type": "Post attributes"
+    }
+  ],
+  "ruleChainConnections": null
+}

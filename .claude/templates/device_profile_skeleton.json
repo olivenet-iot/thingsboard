@@ -1,0 +1,132 @@
+{
+  "_comment": "Minimal device profile with DEFAULT transport and 1 numeric alarm rule (temperature). POST to /api/deviceProfile to create. Replace ${RULE_CHAIN_ID} with the actual rule chain UUID. The alarm 'id' field should be a fresh UUID (uuid4). Alarm rules require a TbDeviceProfileNode in the rule chain to evaluate.",
+  "_usage": "1. Create rule chain first (get ${RULE_CHAIN_ID}). 2. Replace placeholders. 3. POST to /api/deviceProfile. 4. Uses optimistic locking -- for updates, GET first, modify, then POST (retry on 409).",
+  "name": "${PROFILE_NAME}",
+  "type": "DEFAULT",
+  "transportType": "DEFAULT",
+  "description": "Device profile with alarm rules. Replace name and description.",
+  "defaultRuleChainId": {
+    "_comment": "Links this profile to a custom rule chain. Devices with this profile route messages through this chain instead of the root chain.",
+    "entityType": "RULE_CHAIN",
+    "id": "${RULE_CHAIN_ID}"
+  },
+  "defaultDashboardId": null,
+  "defaultQueueName": null,
+  "provisionType": "DISABLED",
+  "profileData": {
+    "configuration": {
+      "type": "DEFAULT"
+    },
+    "transportConfiguration": {
+      "_comment": "DEFAULT transport accepts MQTT/HTTP/CoAP. For MQTT-specific or LwM2M profiles, change type accordingly.",
+      "type": "DEFAULT"
+    },
+    "provisionConfiguration": {
+      "type": "DISABLED",
+      "provisionDeviceSecret": null
+    },
+    "alarms": [
+      {
+        "_comment": "Alarm rule: triggers CRITICAL when temperature > 85, WARNING when > 70, clears when < 60. Each alarm needs a unique UUID in the 'id' field. Severity levels in createRules are evaluated highest-first (CRITICAL before WARNING).",
+        "id": "REPLACE_WITH_UUID",
+        "alarmType": "High Temperature",
+        "createRules": {
+          "CRITICAL": {
+            "condition": {
+              "condition": [
+                {
+                  "key": {
+                    "_comment": "TIME_SERIES means the alarm evaluates against telemetry data. Use ATTRIBUTE for attribute-based alarms.",
+                    "type": "TIME_SERIES",
+                    "key": "temperature"
+                  },
+                  "valueType": "NUMERIC",
+                  "value": null,
+                  "predicate": {
+                    "type": "NUMERIC",
+                    "operation": "GREATER",
+                    "value": {
+                      "defaultValue": 85,
+                      "userValue": null,
+                      "dynamicValue": null
+                    }
+                  }
+                }
+              ],
+              "spec": {
+                "_comment": "SIMPLE spec triggers immediately. Other options: DURATION (must persist for N seconds), REPEATING (must occur N times).",
+                "type": "SIMPLE"
+              }
+            },
+            "schedule": null,
+            "alarmDetails": "CRITICAL: Temperature is above 85: ${temperature}",
+            "dashboardId": null
+          },
+          "WARNING": {
+            "condition": {
+              "condition": [
+                {
+                  "key": {
+                    "type": "TIME_SERIES",
+                    "key": "temperature"
+                  },
+                  "valueType": "NUMERIC",
+                  "value": null,
+                  "predicate": {
+                    "type": "NUMERIC",
+                    "operation": "GREATER",
+                    "value": {
+                      "defaultValue": 70,
+                      "userValue": null,
+                      "dynamicValue": null
+                    }
+                  }
+                }
+              ],
+              "spec": {
+                "type": "SIMPLE"
+              }
+            },
+            "schedule": null,
+            "alarmDetails": "WARNING: Temperature is above 70: ${temperature}",
+            "dashboardId": null
+          }
+        },
+        "clearRule": {
+          "_comment": "Clear rule auto-resolves the alarm when condition is met. The alarm transitions to CLEARED_UNACK status.",
+          "condition": {
+            "condition": [
+              {
+                "key": {
+                  "type": "TIME_SERIES",
+                  "key": "temperature"
+                },
+                "valueType": "NUMERIC",
+                "value": null,
+                "predicate": {
+                  "type": "NUMERIC",
+                  "operation": "LESS",
+                  "value": {
+                    "defaultValue": 60,
+                    "userValue": null,
+                    "dynamicValue": null
+                  }
+                }
+              }
+            ],
+            "spec": {
+              "type": "SIMPLE"
+            }
+          },
+          "schedule": null,
+          "alarmDetails": "Temperature returned to normal: ${temperature}",
+          "dashboardId": null
+        },
+        "propagate": false,
+        "propagateToOwner": false,
+        "propagateToTenant": false,
+        "propagateRelationTypes": null
+      }
+    ]
+  }
+}

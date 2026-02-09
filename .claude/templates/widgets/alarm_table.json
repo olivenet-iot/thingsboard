@@ -1,0 +1,120 @@
+{
+  "_comment": "Alarm table widget showing device alarms with severity, status, search, pagination, and acknowledge/clear actions. Extracted from setup_zenopix.py alarm_table widget (lines 1005-1068). Replace ${ENTITY_ALIAS_ID} with alias UUID. Uses alarmSource instead of datasources.",
+  "_fqn": "system.alarm_widgets.alarms_table",
+  "_type": "alarm",
+  "_datasource": "alarmSource with entity alias. dataKeys are alarm-type fields (startTime, type, severity, status). Not the same as regular datasources.",
+  "typeFullFqn": "system.alarm_widgets.alarms_table",
+  "type": "alarm",
+  "sizeX": 12,
+  "sizeY": 5,
+  "config": {
+    "timewindow": {
+      "_comment": "Alarm table has its own timewindow (useDashboardTimewindow=false). 86400000ms = 24 hours. Aggregation NONE with limit=200 means raw alarm records.",
+      "realtime": {
+        "interval": 1000,
+        "timewindowMs": 86400000
+      },
+      "aggregation": {
+        "type": "NONE",
+        "limit": 200
+      }
+    },
+    "showTitle": true,
+    "backgroundColor": "rgb(255, 255, 255)",
+    "color": "rgba(0, 0, 0, 0.87)",
+    "padding": "4px",
+    "settings": {
+      "enableSelection": true,
+      "enableSearch": true,
+      "displayDetails": true,
+      "allowAcknowledgment": true,
+      "allowClear": true,
+      "displayPagination": true,
+      "defaultPageSize": 10,
+      "defaultSortOrder": "-startTime",
+      "enableSelectColumnDisplay": true,
+      "enableStickyAction": false,
+      "enableFilter": true,
+      "enableStickyHeader": true,
+      "reserveSpaceForHiddenAction": "true",
+      "useRowStyleFunction": false,
+      "alarmsTitle": "Device Alarms"
+    },
+    "title": "Alarms",
+    "dropShadow": true,
+    "enableFullscreen": true,
+    "useDashboardTimewindow": false,
+    "titleStyle": {
+      "fontSize": "20px",
+      "fontWeight": 700
+    },
+    "showLegend": false,
+    "alarmSource": {
+      "_comment": "alarmSource replaces datasources for alarm widgets. dataKeys use type='alarm' with alarm field names. Available fields: startTime, endTime, type, severity, status, originator, originatorName, assignee.",
+      "type": "entity",
+      "name": null,
+      "entityAliasId": "${ENTITY_ALIAS_ID}",
+      "filterId": null,
+      "dataKeys": [
+        {
+          "name": "startTime",
+          "type": "alarm",
+          "label": "Start time",
+          "color": "#2196f3",
+          "settings": {
+            "useCellStyleFunction": false,
+            "useCellContentFunction": false,
+            "columnWidth": "0px",
+            "defaultColumnVisibility": "visible",
+            "columnSelectionToDisplay": "enabled"
+          }
+        },
+        {
+          "name": "type",
+          "type": "alarm",
+          "label": "Type",
+          "color": "#f44336",
+          "settings": {
+            "useCellStyleFunction": false,
+            "useCellContentFunction": false,
+            "columnWidth": "120px",
+            "defaultColumnVisibility": "visible",
+            "columnSelectionToDisplay": "enabled"
+          }
+        },
+        {
+          "name": "severity",
+          "type": "alarm",
+          "label": "Severity",
+          "color": "#ffc107",
+          "settings": {
+            "useCellStyleFunction": false,
+            "useCellContentFunction": false
+          }
+        },
+        {
+          "name": "status",
+          "type": "alarm",
+          "label": "Status",
+          "color": "#607d8b",
+          "settings": {
+            "useCellStyleFunction": false,
+            "useCellContentFunction": false
+          }
+        }
+      ]
+    },
+    "alarmFilterConfig": {
+      "_comment": "Filter which alarm statuses to show. Options: ACTIVE, ACKNOWLEDGED, CLEARED. Omit to show all.",
+      "statusList": ["ACTIVE", "ACKNOWLEDGED"]
+    },
+    "configMode": "basic",
+    "actions": {},
+    "widgetStyle": {},
+    "widgetCss": "",
+    "noDataDisplayMessage": ""
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

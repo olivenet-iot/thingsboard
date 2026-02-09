@@ -1,0 +1,90 @@
+{
+  "_comment": "Slider control widget for RPC-based control (e.g., dimming). Reads initial value from server attribute via GET_ATTRIBUTE, sends updates via EXECUTE_RPC. Extracted from setup_zenopix.py slider widget (lines 862-918). Replace ${DEVICE_ID} with actual device UUID.",
+  "_fqn": "system.slider",
+  "_type": "rpc",
+  "_datasource": "Target device (direct device ID, not entity alias). Uses GET_ATTRIBUTE for initial state and EXECUTE_RPC for updates.",
+  "typeFullFqn": "system.slider",
+  "type": "rpc",
+  "sizeX": 10,
+  "sizeY": 4,
+  "config": {
+    "showTitle": true,
+    "backgroundColor": "#ffffff",
+    "color": "rgba(0, 0, 0, 0.87)",
+    "padding": "0px",
+    "settings": {
+      "initialState": {
+        "_comment": "GET_ATTRIBUTE reads the current value on widget load. scope=SERVER_SCOPE reads from server attributes. Alternative: GET_TIME_SERIES to read from telemetry.",
+        "action": "GET_ATTRIBUTE",
+        "defaultValue": 0,
+        "getAttribute": {
+          "key": "${ATTRIBUTE_KEY}",
+          "scope": "SERVER_SCOPE"
+        },
+        "getTimeSeries": {
+          "key": "${ATTRIBUTE_KEY}"
+        },
+        "dataToValue": {
+          "type": "NONE",
+          "compareToValue": true,
+          "dataToValueFunction": "return data;"
+        }
+      },
+      "sliderUpdateState": {
+        "_comment": "EXECUTE_RPC sends an RPC request to the device when the slider value changes. The RPC method name, timeout, and value mapping are configured here. Alternative: SET_ATTRIBUTE to write directly to shared attributes (returns 200 instantly, no 408 for offline devices).",
+        "action": "EXECUTE_RPC",
+        "executeRpc": {
+          "method": "${RPC_METHOD}",
+          "requestTimeout": 5000,
+          "requestPersistent": false,
+          "persistentPollingInterval": 1000
+        },
+        "setAttribute": {
+          "scope": "SERVER_SCOPE",
+          "key": "${ATTRIBUTE_KEY}"
+        },
+        "putTimeSeries": {
+          "key": "${ATTRIBUTE_KEY}"
+        },
+        "valueToData": {
+          "type": "VALUE",
+          "constantValue": 0,
+          "valueToDataFunction": "return value;"
+        }
+      },
+      "appearance": {
+        "showLabel": true,
+        "label": "${SLIDER_LABEL}",
+        "showValue": true,
+        "valueUnits": "${UNITS}",
+        "showTicks": true,
+        "ticksStep": 25,
+        "mainColor": "#F5DD00",
+        "backgroundColor": "#e0e0e0",
+        "tickMin": 0,
+        "tickMax": 100,
+        "showLeftIcon": true,
+        "leftIcon": "lightbulb_outline",
+        "showRightIcon": true,
+        "rightIcon": "lightbulb"
+      }
+    },
+    "title": "${SLIDER_LABEL}",
+    "dropShadow": true,
+    "enableFullscreen": false,
+    "configMode": "basic",
+    "datasources": [],
+    "targetDevice": {
+      "_comment": "RPC widgets use targetDevice instead of entity alias. type='device' with a direct deviceId. For dashboard entity-based targeting, use type='entity' instead.",
+      "type": "device",
+      "deviceId": "${DEVICE_ID}"
+    },
+    "actions": {},
+    "widgetStyle": {},
+    "widgetCss": "",
+    "noDataDisplayMessage": ""
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

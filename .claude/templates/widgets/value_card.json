@@ -1,0 +1,124 @@
+{
+  "_comment": "Value card widget displaying a single latest telemetry or attribute value with icon, label, and auto-scaling. Extracted from make_value_card() in setup_zenopix.py. Replace ${ENTITY_ALIAS_ID} with the entity alias UUID from your dashboard.",
+  "_fqn": "system.cards.value_card",
+  "_type": "latest",
+  "_datasource": "Single entity alias with one timeseries or attribute dataKey",
+  "typeFullFqn": "system.cards.value_card",
+  "type": "latest",
+  "sizeX": 4,
+  "sizeY": 3,
+  "config": {
+    "datasources": [
+      {
+        "type": "entity",
+        "name": "",
+        "entityAliasId": "${ENTITY_ALIAS_ID}",
+        "dataKeys": [
+          {
+            "name": "${TELEMETRY_KEY}",
+            "type": "timeseries",
+            "label": "${DISPLAY_LABEL}",
+            "color": "#2196f3",
+            "settings": {},
+            "units": null,
+            "decimals": null,
+            "funcBody": null,
+            "usePostProcessing": null,
+            "postFuncBody": null
+          }
+        ],
+        "alarmFilterConfig": {
+          "statusList": ["ACTIVE"]
+        },
+        "latestDataKeys": []
+      }
+    ],
+    "showTitle": false,
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "color": "rgba(0, 0, 0, 0.87)",
+    "padding": "0px",
+    "settings": {
+      "labelPosition": "top",
+      "layout": "square",
+      "showLabel": true,
+      "labelFont": {
+        "size": 16,
+        "sizeUnit": "px",
+        "family": "Roboto",
+        "weight": "500",
+        "style": "normal"
+      },
+      "labelColor": {
+        "type": "constant",
+        "color": "rgba(0, 0, 0, 0.87)"
+      },
+      "showIcon": true,
+      "iconSize": 34,
+      "iconSizeUnit": "px",
+      "icon": "${ICON_NAME}",
+      "iconColor": {
+        "type": "constant",
+        "color": "${ICON_COLOR}"
+      },
+      "valueFont": {
+        "family": "Roboto",
+        "size": 42,
+        "sizeUnit": "px",
+        "style": "normal",
+        "weight": "500"
+      },
+      "valueColor": {
+        "type": "constant",
+        "color": "rgba(0, 0, 0, 0.87)"
+      },
+      "showDate": false,
+      "dateFormat": {
+        "format": null,
+        "lastUpdateAgo": true,
+        "custom": false
+      },
+      "dateFont": {
+        "family": "Roboto",
+        "size": 12,
+        "sizeUnit": "px",
+        "style": "normal",
+        "weight": "500"
+      },
+      "dateColor": {
+        "type": "constant",
+        "color": "rgba(0, 0, 0, 0.38)"
+      },
+      "background": {
+        "type": "color",
+        "color": "#fff",
+        "overlay": {
+          "enabled": false,
+          "color": "rgba(255,255,255,0.72)",
+          "blur": 3
+        }
+      },
+      "autoScale": true
+    },
+    "title": "${DISPLAY_LABEL}",
+    "dropShadow": true,
+    "enableFullscreen": false,
+    "titleStyle": {
+      "fontSize": "16px",
+      "fontWeight": 400
+    },
+    "units": "${UNITS}",
+    "decimals": 1,
+    "configMode": "basic",
+    "actions": {},
+    "widgetStyle": {},
+    "widgetCss": "",
+    "noDataDisplayMessage": "",
+    "pageSize": 1024,
+    "showTitleIcon": false,
+    "borderRadius": "0px",
+    "margin": "0px"
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

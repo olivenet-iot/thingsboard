@@ -1,0 +1,52 @@
+{
+  "_comment": "Entities table widget showing multiple telemetry/attribute keys in a tabular format with search and sticky header. Extracted from tb_api_test.py (lines 636-679). Replace ${ENTITY_ALIAS_ID} with alias UUID. Add/remove dataKeys as needed for your columns.",
+  "_fqn": "system.cards.entities_table",
+  "_type": "latest",
+  "_datasource": "Single entity alias with multiple timeseries or attribute dataKeys. Each dataKey becomes a table column.",
+  "typeFullFqn": "system.cards.entities_table",
+  "type": "latest",
+  "title": "${TABLE_TITLE}",
+  "sizeX": 12,
+  "sizeY": 5,
+  "config": {
+    "datasources": [
+      {
+        "type": "entity",
+        "entityAliasId": "${ENTITY_ALIAS_ID}",
+        "filterId": null,
+        "dataKeys": [
+          {
+            "name": "${KEY_1_NAME}",
+            "type": "timeseries",
+            "label": "${KEY_1_LABEL}",
+            "settings": {},
+            "funcBody": null
+          },
+          {
+            "name": "${KEY_2_NAME}",
+            "type": "timeseries",
+            "label": "${KEY_2_LABEL}",
+            "settings": {},
+            "funcBody": null
+          },
+          {
+            "name": "${KEY_3_NAME}",
+            "type": "timeseries",
+            "label": "${KEY_3_LABEL}",
+            "settings": {},
+            "funcBody": null
+          }
+        ]
+      }
+    ],
+    "settings": {
+      "enableSearch": true,
+      "enableStickyHeader": true
+    },
+    "actions": {},
+    "configMode": "basic"
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

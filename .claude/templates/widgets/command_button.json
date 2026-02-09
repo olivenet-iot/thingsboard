@@ -1,0 +1,98 @@
+{
+  "_comment": "Command button widget for sending RPC calls on click. Extracted from make_command_button() in setup_zenopix.py (lines 763-820). Replace ${DEVICE_ID} with actual device UUID. The valueToDataFunction returns the RPC params value.",
+  "_fqn": "system.command_button",
+  "_type": "rpc",
+  "_datasource": "Target device (direct device ID). No entity alias needed. RPC is sent on button click.",
+  "typeFullFqn": "system.command_button",
+  "type": "rpc",
+  "sizeX": 3,
+  "sizeY": 2,
+  "config": {
+    "showTitle": false,
+    "backgroundColor": "rgba(255, 255, 255, 0)",
+    "color": "rgba(0, 0, 0, 0.87)",
+    "padding": "0px",
+    "settings": {
+      "onClickState": {
+        "_comment": "EXECUTE_RPC sends a one-way RPC to the device. method is the RPC method name. valueToDataFunction returns the params sent to the device. Alternative: SET_ATTRIBUTE to write shared attributes instead (avoids 408 timeout for offline devices).",
+        "action": "EXECUTE_RPC",
+        "executeRpc": {
+          "method": "${RPC_METHOD}",
+          "requestTimeout": 5000,
+          "requestPersistent": false,
+          "persistentPollingInterval": 1000
+        },
+        "setAttribute": {
+          "scope": "SERVER_SCOPE",
+          "key": "state"
+        },
+        "putTimeSeries": {
+          "key": "state"
+        },
+        "valueToData": {
+          "_comment": "FUNCTION type uses valueToDataFunction JS body. For simple constant, use type=CONSTANT with constantValue. The function should return the RPC params.",
+          "type": "FUNCTION",
+          "constantValue": true,
+          "valueToDataFunction": "${VALUE_TO_DATA_FUNCTION}"
+        }
+      },
+      "disabledState": {
+        "_comment": "Controls when the button is disabled. DO_NOTHING means button is always enabled. Other actions: GET_ATTRIBUTE, GET_TIME_SERIES, GET_ALARM_STATUS.",
+        "action": "DO_NOTHING",
+        "defaultValue": false,
+        "getAttribute": {
+          "key": "state",
+          "scope": null
+        },
+        "getTimeSeries": {
+          "key": "state"
+        },
+        "getAlarmStatus": {
+          "severityList": null,
+          "typeList": null
+        },
+        "dataToValue": {
+          "type": "NONE",
+          "compareToValue": true,
+          "dataToValueFunction": "/* Should return boolean value */\nreturn data;"
+        }
+      },
+      "appearance": {
+        "type": "outlined",
+        "autoScale": true,
+        "showLabel": true,
+        "label": "${BUTTON_LABEL}",
+        "showIcon": true,
+        "icon": "${ICON_NAME}",
+        "iconSize": 24,
+        "iconSizeUnit": "px",
+        "mainColor": "${MAIN_COLOR}",
+        "backgroundColor": "#FFFFFF",
+        "customStyle": {
+          "enabled": null,
+          "hovered": null,
+          "pressed": null,
+          "activated": null,
+          "disabled": null
+        }
+      }
+    },
+    "title": "Command button",
+    "dropShadow": false,
+    "enableFullscreen": false,
+    "configMode": "basic",
+    "borderRadius": "4px",
+    "datasources": [],
+    "targetDevice": {
+      "type": "device",
+      "deviceId": "${DEVICE_ID}"
+    },
+    "actions": {},
+    "widgetStyle": {},
+    "widgetCss": "",
+    "noDataDisplayMessage": ""
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

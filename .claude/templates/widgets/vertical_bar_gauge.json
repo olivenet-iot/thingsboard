@@ -1,0 +1,89 @@
+{
+  "_comment": "Vertical bar gauge widget (JustGage) displaying a single value on a 0-100 scale. Extracted from setup_zenopix.py dim_gauge widget (lines 921-967). Replace ${ENTITY_ALIAS_ID} with alias UUID. Good for percentage values, levels, and gauges.",
+  "_fqn": "system.digital_gauges.vertical_bar_justgage",
+  "_type": "latest",
+  "_datasource": "Single entity alias with one timeseries dataKey. Value is displayed on a vertical bar with configurable min/max.",
+  "typeFullFqn": "system.digital_gauges.vertical_bar_justgage",
+  "type": "latest",
+  "sizeX": 4,
+  "sizeY": 4,
+  "config": {
+    "datasources": [
+      {
+        "type": "entity",
+        "name": "",
+        "entityAliasId": "${ENTITY_ALIAS_ID}",
+        "dataKeys": [
+          {
+            "name": "${TELEMETRY_KEY}",
+            "type": "timeseries",
+            "label": "${DISPLAY_LABEL}",
+            "color": "#F5DD00",
+            "settings": {}
+          }
+        ],
+        "alarmFilterConfig": {
+          "statusList": ["ACTIVE"]
+        }
+      }
+    ],
+    "showTitle": false,
+    "backgroundColor": null,
+    "color": "rgba(0, 0, 0, 0.87)",
+    "padding": "0px",
+    "settings": {
+      "maxValue": 100,
+      "minValue": 0,
+      "showValue": true,
+      "showMinMax": true,
+      "gaugeWidthScale": 0.75,
+      "showTitle": false,
+      "gaugeType": "verticalBar",
+      "barColor": {
+        "type": "constant",
+        "color": "${BAR_COLOR}"
+      },
+      "neonGlowBrightness": 0,
+      "dashThickness": 1.5,
+      "gaugeColor": "#A1ADB1",
+      "titleFont": {
+        "family": "Roboto",
+        "size": 12,
+        "style": "normal",
+        "weight": "500",
+        "color": "#999999"
+      },
+      "labelFont": {
+        "family": "Roboto",
+        "size": 8,
+        "style": "normal",
+        "weight": "500"
+      },
+      "valueFont": {
+        "family": "Roboto",
+        "style": "normal",
+        "weight": "500",
+        "size": 14,
+        "color": "#666666"
+      },
+      "minMaxFont": {
+        "family": "Roboto",
+        "size": 8,
+        "style": "normal",
+        "weight": "500",
+        "color": "#666666"
+      }
+    },
+    "title": "${DISPLAY_LABEL}",
+    "dropShadow": true,
+    "enableFullscreen": false,
+    "configMode": "basic",
+    "units": "${UNITS}",
+    "decimals": 0,
+    "actions": {},
+    "widgetStyle": {}
+  },
+  "row": 0,
+  "col": 0,
+  "id": "${WIDGET_ID}"
+}

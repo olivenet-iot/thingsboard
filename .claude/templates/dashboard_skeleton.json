@@ -1,0 +1,431 @@
+{
+  "_comment": "Minimal 3-widget ThingsBoard dashboard skeleton. Contains a value_card, time_series_chart, and entities_table. Replace ${DEVICE_ID} with actual device UUID before POSTing to /api/dashboard. Widget IDs and alias ID are pre-generated UUIDs safe to use as-is, or replace with your own.",
+  "title": "${DASHBOARD_TITLE}",
+  "configuration": {
+    "_comment": "Top-level dashboard configuration containing widgets, layout states, entity aliases, and global settings.",
+    "widgets": {
+      "aaaaaaaa-0001-0001-0001-000000000001": {
+        "_comment": "Value card widget showing a single latest telemetry key (temperature). Uses system.cards.value_card FQN.",
+        "typeFullFqn": "system.cards.value_card",
+        "type": "latest",
+        "title": "Temperature",
+        "sizeX": 6,
+        "sizeY": 4,
+        "config": {
+          "datasources": [
+            {
+              "type": "entity",
+              "entityAliasId": "aaaaaaaa-alias-0001-0001-000000000001",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "temperature",
+                  "type": "timeseries",
+                  "label": "Temperature",
+                  "color": "#2196f3",
+                  "settings": {},
+                  "units": null,
+                  "decimals": null,
+                  "funcBody": null,
+                  "usePostProcessing": null,
+                  "postFuncBody": null
+                }
+              ],
+              "alarmFilterConfig": {
+                "statusList": ["ACTIVE"]
+              },
+              "latestDataKeys": []
+            }
+          ],
+          "showTitle": false,
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "0px",
+          "settings": {
+            "labelPosition": "top",
+            "layout": "square",
+            "showLabel": true,
+            "labelFont": {
+              "size": 16,
+              "sizeUnit": "px",
+              "family": "Roboto",
+              "weight": "500",
+              "style": "normal"
+            },
+            "labelColor": {
+              "type": "constant",
+              "color": "rgba(0, 0, 0, 0.87)"
+            },
+            "showIcon": true,
+            "iconSize": 34,
+            "iconSizeUnit": "px",
+            "icon": "thermostat",
+            "iconColor": {
+              "type": "constant",
+              "color": "#FF5722"
+            },
+            "valueFont": {
+              "family": "Roboto",
+              "size": 42,
+              "sizeUnit": "px",
+              "style": "normal",
+              "weight": "500"
+            },
+            "valueColor": {
+              "type": "constant",
+              "color": "rgba(0, 0, 0, 0.87)"
+            },
+            "showDate": false,
+            "dateFormat": {
+              "format": null,
+              "lastUpdateAgo": true,
+              "custom": false
+            },
+            "dateFont": {
+              "family": "Roboto",
+              "size": 12,
+              "sizeUnit": "px",
+              "style": "normal",
+              "weight": "500"
+            },
+            "dateColor": {
+              "type": "constant",
+              "color": "rgba(0, 0, 0, 0.38)"
+            },
+            "background": {
+              "type": "color",
+              "color": "#fff",
+              "overlay": {
+                "enabled": false,
+                "color": "rgba(255,255,255,0.72)",
+                "blur": 3
+              }
+            },
+            "autoScale": true
+          },
+          "title": "Temperature",
+          "dropShadow": true,
+          "enableFullscreen": false,
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "units": "\u00b0C",
+          "decimals": 1,
+          "configMode": "basic",
+          "actions": {},
+          "widgetStyle": {},
+          "widgetCss": "",
+          "noDataDisplayMessage": "",
+          "pageSize": 1024,
+          "showTitleIcon": false,
+          "borderRadius": "0px",
+          "margin": "0px"
+        },
+        "row": 0,
+        "col": 0,
+        "id": "aaaaaaaa-0001-0001-0001-000000000001"
+      },
+      "aaaaaaaa-0002-0002-0002-000000000002": {
+        "_comment": "Time series chart showing temperature and humidity over time. Uses system.time_series_chart FQN.",
+        "typeFullFqn": "system.time_series_chart",
+        "type": "timeseries",
+        "title": "Temperature & Humidity",
+        "sizeX": 12,
+        "sizeY": 6,
+        "config": {
+          "datasources": [
+            {
+              "type": "entity",
+              "entityAliasId": "aaaaaaaa-alias-0001-0001-000000000001",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "temperature",
+                  "type": "timeseries",
+                  "label": "Temperature",
+                  "color": "#FF5722",
+                  "settings": {
+                    "yAxisId": "default",
+                    "showInLegend": true,
+                    "dataHiddenByDefault": false,
+                    "type": "line",
+                    "lineSettings": {
+                      "showLine": true,
+                      "step": false,
+                      "stepType": "start",
+                      "smooth": true,
+                      "lineType": "solid",
+                      "lineWidth": 2,
+                      "showPoints": false,
+                      "showPointLabel": false,
+                      "pointLabelPosition": "top",
+                      "pointShape": "circle",
+                      "pointSize": 14,
+                      "fillAreaSettings": {
+                        "type": "gradient",
+                        "opacity": 0.4,
+                        "gradient": {
+                          "start": 70,
+                          "end": 10
+                        }
+                      }
+                    }
+                  },
+                  "units": "\u00b0C",
+                  "decimals": 1,
+                  "funcBody": null
+                },
+                {
+                  "name": "humidity",
+                  "type": "timeseries",
+                  "label": "Humidity",
+                  "color": "#2196f3",
+                  "settings": {
+                    "yAxisId": "default",
+                    "showInLegend": true,
+                    "dataHiddenByDefault": false,
+                    "type": "line",
+                    "lineSettings": {
+                      "showLine": true,
+                      "step": false,
+                      "stepType": "start",
+                      "smooth": true,
+                      "lineType": "solid",
+                      "lineWidth": 2,
+                      "showPoints": false,
+                      "showPointLabel": false,
+                      "pointLabelPosition": "top",
+                      "pointShape": "circle",
+                      "pointSize": 14,
+                      "fillAreaSettings": {
+                        "type": "gradient",
+                        "opacity": 0.4,
+                        "gradient": {
+                          "start": 70,
+                          "end": 10
+                        }
+                      }
+                    }
+                  },
+                  "units": "%",
+                  "decimals": 1,
+                  "funcBody": null
+                }
+              ],
+              "alarmFilterConfig": {
+                "statusList": ["ACTIVE"]
+              },
+              "latestDataKeys": []
+            }
+          ],
+          "showTitle": true,
+          "backgroundColor": "rgb(255, 255, 255)",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "0px",
+          "settings": {
+            "showLegend": true,
+            "legendConfig": {
+              "direction": "row",
+              "position": "bottom",
+              "showMin": false,
+              "showMax": false,
+              "showAvg": false,
+              "showTotal": false,
+              "showLatest": true
+            },
+            "dataZoom": true,
+            "stack": false,
+            "yAxes": {
+              "default": {
+                "show": true,
+                "label": "",
+                "min": null,
+                "max": null,
+                "showTickLabels": true,
+                "tickLabelFont": {
+                  "family": "Roboto",
+                  "size": 12,
+                  "sizeUnit": "px",
+                  "style": "normal",
+                  "weight": "400"
+                },
+                "ticksFormatter": "",
+                "showTicks": true,
+                "ticksColor": "rgba(0,0,0,0.1)",
+                "showSplitLines": true,
+                "splitLinesColor": "rgba(0,0,0,0.1)"
+              }
+            },
+            "xAxis": {
+              "show": true,
+              "showTickLabels": true,
+              "tickLabelFont": {
+                "family": "Roboto",
+                "size": 10,
+                "sizeUnit": "px",
+                "style": "normal",
+                "weight": "400"
+              },
+              "showTicks": true,
+              "showSplitLines": true,
+              "splitLinesColor": "rgba(0,0,0,0.1)"
+            },
+            "animation": {
+              "animation": true,
+              "animationDuration": 500,
+              "animationDurationUpdate": 300
+            },
+            "tooltip": {
+              "trigger": "axis",
+              "showFocusedSeries": false
+            },
+            "noAggregation": false,
+            "thresholds": []
+          },
+          "title": "Temperature & Humidity",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "useDashboardTimewindow": true,
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400
+          },
+          "configMode": "basic",
+          "actions": {},
+          "widgetStyle": {},
+          "widgetCss": "",
+          "noDataDisplayMessage": "",
+          "showTitleIcon": false
+        },
+        "row": 0,
+        "col": 0,
+        "id": "aaaaaaaa-0002-0002-0002-000000000002"
+      },
+      "aaaaaaaa-0003-0003-0003-000000000003": {
+        "_comment": "Entities table widget showing multiple telemetry keys in a searchable, sticky-header table. Uses system.cards.entities_table FQN.",
+        "typeFullFqn": "system.cards.entities_table",
+        "type": "latest",
+        "title": "Device Data Table",
+        "sizeX": 12,
+        "sizeY": 5,
+        "config": {
+          "datasources": [
+            {
+              "type": "entity",
+              "entityAliasId": "aaaaaaaa-alias-0001-0001-000000000001",
+              "filterId": null,
+              "dataKeys": [
+                {
+                  "name": "temperature",
+                  "type": "timeseries",
+                  "label": "Temperature",
+                  "settings": {},
+                  "funcBody": null
+                },
+                {
+                  "name": "humidity",
+                  "type": "timeseries",
+                  "label": "Humidity",
+                  "settings": {},
+                  "funcBody": null
+                },
+                {
+                  "name": "voltage",
+                  "type": "timeseries",
+                  "label": "Voltage",
+                  "settings": {},
+                  "funcBody": null
+                }
+              ]
+            }
+          ],
+          "settings": {
+            "enableSearch": true,
+            "enableStickyHeader": true
+          },
+          "actions": {},
+          "configMode": "basic"
+        },
+        "row": 0,
+        "col": 0,
+        "id": "aaaaaaaa-0003-0003-0003-000000000003"
+      }
+    },
+    "entityAliases": {
+      "_comment": "Entity aliases map a symbolic name to a real device/asset. Replace ${DEVICE_ID} with actual device UUID.",
+      "aaaaaaaa-alias-0001-0001-000000000001": {
+        "id": "aaaaaaaa-alias-0001-0001-000000000001",
+        "alias": "Target Device",
+        "filter": {
+          "type": "singleEntity",
+          "resolveMultiple": false,
+          "singleEntity": {
+            "entityType": "DEVICE",
+            "id": "${DEVICE_ID}"
+          }
+        }
+      }
+    },
+    "states": {
+      "_comment": "Dashboard states define pages/views. 'default' is the root state shown on load. Each state has a 'main' layout with widget placement and grid settings.",
+      "default": {
+        "name": "default",
+        "root": true,
+        "layouts": {
+          "main": {
+            "widgets": {
+              "aaaaaaaa-0001-0001-0001-000000000001": {
+                "sizeX": 6,
+                "sizeY": 4,
+                "row": 0,
+                "col": 0
+              },
+              "aaaaaaaa-0002-0002-0002-000000000002": {
+                "sizeX": 12,
+                "sizeY": 6,
+                "row": 4,
+                "col": 0
+              },
+              "aaaaaaaa-0003-0003-0003-000000000003": {
+                "sizeX": 12,
+                "sizeY": 5,
+                "row": 4,
+                "col": 12
+              }
+            },
+            "gridSettings": {
+              "_comment": "Grid uses 24 columns. margin=10px between widgets. outerMargin adds padding around the grid edge.",
+              "backgroundColor": "#eeeeee",
+              "columns": 24,
+              "margin": 10,
+              "outerMargin": true,
+              "backgroundSizeMode": "100%"
+            }
+          }
+        }
+      }
+    },
+    "filters": {},
+    "timewindow": {
+      "_comment": "Global dashboard timewindow. selectedTab=0 means realtime. timewindowMs=3600000 is 1 hour. Widgets with useDashboardTimewindow=true inherit this.",
+      "displayValue": "",
+      "selectedTab": 0,
+      "realtime": {
+        "realtimeType": 1,
+        "timewindowMs": 3600000,
+        "interval": 60000
+      }
+    },
+    "settings": {
+      "_comment": "Dashboard toolbar settings. stateControllerId='entity' enables entity-based state navigation. toolbarAlwaysOpen keeps the top toolbar visible.",
+      "stateControllerId": "entity",
+      "showTitle": true,
+      "showDashboardsSelect": true,
+      "showEntitiesSelect": true,
+      "showDashboardTimewindow": true,
+      "showDashboardExport": true,
+      "toolbarAlwaysOpen": true
+    }
+  }
+}
