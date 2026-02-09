@@ -1,3 +1,6 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: TbUtils.java, TbDate.java, TbJson.java, https://thingsboard.io/docs/user-guide/tbel/ -->
+
 # TBEL/MVEL Scripting Guide
 
 Comprehensive guide for writing TBEL (ThingsBoard Expression Language) scripts in rule engine transform and filter nodes. Includes critical bugs and workarounds discovered through real usage.
@@ -455,3 +458,137 @@ var payload = bytesToBase64([0x01, 0x02, msg.value]);
 var downlink = {"downlinks": [{"f_port": 8, "frm_payload": payload, "priority": "NORMAL"}]};
 return {msg: downlink, metadata: metadata, msgType: "DOWNLINK"};
 ```
+
+---
+
+## TBEL Function Reference (Complete)
+
+All functions below are registered in `TbUtils.register()` and available as global functions in TBEL scripts. Source: `TbUtils.java`, `TbDate.java`, `TbJson.java`.
+
+### Hex Parsing Functions
+
+All accept `"0x"` prefix or raw hex. `bigEndian` defaults to `true`.
+
+- `parseHexToInt(hex)` / `parseHexToInt(hex, bigEndian)` -- hex string to int
+- `parseBigEndianHexToInt(hex)` / `parseLittleEndianHexToInt(hex)` -- explicit byte order
+- `parseHexToLong(hex)` / `parseHexToLong(hex, bigEndian)` -- hex string to long
+- `parseBigEndianHexToLong(hex)` / `parseLittleEndianHexToLong(hex)`
+- `parseHexToFloat(hex)` / `parseHexToFloat(hex, bigEndian)` -- hex as IEEE 754 float
+- `parseBigEndianHexToFloat(hex)` / `parseLittleEndianHexToFloat(hex)`
+- `parseHexIntLongToFloat(hex, bigEndian)` -- parse hex as integer, cast to float
+- `parseHexToDouble(hex)` / `parseHexToDouble(hex, bigEndian)` -- hex as IEEE 754 double
+- `parseBigEndianHexToDouble(hex)` / `parseLittleEndianHexToDouble(hex)`
+
+```java
+var temp = parseHexToFloat("41200000");                // 10.0
+var tempLE = parseLittleEndianHexToFloat("00002041");  // 10.0
+```
+
+### Bytes Parsing Functions
+
+All accept `List<Byte>` or `byte[]`. Overloads: `(data)`, `(data, offset)`, `(data, offset, length)`, `(data, offset, length, bigEndian)`.
+
+- `parseBytesToInt(data, ...)` -- up to 4 bytes to signed int
+- `parseBytesToLong(data, ...)` -- up to 8 bytes to signed long
+- `parseBytesToFloat(data, ...)` -- 4 bytes as IEEE 754 float
+- `parseBytesIntToFloat(data, ...)` -- bytes as integer, cast to float
+- `parseBytesToDouble(data, ...)` -- 8 bytes as IEEE 754 double
+- `parseBytesLongToDouble(data, ...)` -- bytes as long, cast to double
+
+```java
+var val = parseBytesToInt([0x00, 0x0A], 0, 2, true);    // 10
+var temp = parseBytesToFloat([0x41, 0x20, 0x00, 0x00]);  // 10.0
+```
+
+### Hex/Binary Generation
+
+Optional params: `bigEndian` (default true), `pref` (add "0x" prefix), `len` (output length).
+
+- `intToHex(int, [bigEndian], [pref], [len])` -- int to hex string
+- `longToHex(long, [bigEndian], [pref], [len])` -- long to hex string
+- `floatToHex(float, [bigEndian])` -- float to IEEE 754 hex (always prefixed "0x")
+- `doubleToHex(double, [bigEndian])` -- double to IEEE 754 hex (always prefixed "0x")
+- `intLongToRadixString(long, [radix], [bigEndian], [pref])` -- to string in radix 2/8/10/16
+
+### Byte Array Utilities
+
+- `hexToBytes(hex)` -> `List<Byte>` | `hexToBytesArray(hex)` -> `byte[]`
+- `bytesToHex(bytes)` -- byte array or list to hex string
+- `base64ToHex(base64)` / `hexToBase64(hex)` -- convert between base64 and hex
+- `base64ToBytes(base64)` -> `byte[]` | `base64ToBytesList(base64)` -> `List<Byte>`
+- `bytesToBase64(bytes)` -- byte array to base64 string
+- `stringToBytes(str, [charset])` -> `List<Byte>` | `bytesToString(byteList, [charset])` -> `String`
+- `decodeToJson(byteList)` / `decodeToJson(str)` -- parse bytes or string to JSON object
+- `printUnsignedBytes(byteList)` -> `List<Integer>` -- signed bytes to unsigned (0-255)
+
+### Binary Array Functions
+
+- `parseByteToBinaryArray(byte, [len], [bigEndian])` -- single byte to array of 0/1 values
+- `parseBytesToBinaryArray(data, [len])` -- byte list/array to binary array
+- `parseLongToBinaryArray(long, [len])` -- long to binary array (default 64-bit)
+- `parseBinaryArrayToInt(data, [offset], [len])` -- binary array back to integer
+
+```java
+var bits = parseByteToBinaryArray(0xA5);       // [1,0,1,0,0,1,0,1]
+var nibble = parseBinaryArrayToInt(bits, 2, 4); // bits[2..5] => 8
+```
+
+### Base Validation
+
+Returns the radix on success, -1 on failure.
+
+- `isBinary(str)` -> 2 or -1 | `isOctal(str)` -> 8 or -1
+- `isDecimal(str)` -> 10 or -1 | `isHexadecimal(str)` -> 16 or -1
+
+### Geofencing
+
+- `isInsidePolygon(lat, lng, polygonJson)` -> boolean
+- `isInsideCircle(lat, lng, circleJson)` -> boolean
+
+`circleJson`: `{"latitude":51.5,"longitude":-0.1,"radius":500,"radiusUnit":"METER"}`. Units: `METER`, `KILOMETER`, `FOOT`, `MILE`, `NAUTICAL_MILE`.
+
+### URI Functions
+
+- `encodeURI(str)` -- encode string for URI use (MDN-compatible)
+- `decodeURI(str)` -- decode a URI-encoded string
+
+### Type Check and Utility Functions
+
+- `isMap(obj)` / `isList(obj)` / `isArray(obj)` / `isSet(obj)` -- type checks (boolean)
+- `isNaN(double)` -- true if Not-a-Number
+- `toFixed(double, precision)` -- round to N decimal places
+- `toInt(double)` -- round to nearest integer
+- `toFlatMap(json, [excludeList], [pathInKey])` -- flatten nested JSON to dot-notation map
+- `raiseError(message)` -- throw RuntimeException
+- `newSet()` / `toSet(list)` -- create empty Set or convert List to Set
+- `padStart(str, targetLen, padChar)` / `padEnd(str, targetLen, padChar)` -- pad strings
+- `btoa(str)` / `atob(str)` -- base64 encode/decode (registered but unreliable, prefer `bytesToBase64`)
+
+### TbDate Class
+
+Create with `new TbDate(...)`. Provides JavaScript-like Date functionality.
+
+**Constructors:** `TbDate()` (now) | `TbDate(millis)` | `TbDate(dateString, [pattern], [locale], [zoneId])` | `TbDate(y, m, d, [h], [min], [sec], [ms], [tz])`
+
+**Getters (local tz):** `getTime()`, `valueOf()`, `getFullYear()`, `getMonth()` (1-12), `getDate()`, `getDay()` (Mon=1), `getHours()`, `getMinutes()`, `getSeconds()`, `getMilliseconds()`
+
+**UTC variants:** `getUTCFullYear()`, `getUTCMonth()`, `getUTCDate()`, `getUTCDay()`, `getUTCHours()`, `getUTCMinutes()`, `getUTCSeconds()`, `getUTCMilliseconds()` + matching `setUTC*()` methods.
+
+**Setters (local tz):** `setFullYear(y,[m],[d])`, `setMonth(m,[d])`, `setDate(d)`, `setHours(h,[min],[sec],[ms])`, `setMinutes(min,[sec],[ms])`, `setSeconds(sec,[ms])`, `setMilliseconds(ms)`, `setTime(millis)`
+
+**Arithmetic (mutating):** `addYears(n)`, `addMonths(n)`, `addWeeks(n)`, `addDays(n)`, `addHours(n)`, `addMinutes(n)`, `addSeconds(n)`, `addNanos(n)`
+
+**Formatting:** `toISOString()`, `toJSON()`, `toString([locale])`, `toDateString()`, `toTimeString()`, `toUTCString()`, `toLocaleDateString([locale],[options])`, `toLocaleTimeString([locale],[options])`, `toLocaleString([locale],[options])`
+
+**Static:** `TbDate.now()` -> long | `TbDate.parse(str,[format])` -> long (-1 on failure) | `TbDate.UTC(y,[m],[d],[h],[min],[sec],[ms])` -> long
+
+```java
+var now = new TbDate();
+var eventTime = new TbDate(msg.timestamp);
+msg.ageMinutes = parseFloat(((now.getTime() - eventTime.getTime()) / 60000.0).toFixed(1));
+```
+
+### JSON Functions (TbJson)
+
+- `JSON.stringify(obj)` -- serialize to JSON string (null returns "null")
+- `JSON.parse(str)` -- parse JSON string to Map, List, or primitive

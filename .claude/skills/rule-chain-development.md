@@ -1,3 +1,5 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: @RuleNode classes in rule-engine-components, ThingsBoard official docs -->
 # Rule Chain Development Reference
 
 Practical reference for building and modifying ThingsBoard rule chains via the REST API. Covers node types, connection patterns, TBEL scripting, and the metadata API.
@@ -16,357 +18,286 @@ POST ${TB_HOST}/api/ruleChain/metadata
 
 ```json
 {
-  "ruleChainId": {
-    "entityType": "RULE_CHAIN",
-    "id": "${RULE_CHAIN_ID}"
-  },
+  "ruleChainId": { "entityType": "RULE_CHAIN", "id": "${RULE_CHAIN_ID}" },
   "firstNodeIndex": 0,
   "nodes": [
     {
       "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
       "name": "Message Type Switch",
-      "debugMode": false,
-      "singletonMode": false,
-      "queueName": null,
-      "configurationVersion": 0,
+      "debugMode": false, "singletonMode": false,
+      "queueName": null, "configurationVersion": 0,
       "configuration": {}
     }
   ],
   "connections": [
-    {
-      "fromIndex": 0,
-      "toIndex": 1,
-      "type": "Post telemetry"
-    }
+    { "fromIndex": 0, "toIndex": 1, "type": "Post telemetry" }
   ],
   "ruleChainConnections": null
 }
 ```
 
-### GET Metadata
+### GET/POST/Create
 
-```
-GET ${TB_HOST}/api/ruleChain/${RULE_CHAIN_ID}/metadata
-```
+- **GET metadata**: `GET ${TB_HOST}/api/ruleChain/${RULE_CHAIN_ID}/metadata`
+- **Save metadata**: `POST ${TB_HOST}/api/ruleChain/metadata` (body as above)
+- **Create rule chain**: `POST ${TB_HOST}/api/ruleChain` with body: `{"name":"My Chain","type":"CORE","debugMode":false,"root":false,"configuration":{"description":""}}`
 
-Returns the same structure. Use this to read, modify, and POST back.
+Returns the created rule chain with ID. Then POST metadata separately.
 
-### Create a New Rule Chain
+## Complete Node Catalog
 
-```
-POST ${TB_HOST}/api/ruleChain
-```
+Base package: `org.thingsboard.rule.engine`
 
-Body:
+#### Filter Nodes (ComponentType.FILTER)
 
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| message type switch | TbMsgTypeSwitchNode | filter | Routes messages by type (Post telemetry, Post attributes, RPC, etc.) |
+| message type filter | TbMsgTypeFilterNode | filter | Filters by message type; outputs True/False |
+| script (filter) | TbJsFilterNode | filter | TBEL/JS boolean filter; outputs True/False |
+| switch | TbJsSwitchNode | filter | TBEL/JS returns array of connection names for routing |
+| entity type switch | TbOriginatorTypeSwitchNode | filter | Routes by originator entity type (Device, Asset, etc.) |
+| entity type filter | TbOriginatorTypeFilterNode | filter | Filters by originator entity type; outputs True/False |
+| device profile switch | TbDeviceTypeSwitchNode | filter | Routes by device profile name |
+| asset profile switch | TbAssetTypeSwitchNode | filter | Routes by asset profile name |
+| check relation presence | TbCheckRelationNode | filter | Checks relation exists between originator and entity; True/False |
+| check fields presence | TbCheckMessageNode | filter | Checks specified fields exist in message/metadata; True/False |
+| alarm status filter | TbCheckAlarmStatusNode | filter | Checks alarm status matches configured values; True/False |
+| gps geofencing filter | TbGpsGeofencingFilterNode | geo | Checks lat/lng against geofence perimeter; True/False |
+
+#### Enrichment Nodes (ComponentType.ENRICHMENT)
+
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| originator attributes | TbGetAttributesNode | metadata | Adds originator attributes/latest telemetry to msg or metadata |
+| originator telemetry | TbGetTelemetryNode | metadata | Adds originator telemetry for time range to msg or metadata |
+| originator fields | TbGetOriginatorFieldsNode | metadata | Adds originator entity fields (name, label, etc.) to msg/metadata |
+| related entity data | TbGetRelatedAttributeNode | metadata | Adds related entity attributes/telemetry via relation query |
+| related device attributes | TbGetDeviceAttrNode | metadata | Adds related device attributes/telemetry via relation query |
+| tenant attributes | TbGetTenantAttributeNode | metadata | Adds tenant attributes or latest telemetry |
+| tenant details | TbGetTenantDetailsNode | metadata | Adds tenant contact info (email, phone, address) |
+| customer attributes | TbGetCustomerAttributeNode | metadata | Adds customer attributes or latest telemetry |
+| customer details | TbGetCustomerDetailsNode | metadata | Adds customer contact info (email, phone, address) |
+| fetch device credentials | TbFetchDeviceCredentialsNode | metadata | Adds credentialsType and credentials to msg/metadata |
+| calculate delta | CalculateDeltaNode | metadata | Calculates delta between current and previous ts reading |
+
+#### Transformation Nodes (ComponentType.TRANSFORMATION)
+
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| script (transform) | TbTransformMsgNode | transform | TBEL/JS transform of msg, metadata, msgType |
+| change originator | TbChangeOriginatorNode | transform | Changes originator to Tenant/Customer/Related/AlarmOriginator |
+| rename keys | TbRenameKeysNode | transform | Renames keys in message or metadata |
+| delete key-value pairs | TbDeleteKeysNode | transform | Deletes keys from message or metadata |
+| copy key-value pairs | TbCopyKeysNode | transform | Copies keys between message and metadata |
+| to email | TbMsgToEmailNode | mail | Transforms message to SEND_EMAIL type for send email node |
+| split array msg | TbSplitArrayMsgNode | transform | Splits JSON array into individual messages |
+| json path | TbJsonPathNode | transform | Transforms message body using JSONPath expression |
+| deduplication | TbMsgDeduplicationNode | deduplication | Deduplicates messages per originator (FIRST/LAST/ALL strategy) |
+
+#### Action Nodes (ComponentType.ACTION)
+
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| save time series | TbMsgTimeseriesNode | telemetry | Saves message data as time-series with configurable TTL |
+| save attributes | TbMsgAttributesNode | telemetry | Saves attributes with configurable scope |
+| delete attributes | TbMsgDeleteAttributesNode | telemetry | Deletes specified attributes from originator |
+| calculated fields and alarm rules | TbCalculatedFieldsNode | telemetry | Pushes to calculated fields/alarm rules without persisting |
+| create alarm | TbCreateAlarmNode | action | Creates or updates alarm; outputs Created/Updated/False |
+| clear alarm | TbClearAlarmNode | action | Clears existing alarm; outputs Cleared/False |
+| log | TbLogNode | action | Logs message via TBEL/JS to rule engine console |
+| rpc call request | TbSendRPCRequestNode | rpc | Sends RPC to device (expects method + params) |
+| rpc call reply | TbSendRPCReplyNode | rpc | Sends reply to device RPC request |
+| rest call reply | TbSendRestApiCallReplyNode | rest | Sends reply to REST API call to rule engine |
+| create relation | TbCreateRelationNode | action | Creates relation between originator and target entity |
+| delete relation | TbDeleteRelationNode | action | Deletes relation from originator |
+| assign to customer | TbAssignToCustomerNode | action | Assigns originator entity to customer by title |
+| unassign from customer | TbUnassignFromCustomerNode | action | Unassigns originator entity from customer |
+| device profile (deprecated) | TbDeviceProfileNode | profile | Evaluates alarm rules from device profile |
+| device state | TbDeviceStateNode | action | Triggers device connectivity events |
+| message count | TbMsgCountNode | action | Counts messages per interval, outputs as telemetry |
+| copy to view | TbCopyAttributesToEntityViewNode | action | Copies attributes from device/asset to entity view |
+| save to custom table | TbSaveToCustomCassandraTableNode | action | Saves to Cassandra custom table (cs_tb_ prefix) |
+| gps geofencing events | TbGpsGeofencingActionNode | geo | GPS geofence with Entered/Left/Inside/Outside events |
+| math function | TbMathNode | math | Applies math operations (ADD, SUB, SIN, COS, CUSTOM expr) |
+| generator | TbMsgGeneratorNode | debug | Periodically generates test messages via TBEL/JS |
+| delay (deprecated) | TbMsgDelayNode | delay | Delays messages for configurable period |
+| push to edge | TbMsgPushToEdgeNode | edge | Pushes messages from cloud to edge |
+| push to cloud | TbMsgPushToCloudNode | edge | Pushes messages from edge to cloud |
+
+#### External Nodes (ComponentType.EXTERNAL)
+
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| rest api call | TbRestApiCallNode | rest | Calls external REST API (GET/POST/PUT/DELETE) |
+| send email | TbSendEmailNode | mail | Sends email via SMTP (expects SEND_EMAIL msg type) |
+| send sms | TbSendSmsNode | sms | Sends SMS via configured provider |
+| mqtt | TbMqttNode | mqtt | Publishes to external MQTT broker |
+| kafka | TbKafkaNode | kafka | Publishes to Kafka topic |
+| rabbitmq | TbRabbitMqNode | rabbitmq | Publishes to RabbitMQ queue |
+| aws sns | TbSnsNode | aws.sns | Publishes to AWS SNS topic |
+| aws sqs | TbSqsNode | aws.sqs | Publishes to AWS SQS queue |
+| aws lambda | TbAwsLambdaNode | aws.lambda | Invokes AWS Lambda function |
+| azure iot hub | TbAzureIotHubNode | mqtt.azure | Publishes to Azure IoT Hub via MQTT |
+| gcp pubsub | TbPubSubNode | gcp.pubsub | Publishes to Google Cloud Pub/Sub topic |
+| send notification | TbNotificationNode | notification | Sends notification via configured template and targets |
+| send to slack | TbSlackNode | notification | Sends message to Slack channel or user |
+| AI request | TbAiNode | ai | Sends request to AI/LLM model with system+user prompts |
+
+#### Flow Nodes (ComponentType.FLOW)
+
+| Node Name | Class | Package | Description |
+|-----------|-------|---------|-------------|
+| rule chain | TbRuleChainInputNode | flow | Transfers message to another rule chain |
+| output | TbRuleChainOutputNode | flow | Returns message to caller rule chain |
+| acknowledge | TbAckNode | flow | Acknowledges message from queue |
+| checkpoint | TbCheckpointNode | flow | Transfers message to another queue |
+
+**Total: 75 nodes listed** (2 deprecated in table: device profile, delay; 2 more deprecated not listed: synchronization start/end)
+
+## Key Node Configuration Details
+
+### TbGetAttributesNode (originator attributes)
 ```json
-{
-  "name": "My Rule Chain",
-  "type": "CORE",
-  "debugMode": false,
-  "root": false,
-  "configuration": {"description": ""}
-}
+{ "fetchTo": "METADATA", "clientAttributeNames": ["key1"],
+  "serverAttributeNames": ["key2"], "sharedAttributeNames": ["key3"],
+  "latestTsKeyNames": ["temp"], "getLatestValueWithTs": false, "tellFailureIfAbsent": true }
 ```
+`fetchTo`: METADATA (default) or DATA. Attribute values added with scope prefix (e.g., `cs_key1`, `ss_key2`, `shared_key3`).
 
-Returns the created rule chain with its ID. Then POST metadata separately.
-
-## Node Types Reference
-
-### Core Nodes
-
-| Node | Java Class | configurationVersion | Purpose |
-|------|-----------|---------------------|---------|
-| Message Type Switch | `TbMsgTypeSwitchNode` | 0 | Routes messages by type |
-| Transform (TBEL) | `TbTransformMsgNode` | 0 | Transform message payload/metadata |
-| Save Timeseries | `TbMsgTimeseriesNode` | 0 | Save message data as time-series |
-| Save Attributes | `TbMsgAttributesNode` | 0 | Save attributes (client/server/shared) |
-| Device Profile | `TbDeviceProfileNode` | 0 | Evaluate alarm rules from device profile |
-| External MQTT | `TbMqttNode` | 2 | Publish to external MQTT broker |
-| Log | `TbLogNode` | 0 | Log message to rule engine console |
-| REST API Call | `TbRestApiCallNode` | 0 | Call external REST API |
-| Create Alarm | `TbCreateAlarmNode` | 1 | Create or update alarm |
-| Clear Alarm | `TbClearAlarmNode` | 0 | Clear existing alarm |
-| RPC Call Request | `TbSendRPCRequestNode` | 0 | Send RPC to device |
-
-### Full Java Class Paths
-
-```
-org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode
-org.thingsboard.rule.engine.transform.TbTransformMsgNode
-org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode
-org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode
-org.thingsboard.rule.engine.profile.TbDeviceProfileNode
-org.thingsboard.rule.engine.mqtt.TbMqttNode
-org.thingsboard.rule.engine.action.TbLogNode
-org.thingsboard.rule.engine.rest.TbRestApiCallNode
-org.thingsboard.rule.engine.action.TbCreateAlarmNode
-org.thingsboard.rule.engine.action.TbClearAlarmNode
-org.thingsboard.rule.engine.rpc.TbSendRPCRequestNode
-```
-
-## Node Configuration Details
-
-### Message Type Switch
-
+### TbGetTelemetryNode (originator telemetry)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
-  "name": "Message Type Switch",
-  "configuration": {},
-  "configurationVersion": 0
-}
+{ "latestTsKeyNames": ["temp","humidity"], "fetchMode": "FIRST",
+  "orderBy": "ASC", "aggregation": "NONE", "limit": 1000,
+  "startInterval": 2, "startIntervalTimeUnit": "MINUTES",
+  "endInterval": 1, "endIntervalTimeUnit": "MINUTES" }
 ```
+`fetchMode`: FIRST, LAST, or ALL. `aggregation`: NONE, MIN, MAX, AVG, SUM, COUNT. Max fetch size: 1000.
 
-No configuration needed. Routes messages by their type.
-
-### Transform (TBEL)
-
+### TbChangeOriginatorNode (change originator)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-  "name": "Energy Calculator",
-  "configuration": {
-    "scriptLang": "TBEL",
-    "tbelScript": "msg.power_watts = msg.supply_voltage * msg.light_src_current / 1000.0;\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
-    "jsScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
-  },
-  "configurationVersion": 0
-}
+{ "originatorSource": "RELATED", "relationsQuery": {
+    "direction": "FROM", "maxLevel": 1, "relationType": "Contains",
+    "entityTypes": ["ASSET"], "fetchLastLevelOnly": false } }
 ```
+`originatorSource`: CUSTOMER, TENANT, RELATED, ALARM_ORIGINATOR, or ENTITY (by name pattern).
 
-- `scriptLang`: `"TBEL"` or `"JS"`
-- `tbelScript`: TBEL script body (used when scriptLang is TBEL)
-- `jsScript`: JS script body (used when scriptLang is JS)
-- MUST always return `{msg, metadata, msgType}` object
-- See TBEL Scripting section below for gotchas
-
-### Save Timeseries
-
+### TbMsgTimeseriesNode (save time series)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
-  "name": "Save Timeseries",
-  "configuration": {
-    "defaultTTL": 0
-  },
-  "configurationVersion": 0
-}
+{ "defaultTTL": 0, "useServerTs": false,
+  "processingSettings": { "type": "ON_EVERY_MESSAGE" } }
 ```
+`processingSettings.type`: ON_EVERY_MESSAGE (default), DEDUPLICATE, or WEBSOCKET_ONLY.
 
-- `defaultTTL`: time-to-live in seconds (0 = no expiry)
-- Saves all keys in message body as time-series data
-
-### Save Attributes
-
+### TbMsgAttributesNode (save attributes)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
-  "name": "Save Server Attributes",
-  "configuration": {
-    "scope": "SERVER_SCOPE",
-    "notifyDevice": false,
-    "sendAttributesUpdatedNotification": false,
-    "updateAttributesOnlyOnValueChange": false
-  },
-  "configurationVersion": 0
-}
+{ "scope": "SERVER_SCOPE", "notifyDevice": false,
+  "sendAttributesUpdatedNotification": false,
+  "updateAttributesOnlyOnValueChange": false }
 ```
+`scope`: CLIENT_SCOPE, SERVER_SCOPE, or SHARED_SCOPE. Set `notifyDevice: true` to push shared attributes to device.
 
-- `scope`: `"CLIENT_SCOPE"`, `"SERVER_SCOPE"`, or `"SHARED_SCOPE"`
-- `notifyDevice`: if true, notifies device of shared attribute change
-- Message body keys become attribute keys
-
-### Device Profile Node
-
+### CalculateDeltaNode (calculate delta)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.profile.TbDeviceProfileNode",
-  "name": "Device Profile",
-  "configuration": {
-    "persistAlarmRulesState": false,
-    "fetchAlarmRulesStateOnStart": false
-  },
-  "configurationVersion": 0
-}
+{ "inputValueKey": "pulseCounter", "outputValueKey": "delta",
+  "useCache": true, "addPeriodBetweenMsgs": false,
+  "periodValueKey": "periodInMs", "round": null,
+  "tellFailureIfDeltaIsNegative": true, "excludeZeroDeltas": false }
 ```
+Useful for metering/consumption. Outputs: Success, Failure, Other (first message with no previous value).
 
-**CRITICAL**: Alarm rules defined in a device profile are ONLY evaluated when telemetry passes through this node. Without a `TbDeviceProfileNode` in the rule chain, alarms are completely ignored.
-
-Output connections:
-- `"Success"` -- telemetry processed, no alarm state change
-- `"Alarm Created"` -- new alarm was created
-- `"Alarm Updated"` -- existing alarm severity/details changed
-- `"Alarm Severity Updated"` -- alarm severity specifically changed
-- `"Alarm Cleared"` -- alarm condition no longer met
-
-### External MQTT Node (TbMqttNode)
-
+### TbCreateRelationNode (create relation)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.mqtt.TbMqttNode",
-  "name": "TTN MQTT Publish",
-  "configuration": {
-    "topicPattern": "v3/${APP_ID}/devices/${deviceName}/down/push",
-    "host": "${TTN_MQTT_HOST}",
-    "port": 8883,
-    "connectTimeoutSec": 10,
-    "clientId": null,
-    "cleanSession": true,
-    "ssl": true,
-    "retainedMessage": false,
-    "parseToPlainText": false,
-    "protocolVersion": "MQTT_3_1_1",
-    "credentials": {
-      "type": "basic",
-      "username": "${TTN_MQTT_USER}",
-      "password": "${TTN_MQTT_PASS}"
-    }
-  },
-  "singletonMode": true,
-  "configurationVersion": 2
-}
+{ "direction": "FROM", "relationType": "Contains",
+  "entityType": "ASSET", "entityNamePattern": "${assetName}",
+  "entityCacheExpiration": 300, "createEntityIfNotExists": false }
 ```
 
-Key details:
-- `configurationVersion`: MUST be `2` for TB 4.x
-- `singletonMode`: `true` -- only one MQTT connection per rule engine instance
-- `clientId`: `null` -- let broker assign (avoids collision with other clients)
-- `protocolVersion`: `"MQTT_3_1_1"` -- must match root chain pattern
-- `${deviceName}` in topic: dynamically replaced from message metadata
-- `ssl: true` with `port: 8883` for TLS connections
-
-### Log Node
-
+### TbSendEmailNode (send email)
 ```json
-{
-  "type": "org.thingsboard.rule.engine.action.TbLogNode",
-  "name": "Log Other",
-  "configuration": {
-    "scriptLang": "TBEL",
-    "tbelScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nMetadata: ' + JSON.stringify(metadata);",
-    "jsScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nMetadata: ' + JSON.stringify(metadata);"
-  },
-  "configurationVersion": 0
-}
+{ "useSystemSmtpSettings": true, "smtpHost": "${SMTP_HOST}",
+  "smtpPort": 587, "username": "${SMTP_USER}", "password": "${SMTP_PASS}" }
 ```
+Requires SEND_EMAIL message type. Chain `to email` node before this node.
+
+### TbMqttNode (external MQTT)
+```json
+{ "topicPattern": "devices/${deviceName}/telemetry",
+  "host": "${MQTT_HOST}", "port": 8883, "connectTimeoutSec": 10,
+  "clientId": null, "cleanSession": true, "ssl": true,
+  "retainedMessage": false, "parseToPlainText": false,
+  "protocolVersion": "MQTT_3_1_1",
+  "credentials": { "type": "basic", "username": "${MQTT_USER}", "password": "${MQTT_PASS}" } }
+```
+`configurationVersion`: **must be 2** for TB 4.x. Use `singletonMode: true` for single connection.
 
 ## Connection Types
 
 ### From Message Type Switch
 
-These are the output labels from the Message Type Switch node:
-
-| Label | Message Type | Trigger |
-|-------|-------------|---------|
-| `Post telemetry` | POST_TELEMETRY_REQUEST | Device sends telemetry |
-| `Post attributes` | POST_ATTRIBUTES_REQUEST | Device sends client attributes |
-| `RPC Request to Device` | RPC_CALL_FROM_SERVER_TO_DEVICE | Server-to-device RPC |
-| `RPC Request from Device` | RPC_CALL_FROM_DEVICE_TO_SERVER | Device-to-server RPC |
-| `Attributes Updated` | ATTRIBUTES_UPDATED | Attribute change notification |
-| `Activity Event` | ACTIVITY_EVENT | Device activity/inactivity |
-| `Inactivity Event` | INACTIVITY_EVENT | Device inactivity |
-| `Connect Event` | CONNECT_EVENT | Device connected |
-| `Disconnect Event` | DISCONNECT_EVENT | Device disconnected |
-| `Entity Created` | ENTITY_CREATED | New entity created |
-| `Entity Updated` | ENTITY_UPDATED | Entity modified |
-| `Entity Deleted` | ENTITY_DELETED | Entity removed |
-| `Other` | (everything else) | Catch-all |
+| Label | Trigger |
+|-------|---------|
+| `Post telemetry` | Device sends telemetry |
+| `Post attributes` | Device sends client attributes |
+| `RPC Request to Device` | Server-to-device RPC |
+| `RPC Request from Device` | Device-to-server RPC |
+| `Attributes Updated` | Attribute change notification |
+| `Activity Event` / `Inactivity Event` | Device activity state |
+| `Connect Event` / `Disconnect Event` | Device connection state |
+| `Entity Created` / `Entity Updated` / `Entity Deleted` | Entity lifecycle |
+| `Other` | Catch-all for custom types |
 
 ### General Connection Types
 
 | Type | Description |
 |------|-------------|
-| `Success` | Node processed successfully |
-| `Failure` | Node processing failed |
+| `Success` / `Failure` | Standard node output |
 | `True` / `False` | Filter node output |
-| `Alarm Created` | Device Profile node: new alarm |
-| `Alarm Updated` | Device Profile node: alarm updated |
-| `Alarm Severity Updated` | Device Profile node: severity changed |
-| `Alarm Cleared` | Device Profile node: alarm cleared |
+| `Alarm Created` / `Updated` / `Severity Updated` / `Cleared` | Device Profile node |
+| `Created` / `Updated` / `False` | Create Alarm node |
+| `Cleared` / `False` | Clear Alarm node |
+| `Entered` / `Left` / `Inside` / `Outside` | GPS Geofencing Events node |
 
 ## Common Rule Chain Patterns
 
 ### Pattern 1: Telemetry with Calculated Fields
-
 ```
 [0] Message Type Switch
-  --"Post telemetry"--> [1] Transform (calculate power_watts, energy)
+  --"Post telemetry"--> [1] Transform (calculate power_watts)
     --"Success"--> [2] Save Timeseries
 ```
-
-TBEL for energy calculation:
-
-```
-msg.power_watts = msg.supply_voltage * msg.light_src_current / 1000.0;
-msg.energy_wh_increment = msg.power_watts * (msg.operating_time / 3600.0);
-return {msg: msg, metadata: metadata, msgType: msgType};
-```
+TBEL: `msg.power_watts = msg.supply_voltage * msg.light_src_current / 1000.0; return {msg: msg, metadata: metadata, msgType: msgType};`
 
 ### Pattern 2: RPC to External MQTT (Downlink)
-
 ```
 [0] Message Type Switch
-  --"RPC Request to Device"--> [5] Transform (encode DALI command)
-    --"Success"--> [6] External MQTT (publish to TTN)
-```
-
-TBEL for DALI dimming:
-
-```
-var dimValue = msg.params;
-var base64Payload = bytesToBase64([0x84, 0x01, dimValue]);
-var downlink = new JSON();
-downlink.downlinks = [{f_port: 8, frm_payload: base64Payload, priority: "NORMAL"}];
-return {msg: downlink, metadata: metadata, msgType: msgType};
+  --"RPC Request to Device"--> [5] Transform (encode payload)
+    --"Success"--> [6] External MQTT
 ```
 
 ### Pattern 3: Alarm Evaluation Pipeline
-
 ```
 [0] Message Type Switch
   --"Post telemetry"--> [4] Device Profile Node
     --"Success"--> [2] Save Timeseries
     --"Alarm Created"--> [10] Notification Handler
-    --"Alarm Cleared"--> [10] Notification Handler
 ```
 
-### Pattern 4: Server Attribute from RPC
-
-```
-[0] Message Type Switch
-  --"RPC Request to Device"--> [7] Transform (extract dim level)
-    --"Success"--> [8] Save Attributes (SERVER_SCOPE)
-```
-
-TBEL to extract RPC param as attribute:
-
-```
-var newMsg = new JSON();
-newMsg.dimLevel = msg.params;
-return {msg: newMsg, metadata: metadata, msgType: msgType};
-```
-
-### Pattern 5: Parallel Processing
-
-Multiple connections from the same node output run IN PARALLEL.
-
+### Pattern 4: Parallel Processing
+Multiple connections from the same output run **in parallel**:
 ```
 [0] Message Type Switch
-  --"Post telemetry"--> [1] Energy Calculator     (runs in parallel)
-  --"Post telemetry"--> [4] Device Profile Node   (runs in parallel)
+  --"Post telemetry"--> [1] Energy Calculator     (parallel)
+  --"Post telemetry"--> [4] Device Profile Node   (parallel)
 ```
 
-Both [1] and [4] receive the same message simultaneously.
-
-Similarly for RPC:
+### Pattern 5: Enrichment Before Transform
 ```
 [0] Message Type Switch
-  --"RPC Request to Device"--> [5] Dim Downlink (encode + MQTT)  (parallel)
-  --"RPC Request to Device"--> [7] Save Dim Level (attribute)    (parallel)
+  --"Post telemetry"--> [1] Originator Attributes (fetch threshold)
+    --"Success"--> [2] Script Filter (compare value vs threshold)
+      --"True"--> [3] Create Alarm
 ```
-
-This is how one RPC request can simultaneously send a DALI command AND save the dim level.
 
 ## TBEL Scripting Guide
 
@@ -379,199 +310,88 @@ This is how one RPC request can simultaneously send a DALI command AND save the 
 | `msgType` | Message type string |
 
 ### Return Format
-
-Transform nodes MUST return:
-
-```
-return {msg: msg, metadata: metadata, msgType: msgType};
-```
-
-Or with a new message:
-
-```
-var newMsg = new JSON();
-newMsg.key = "value";
-return {msg: newMsg, metadata: metadata, msgType: msgType};
-```
+Transform nodes: `return {msg: msg, metadata: metadata, msgType: msgType};`
+Filter nodes: `return msg.temperature > 50;` (boolean)
+Switch nodes: `return ['High', 'Critical'];` (array of connection names)
 
 ### TBEL Built-in Functions
 
 | Function | Description |
 |----------|-------------|
-| `bytesToBase64(byteArray)` | Convert byte array to base64 string |
-| `JSON.stringify(obj)` | Serialize object to JSON string |
-| `JSON.parse(str)` | Parse JSON string to object |
-| `parseInt(str)` | Parse integer |
-| `parseFloat(str)` | Parse float |
-| `Math.round(n)` | Round number |
-| `Math.abs(n)` | Absolute value |
+| `bytesToBase64(byteArray)` | Convert byte array to base64 |
+| `JSON.stringify(obj)` / `JSON.parse(str)` | JSON serialize/parse |
+| `parseInt(str)` / `parseFloat(str)` | Parse numbers |
+| `Math.round(n)` / `Math.abs(n)` | Math functions |
 | `new JSON()` | Create empty JSON object |
 
 ### TBEL Gotchas (Critical)
 
-1. **No regex**: `/pattern/g` syntax causes "unterminated string literal". Use string comparison (`== "value"`) instead.
-
-2. **var + if-block scope bug**: Variables assigned inside an if-block do NOT retain their value outside:
-   ```
-   var x = 0;
-   if (cond) { x = 5; }   // x is STILL 0 after this block
-   ```
-   **Workaround**: Assign directly to `msg.field`:
-   ```
-   msg.result = 0;
-   if (cond) { msg.result = 5; }   // msg.result is correctly 5
-   ```
-
-3. **Ternary with var also unreliable**: `var x = (cond) ? val1 : val2;` may not evaluate correctly.
-   **Workaround**: Use `msg.result = (cond) ? val1 : val2;`
-
-4. **No reflection**: `getClass().getName()` is blocked by the TBEL sandbox.
-
-5. **Actor caching on compile failure**: If a TBEL script fails to compile, the actor gets stuck with exponential backoff. Fix the script, then restart ThingsBoard (`docker restart signconnect`) to clear the actor cache.
-
-6. **Safe pattern**: Always work directly on `msg` fields:
+1. **No regex**: `/pattern/g` causes "unterminated string literal". Use `==` instead.
+2. **var + if-block scope bug**: Variables assigned in if-block lose value outside. **Workaround**: assign to `msg.field` directly.
+3. **Ternary with var unreliable**: Use `msg.result = (cond) ? val1 : val2;` instead.
+4. **No reflection**: `getClass().getName()` blocked by sandbox.
+5. **Actor caching on compile failure**: Fix script, then `docker restart signconnect` to clear cache.
+6. **Safe pattern**: Always work on `msg` fields directly:
    ```
    msg.power_watts = msg.supply_voltage * msg.light_src_current / 1000.0;
-   msg.energy_wh = msg.power_watts * msg.operating_time / 3600.0;
    return {msg: msg, metadata: metadata, msgType: msgType};
    ```
 
 ## Debug Mode
 
-Set `"debugMode": true` on individual nodes to see input/output in the Events tab.
-
-```json
-{
-  "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-  "name": "Energy Calculator",
-  "debugMode": true,
-  "configuration": { ... }
-}
-```
-
-View debug events via API:
-
+Set `"debugMode": true` on individual nodes. View events:
 ```
 GET ${TB_HOST}/api/events/RULE_NODE/${NODE_ID}/DEBUG_RULE_NODE?pageSize=10&page=0&sortOrder=DESC
 ```
+**Performance impact**: Stores every message in/out. Disable in production.
 
-**Performance impact**: Debug mode stores every message in/out. Disable in production.
+## Optimistic Locking & Node Index System
 
-## Optimistic Locking
-
-Rule chain metadata uses optimistic locking. The workflow:
-
-1. `GET /api/ruleChain/${RULE_CHAIN_ID}/metadata` -- get current state
-2. Modify nodes/connections as needed
-3. `POST /api/ruleChain/metadata` -- save changes
-4. If 409 Conflict: re-GET and retry
-
-The version field is on the rule chain entity itself, not the metadata.
-
-## Node Index System
-
-Nodes are referenced by their zero-based index in the `nodes` array. Connections use `fromIndex` and `toIndex`.
-
-**Important**: When adding/removing nodes, all connection indices must be recalculated. The safest approach is to rebuild the entire nodes array and connections array together.
-
-Example with 3 nodes:
-
-```json
-{
-  "nodes": [
-    {"name": "Message Type Switch", ...},
-    {"name": "Save Timeseries", ...},
-    {"name": "Log", ...}
-  ],
-  "connections": [
-    {"fromIndex": 0, "toIndex": 1, "type": "Post telemetry"},
-    {"fromIndex": 0, "toIndex": 2, "type": "Other"}
-  ],
-  "firstNodeIndex": 0
-}
-```
-
-`firstNodeIndex`: which node receives messages entering the rule chain (usually 0 for Message Type Switch).
+1. `GET` metadata, modify, `POST` back. If 409 Conflict: re-GET and retry.
+2. Nodes referenced by zero-based index. Connections use `fromIndex`/`toIndex`.
+3. When adding/removing nodes, rebuild all indices. `firstNodeIndex` = entry point (usually 0).
 
 ## Rule Chain Assignment
 
 ### Assign to Device Profile
-
-A device profile specifies which rule chain its devices use:
-
 ```json
-{
-  "name": "My Profile",
-  "type": "DEFAULT",
-  "defaultRuleChainId": {
-    "entityType": "RULE_CHAIN",
-    "id": "${RULE_CHAIN_ID}"
-  }
-}
+{ "name": "My Profile", "type": "DEFAULT",
+  "defaultRuleChainId": { "entityType": "RULE_CHAIN", "id": "${RULE_CHAIN_ID}" } }
 ```
-
-POST to `/api/deviceProfile`.
-
-### RPC Routing
-
-When a device has a custom profile with a custom rule chain, RPC messages are routed through THAT rule chain, not the root chain. This is critical for device-specific RPC handling.
+POST to `/api/deviceProfile`. RPC messages route through the profile's rule chain, not root.
 
 ## Complete Rule Chain Build Example (Python)
 
 ```python
-import requests
-import os
+import requests, os
 
 TB_URL = os.environ.get("TB_URL", "http://localhost:8080")
 
 def get_token():
     resp = requests.post(f"{TB_URL}/api/auth/login",
-                         json={"username": os.environ["TB_USERNAME"],
-                               "password": os.environ["TB_PASSWORD"]})
-    resp.raise_for_status()
+        json={"username": os.environ["TB_USERNAME"], "password": os.environ["TB_PASSWORD"]})
     return resp.json()["token"]
 
 def create_rule_chain(token, name):
-    headers = {"X-Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-    # Create rule chain
+    h = {"X-Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     rc = requests.post(f"{TB_URL}/api/ruleChain",
-                       json={"name": name, "type": "CORE", "debugMode": False, "root": False},
-                       headers=headers).json()
+        json={"name": name, "type": "CORE", "debugMode": False, "root": False}, headers=h).json()
     rc_id = rc["id"]["id"]
-
-    # Set metadata
     metadata = {
         "ruleChainId": {"entityType": "RULE_CHAIN", "id": rc_id},
         "firstNodeIndex": 0,
         "nodes": [
-            {
-                "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
-                "name": "Message Type Switch",
-                "debugMode": False,
-                "singletonMode": False,
-                "configurationVersion": 0,
-                "configuration": {}
-            },
-            {
-                "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
-                "name": "Save Timeseries",
-                "debugMode": False,
-                "singletonMode": False,
-                "configurationVersion": 0,
-                "configuration": {"defaultTTL": 0}
-            }
+            {"type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+             "name": "Message Type Switch", "debugMode": False,
+             "singletonMode": False, "configurationVersion": 0, "configuration": {}},
+            {"type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+             "name": "Save Timeseries", "debugMode": False,
+             "singletonMode": False, "configurationVersion": 0,
+             "configuration": {"defaultTTL": 0}}
         ],
-        "connections": [
-            {"fromIndex": 0, "toIndex": 1, "type": "Post telemetry"}
-        ],
+        "connections": [{"fromIndex": 0, "toIndex": 1, "type": "Post telemetry"}],
         "ruleChainConnections": None
     }
-
-    requests.post(f"{TB_URL}/api/ruleChain/metadata",
-                  json=metadata, headers=headers).raise_for_status()
-
+    requests.post(f"{TB_URL}/api/ruleChain/metadata", json=metadata, headers=h).raise_for_status()
     return rc_id
 ```
-
-Reference template: `/opt/thingsboard/.claude/templates/rule_chain_skeleton.json`

@@ -1,3 +1,6 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: Device profile source code, ThingsBoard docs -->
+
 # Device Profile and Alarm Configuration Guide
 
 Complete guide for creating and managing device profiles with alarm rules in ThingsBoard CE v4.4.0-SNAPSHOT.
@@ -59,31 +62,15 @@ A device profile defines:
 
 ---
 
-## API Endpoint
-
-### Create or Update Device Profile
+## API Endpoints
 
 ```
-POST ${TB_HOST}/api/deviceProfile
-X-Authorization: Bearer ${TB_TOKEN}
-Content-Type: application/json
+POST ${TB_HOST}/api/deviceProfile              # Create or update (include id+version for update)
+GET  ${TB_HOST}/api/deviceProfile/${PROFILE_ID} # Get by ID
+GET  ${TB_HOST}/api/deviceProfiles?pageSize=100&page=0  # List all
 ```
 
 **Same endpoint for both create and update.** For updates, include the `id` and `version` fields from the GET response (optimistic locking).
-
-### Get Device Profile
-
-```
-GET ${TB_HOST}/api/deviceProfile/${PROFILE_ID}
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### List Device Profiles
-
-```
-GET ${TB_HOST}/api/deviceProfiles?pageSize=100&page=0
-X-Authorization: Bearer ${TB_TOKEN}
-```
 
 ---
 
@@ -193,15 +180,7 @@ Each severity in `createRules` and the `clearRule` uses this format:
 #### Duration Spec
 
 ```json
-{
-  "type": "DURATION",
-  "unit": "MINUTES",
-  "predicate": {
-    "defaultValue": 5,
-    "userValue": null,
-    "dynamicValue": null
-  }
-}
+{"type": "DURATION", "unit": "MINUTES", "predicate": {"defaultValue": 5, "userValue": null, "dynamicValue": null}}
 ```
 
 Units: `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
@@ -209,15 +188,68 @@ Units: `SECONDS`, `MINUTES`, `HOURS`, `DAYS`
 #### Repeating Spec
 
 ```json
-{
-  "type": "REPEATING",
-  "predicate": {
-    "defaultValue": 3,
+{"type": "REPEATING", "predicate": {"defaultValue": 3, "userValue": null, "dynamicValue": null}}
+```
+
+Use `REPEATING` spec to require a condition be met N times before triggering. This is also useful for OR logic: define multiple `createRules` severity entries where each uses a different condition -- the first severity whose condition fires will create the alarm.
+
+---
+
+## Dynamic Thresholds
+
+Instead of hardcoding threshold values, use `dynamicValue` to read thresholds from device or tenant attributes. This allows per-device alarm customization without changing the profile.
+
+```json
+"predicate": {
+  "type": "NUMERIC",
+  "operation": "GREATER",
+  "value": {
+    "defaultValue": 70,
     "userValue": null,
-    "dynamicValue": null
+    "dynamicValue": {
+      "sourceType": "CURRENT_DEVICE",
+      "sourceAttribute": "temperatureThreshold",
+      "inherit": true
+    }
   }
 }
 ```
+
+- `sourceType`: `CURRENT_DEVICE` or `CURRENT_TENANT`
+- `sourceAttribute`: name of the server-side attribute holding the threshold
+- `inherit`: if `true` and the attribute is not found on the device, look up the hierarchy (customer, then tenant)
+- `defaultValue` is used as fallback when the attribute does not exist
+
+---
+
+## Schedule Config for Alarms
+
+The `schedule` field in each alarm rule severity controls when the alarm is active. Set to `null` for always-on.
+
+```json
+"schedule": {
+  "type": "SPECIFIC_TIME",
+  "timezone": "America/New_York",
+  "daysOfWeek": [1, 2, 3, 4, 5],
+  "startsOn": 32400000,
+  "endsOn": 64800000
+}
+```
+
+- **`ANY_TIME`** (or `null`): alarm is always active
+- **`SPECIFIC_TIME`**: active during specified hours/days. `startsOn`/`endsOn` are milliseconds from midnight (e.g., 32400000 = 9:00 AM, 64800000 = 6:00 PM). `daysOfWeek`: 1=Mon through 7=Sun.
+- **`CUSTOM`**: array of per-day time ranges with `enablingFilter`
+
+---
+
+## OR Logic in Alarm Conditions
+
+Multiple entries in the `condition` array use AND logic (all must be true). For OR logic, use separate severity levels or separate alarm rules:
+
+- **Separate alarm rules**: define two alarm rules with different `alarmType` values, each with its own condition
+- **Multiple severities**: use WARNING for condition A and CRITICAL for condition B -- whichever fires first creates the alarm at that severity
+
+For count-based OR, use `REPEATING` spec: if telemetry matches condition A or condition B at least N times, the alarm triggers.
 
 ---
 
@@ -227,10 +259,6 @@ Use `${telemetry_key}` in `alarmDetails` to include the current telemetry value:
 
 ```json
 "alarmDetails": "Temperature above threshold: ${internal_temp}\u00b0C"
-```
-
-```json
-"alarmDetails": "CRITICAL: Supply voltage is ${supply_voltage}V (expected 198-253V)"
 ```
 
 Variables are resolved at alarm creation time using the current message payload.
@@ -250,18 +278,16 @@ Temperature alarm: WARNING above 70, CRITICAL above 85, clears below 60.
   "createRules": {
     "WARNING": {
       "condition": {
-        "condition": [
-          {
-            "key": {"type": "TIME_SERIES", "key": "internal_temp"},
-            "valueType": "NUMERIC",
-            "value": null,
-            "predicate": {
-              "type": "NUMERIC",
-              "operation": "GREATER",
-              "value": {"defaultValue": 70, "userValue": null, "dynamicValue": null}
-            }
+        "condition": [{
+          "key": {"type": "TIME_SERIES", "key": "internal_temp"},
+          "valueType": "NUMERIC",
+          "value": null,
+          "predicate": {
+            "type": "NUMERIC",
+            "operation": "GREATER",
+            "value": {"defaultValue": 70, "userValue": null, "dynamicValue": null}
           }
-        ],
+        }],
         "spec": {"type": "SIMPLE"}
       },
       "schedule": null,
@@ -270,18 +296,16 @@ Temperature alarm: WARNING above 70, CRITICAL above 85, clears below 60.
     },
     "CRITICAL": {
       "condition": {
-        "condition": [
-          {
-            "key": {"type": "TIME_SERIES", "key": "internal_temp"},
-            "valueType": "NUMERIC",
-            "value": null,
-            "predicate": {
-              "type": "NUMERIC",
-              "operation": "GREATER",
-              "value": {"defaultValue": 85, "userValue": null, "dynamicValue": null}
-            }
+        "condition": [{
+          "key": {"type": "TIME_SERIES", "key": "internal_temp"},
+          "valueType": "NUMERIC",
+          "value": null,
+          "predicate": {
+            "type": "NUMERIC",
+            "operation": "GREATER",
+            "value": {"defaultValue": 85, "userValue": null, "dynamicValue": null}
           }
-        ],
+        }],
         "spec": {"type": "SIMPLE"}
       },
       "schedule": null,
@@ -291,18 +315,16 @@ Temperature alarm: WARNING above 70, CRITICAL above 85, clears below 60.
   },
   "clearRule": {
     "condition": {
-      "condition": [
-        {
-          "key": {"type": "TIME_SERIES", "key": "internal_temp"},
-          "valueType": "NUMERIC",
-          "value": null,
-          "predicate": {
-            "type": "NUMERIC",
-            "operation": "LESS",
-            "value": {"defaultValue": 60, "userValue": null, "dynamicValue": null}
-          }
+      "condition": [{
+        "key": {"type": "TIME_SERIES", "key": "internal_temp"},
+        "valueType": "NUMERIC",
+        "value": null,
+        "predicate": {
+          "type": "NUMERIC",
+          "operation": "LESS",
+          "value": {"defaultValue": 60, "userValue": null, "dynamicValue": null}
         }
-      ],
+      }],
       "spec": {"type": "SIMPLE"}
     },
     "schedule": null,
@@ -333,18 +355,16 @@ Fault detection based on a boolean telemetry key.
   "createRules": {
     "CRITICAL": {
       "condition": {
-        "condition": [
-          {
-            "key": {"type": "TIME_SERIES", "key": "fault_light_src_failure"},
-            "valueType": "BOOLEAN",
-            "value": null,
-            "predicate": {
-              "type": "BOOLEAN",
-              "operation": "EQUAL",
-              "value": {"defaultValue": true, "userValue": null, "dynamicValue": null}
-            }
+        "condition": [{
+          "key": {"type": "TIME_SERIES", "key": "fault_light_src_failure"},
+          "valueType": "BOOLEAN",
+          "value": null,
+          "predicate": {
+            "type": "BOOLEAN",
+            "operation": "EQUAL",
+            "value": {"defaultValue": true, "userValue": null, "dynamicValue": null}
           }
-        ],
+        }],
         "spec": {"type": "SIMPLE"}
       },
       "schedule": null,
@@ -354,18 +374,16 @@ Fault detection based on a boolean telemetry key.
   },
   "clearRule": {
     "condition": {
-      "condition": [
-        {
-          "key": {"type": "TIME_SERIES", "key": "fault_light_src_failure"},
-          "valueType": "BOOLEAN",
-          "value": null,
-          "predicate": {
-            "type": "BOOLEAN",
-            "operation": "EQUAL",
-            "value": {"defaultValue": false, "userValue": null, "dynamicValue": null}
-          }
+      "condition": [{
+        "key": {"type": "TIME_SERIES", "key": "fault_light_src_failure"},
+        "valueType": "BOOLEAN",
+        "value": null,
+        "predicate": {
+          "type": "BOOLEAN",
+          "operation": "EQUAL",
+          "value": {"defaultValue": false, "userValue": null, "dynamicValue": null}
         }
-      ],
+      }],
       "spec": {"type": "SIMPLE"}
     },
     "schedule": null,
@@ -378,62 +396,6 @@ Fault detection based on a boolean telemetry key.
   "propagateRelationTypes": null
 }
 ```
-
-### Example 3: Range Alarm (Under-Voltage / Over-Voltage)
-
-Two separate alarm rules for under-voltage and over-voltage.
-
-**Under-Voltage:**
-```json
-{
-  "id": "${ALARM_UUID}",
-  "alarmType": "Supply Under-Voltage",
-  "createRules": {
-    "WARNING": {
-      "condition": {
-        "condition": [{
-          "key": {"type": "TIME_SERIES", "key": "supply_voltage"},
-          "valueType": "NUMERIC",
-          "value": null,
-          "predicate": {
-            "type": "NUMERIC",
-            "operation": "LESS",
-            "value": {"defaultValue": 198, "userValue": null, "dynamicValue": null}
-          }
-        }],
-        "spec": {"type": "SIMPLE"}
-      },
-      "schedule": null,
-      "alarmDetails": "Supply voltage below 198V: ${supply_voltage}V",
-      "dashboardId": null
-    }
-  },
-  "clearRule": {
-    "condition": {
-      "condition": [{
-        "key": {"type": "TIME_SERIES", "key": "supply_voltage"},
-        "valueType": "NUMERIC",
-        "value": null,
-        "predicate": {
-          "type": "NUMERIC",
-          "operation": "GREATER",
-          "value": {"defaultValue": 205, "userValue": null, "dynamicValue": null}
-        }
-      }],
-      "spec": {"type": "SIMPLE"}
-    },
-    "schedule": null,
-    "alarmDetails": "Supply voltage returned to normal: ${supply_voltage}V",
-    "dashboardId": null
-  },
-  "propagate": false,
-  "propagateToOwner": false,
-  "propagateToTenant": false,
-  "propagateRelationTypes": null
-}
-```
-
-**Over-Voltage:** Same structure with `GREATER` > 253 trigger and `LESS` < 245 clear.
 
 ---
 
@@ -449,10 +411,6 @@ Without this node, alarm rules in the profile are completely ignored -- no alarm
 {
   "type": "org.thingsboard.rule.engine.profile.TbDeviceProfileNode",
   "name": "Device Profile Node",
-  "debugMode": false,
-  "singletonMode": false,
-  "queueName": null,
-  "configurationVersion": 0,
   "configuration": {
     "persistAlarmRulesState": false,
     "fetchAlarmRulesStateOnStart": false
@@ -462,15 +420,11 @@ Without this node, alarm rules in the profile are completely ignored -- no alarm
 
 ### Rule Chain Wiring
 
-The `TbDeviceProfileNode` must be connected from the Message Type Switch via the "Post telemetry" output:
-
 ```
 [Message Type Switch] --"Post telemetry"--> [Device Profile Node] --"Success"--> [Save Timeseries]
 ```
 
-The Device Profile Node evaluates alarm rules and then passes the message through. Its "Success" output should connect to Save Timeseries (or whatever node saves the data).
-
-### Configuration Options
+The Device Profile Node evaluates alarm rules and then passes the message through.
 
 | Field | Default | Description |
 |-------|---------|-------------|
@@ -483,18 +437,13 @@ For production, consider setting both to `true` for alarm state persistence acro
 
 ## Device Migration Between Profiles
 
-To change a device's profile:
-
-### Step 1: GET Current Device
+To change a device's profile, GET the device, modify `deviceProfileId.id`, and POST it back:
 
 ```
-GET ${TB_HOST}/api/device/${DEVICE_ID}
-X-Authorization: Bearer ${TB_TOKEN}
+GET  ${TB_HOST}/api/device/${DEVICE_ID}
 ```
 
-### Step 2: Modify Profile ID
-
-Change the `deviceProfileId.id` to the new profile UUID:
+Modify the profile reference:
 
 ```json
 {
@@ -508,174 +457,56 @@ Change the `deviceProfileId.id` to the new profile UUID:
 }
 ```
 
-### Step 3: POST Updated Device
-
 ```
 POST ${TB_HOST}/api/device
 X-Authorization: Bearer ${TB_TOKEN}
 Content-Type: application/json
 ```
 
-Send the full device object with modified `deviceProfileId`.
-
-### Step 4: Verify
-
-```
-GET ${TB_HOST}/api/device/${DEVICE_ID}
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-Confirm `deviceProfileId.id` matches the new profile.
-
-**Important:** After migration, the device's telemetry will be processed by the new profile's rule chain. Existing alarms from the old profile will remain until cleared manually.
+**Important:** After migration, existing alarms from the old profile remain until cleared manually.
 
 ---
 
-## Creating a Complete Profile via Python
+## Creating and Updating Profiles via Python
 
 ```python
-import requests
-import uuid
-import os
+import requests, uuid, os
 
 TB_URL = os.environ["TB_URL"]
-TOKEN = os.environ["TB_TOKEN"]
+headers = {"X-Authorization": f"Bearer {os.environ['TB_TOKEN']}", "Content-Type": "application/json"}
 
-headers = {
-    "X-Authorization": f"Bearer {TOKEN}",
-    "Content-Type": "application/json"
-}
+def make_alarm(alarm_type, key, op, threshold, clear_op, clear_threshold, severity="WARNING"):
+    """Helper to build an alarm rule dict."""
+    def _cond(operation, value):
+        return {"condition": {"condition": [{"key": {"type": "TIME_SERIES", "key": key},
+            "valueType": "NUMERIC", "value": None, "predicate": {"type": "NUMERIC",
+            "operation": operation, "value": {"defaultValue": value, "userValue": None,
+            "dynamicValue": None}}}], "spec": {"type": "SIMPLE"}},
+            "schedule": None, "alarmDetails": f"{alarm_type}: ${{{key}}}", "dashboardId": None}
+    return {"id": str(uuid.uuid4()), "alarmType": alarm_type,
+        "createRules": {severity: _cond(op, threshold)}, "clearRule": _cond(clear_op, clear_threshold),
+        "propagate": False, "propagateToOwner": False, "propagateToTenant": False,
+        "propagateRelationTypes": None}
 
+# Create a new profile
 profile = {
-    "name": "My Sensor Profile",
-    "type": "DEFAULT",
-    "transportType": "DEFAULT",
+    "name": "My Sensor Profile", "type": "DEFAULT", "transportType": "DEFAULT",
     "description": "Profile for temperature/humidity sensors",
-    "defaultRuleChainId": {
-        "entityType": "RULE_CHAIN",
-        "id": "${RULE_CHAIN_ID}"
-    },
+    "defaultRuleChainId": {"entityType": "RULE_CHAIN", "id": "${RULE_CHAIN_ID}"},
     "profileData": {
-        "configuration": {"type": "DEFAULT"},
-        "transportConfiguration": {"type": "DEFAULT"},
+        "configuration": {"type": "DEFAULT"}, "transportConfiguration": {"type": "DEFAULT"},
         "provisionConfiguration": {"type": "DISABLED"},
-        "alarms": [
-            {
-                "id": str(uuid.uuid4()),
-                "alarmType": "High Temperature",
-                "createRules": {
-                    "WARNING": {
-                        "condition": {
-                            "condition": [{
-                                "key": {"type": "TIME_SERIES", "key": "temperature"},
-                                "valueType": "NUMERIC",
-                                "value": None,
-                                "predicate": {
-                                    "type": "NUMERIC",
-                                    "operation": "GREATER",
-                                    "value": {"defaultValue": 50, "userValue": None, "dynamicValue": None}
-                                }
-                            }],
-                            "spec": {"type": "SIMPLE"}
-                        },
-                        "schedule": None,
-                        "alarmDetails": "Temperature above 50: ${temperature}",
-                        "dashboardId": None
-                    }
-                },
-                "clearRule": {
-                    "condition": {
-                        "condition": [{
-                            "key": {"type": "TIME_SERIES", "key": "temperature"},
-                            "valueType": "NUMERIC",
-                            "value": None,
-                            "predicate": {
-                                "type": "NUMERIC",
-                                "operation": "LESS",
-                                "value": {"defaultValue": 40, "userValue": None, "dynamicValue": None}
-                            }
-                        }],
-                        "spec": {"type": "SIMPLE"}
-                    },
-                    "schedule": None,
-                    "alarmDetails": "Temperature returned to normal: ${temperature}",
-                    "dashboardId": None
-                },
-                "propagate": False,
-                "propagateToOwner": False,
-                "propagateToTenant": False,
-                "propagateRelationTypes": None
-            }
-        ]
+        "alarms": [make_alarm("High Temperature", "temperature", "GREATER", 50, "LESS", 40)]
     }
 }
-
 resp = requests.post(f"{TB_URL}/api/deviceProfile", json=profile, headers=headers)
 resp.raise_for_status()
 created = resp.json()
 print(f"Created profile: {created['id']['id']}")
-```
 
----
-
-## Updating an Existing Profile (Optimistic Locking)
-
-```python
-# Step 1: GET current profile
-resp = requests.get(f"{TB_URL}/api/deviceProfile/{PROFILE_ID}", headers=headers)
-profile = resp.json()
-
-# Step 2: Modify (e.g., add a new alarm rule)
-new_alarm = {
-    "id": str(uuid.uuid4()),
-    "alarmType": "Low Battery",
-    "createRules": {
-        "WARNING": {
-            "condition": {
-                "condition": [{
-                    "key": {"type": "TIME_SERIES", "key": "battery"},
-                    "valueType": "NUMERIC",
-                    "value": None,
-                    "predicate": {
-                        "type": "NUMERIC",
-                        "operation": "LESS",
-                        "value": {"defaultValue": 20, "userValue": None, "dynamicValue": None}
-                    }
-                }],
-                "spec": {"type": "SIMPLE"}
-            },
-            "schedule": None,
-            "alarmDetails": "Battery low: ${battery}%",
-            "dashboardId": None
-        }
-    },
-    "clearRule": {
-        "condition": {
-            "condition": [{
-                "key": {"type": "TIME_SERIES", "key": "battery"},
-                "valueType": "NUMERIC",
-                "value": None,
-                "predicate": {
-                    "type": "NUMERIC",
-                    "operation": "GREATER",
-                    "value": {"defaultValue": 30, "userValue": None, "dynamicValue": None}
-                }
-            }],
-            "spec": {"type": "SIMPLE"}
-        },
-        "schedule": None,
-        "alarmDetails": "Battery recovered: ${battery}%",
-        "dashboardId": None
-    },
-    "propagate": False,
-    "propagateToOwner": False,
-    "propagateToTenant": False,
-    "propagateRelationTypes": None
-}
-
-profile["profileData"]["alarms"].append(new_alarm)
-
-# Step 3: POST back (include version for optimistic locking)
+# Update an existing profile (optimistic locking)
+profile = requests.get(f"{TB_URL}/api/deviceProfile/{created['id']['id']}", headers=headers).json()
+profile["profileData"]["alarms"].append(make_alarm("Low Battery", "battery", "LESS", 20, "GREATER", 30))
 resp = requests.post(f"{TB_URL}/api/deviceProfile", json=profile, headers=headers)
 if resp.status_code == 409:
     print("Optimistic lock conflict -- re-GET and retry")
@@ -686,9 +517,9 @@ else:
 
 ---
 
-## Multiple Conditions in One Alarm Rule
+## Multiple Conditions (AND Logic)
 
-Combine multiple conditions with AND logic (all must be true):
+Combine multiple conditions in one alarm rule -- all must be true (AND logic):
 
 ```json
 {
@@ -696,23 +527,15 @@ Combine multiple conditions with AND logic (all must be true):
     "condition": [
       {
         "key": {"type": "TIME_SERIES", "key": "temperature"},
-        "valueType": "NUMERIC",
-        "value": null,
-        "predicate": {
-          "type": "NUMERIC",
-          "operation": "GREATER",
-          "value": {"defaultValue": 50, "userValue": null, "dynamicValue": null}
-        }
+        "valueType": "NUMERIC", "value": null,
+        "predicate": {"type": "NUMERIC", "operation": "GREATER",
+          "value": {"defaultValue": 50, "userValue": null, "dynamicValue": null}}
       },
       {
         "key": {"type": "TIME_SERIES", "key": "humidity"},
-        "valueType": "NUMERIC",
-        "value": null,
-        "predicate": {
-          "type": "NUMERIC",
-          "operation": "GREATER",
-          "value": {"defaultValue": 80, "userValue": null, "dynamicValue": null}
-        }
+        "valueType": "NUMERIC", "value": null,
+        "predicate": {"type": "NUMERIC", "operation": "GREATER",
+          "value": {"defaultValue": 80, "userValue": null, "dynamicValue": null}}
       }
     ],
     "spec": {"type": "SIMPLE"}
@@ -728,9 +551,9 @@ This triggers only when BOTH temperature > 50 AND humidity > 80.
 
 ### Alarms Not Triggering
 
-1. **Missing TbDeviceProfileNode** -- verify the device's rule chain contains this node and it is wired to receive "Post telemetry" messages
-2. **Wrong rule chain** -- the device profile's `defaultRuleChainId` must point to the rule chain that has the TbDeviceProfileNode
-3. **Telemetry key mismatch** -- the `key` in alarm condition must exactly match the telemetry key name
+1. **Missing TbDeviceProfileNode** -- verify the device's rule chain contains this node wired to "Post telemetry"
+2. **Wrong rule chain** -- `defaultRuleChainId` must point to the chain with TbDeviceProfileNode
+3. **Telemetry key mismatch** -- `key` in alarm condition must exactly match the telemetry key name
 4. **Data type mismatch** -- NUMERIC conditions require numeric telemetry values (not strings)
 
 ### Alarms Not Clearing
@@ -749,6 +572,6 @@ This triggers only when BOTH temperature > 50 AND humidity > 80.
 
 ## Template Reference
 
-- Device profile skeleton: See the examples above (no separate template file yet)
+- Device profile skeleton: See the examples above
 - Rule chain skeleton (with TbDeviceProfileNode): `/opt/thingsboard/.claude/templates/rule_chain_skeleton.json`
 - Dashboard skeleton: `/opt/thingsboard/.claude/templates/dashboard_skeleton.json`

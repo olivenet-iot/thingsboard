@@ -1,3 +1,6 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: Controller classes in /application/src/main/java/org/thingsboard/server/controller/, ThingsBoard REST API docs -->
+
 # ThingsBoard REST API Reference
 
 Complete REST API reference for ThingsBoard CE v4.4.0-SNAPSHOT. All examples use `${TB_HOST}` and `${TB_TOKEN}` placeholders.
@@ -70,7 +73,7 @@ X-Authorization: Bearer ${TB_TOKEN}
 
 ## 2. Pagination Pattern
 
-All list endpoints use consistent pagination:
+All list endpoints use consistent pagination. See [entity-management.md](entity-management.md) for full pagination details.
 
 ```
 GET ${TB_HOST}/api/{resource}?pageSize=100&page=0&sortProperty=name&sortOrder=ASC
@@ -107,8 +110,6 @@ GET ${TB_HOST}/api/tenant/devices?pageSize=100&page=0
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:** Paginated list of device objects.
-
 ### Get Device by ID
 
 ```
@@ -116,19 +117,7 @@ GET ${TB_HOST}/api/device/${DEVICE_ID}
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:**
-```json
-{
-  "id": {"entityType": "DEVICE", "id": "${DEVICE_ID}"},
-  "name": "my-device",
-  "type": "default",
-  "label": "My Device",
-  "deviceProfileId": {"entityType": "DEVICE_PROFILE", "id": "${PROFILE_ID}"},
-  "version": 3,
-  "createdTime": 1700000000000,
-  "additionalInfo": {}
-}
-```
+**Response:** Device object with `id`, `name`, `type`, `label`, `deviceProfileId`, `version`, `createdTime`, `additionalInfo`.
 
 ### Create Device
 
@@ -151,14 +140,7 @@ X-Authorization: Bearer ${TB_TOKEN}
 
 ### Update Device
 
-Same endpoint as create. Include the full object from GET (with `id` and `version`):
-
-```
-POST ${TB_HOST}/api/device
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-**Request:** Full device object from GET, with modifications. The `version` field is required for optimistic locking.
+Same endpoint as create. Include the full object from GET (with `id` and `version`). The `version` field is required for optimistic locking (see section 13).
 
 ### Delete Device
 
@@ -167,8 +149,6 @@ DELETE ${TB_HOST}/api/device/${DEVICE_ID}
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:** 200 OK (empty body).
-
 ### Get Device Credentials
 
 ```
@@ -176,18 +156,7 @@ GET ${TB_HOST}/api/device/${DEVICE_ID}/credentials
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:**
-```json
-{
-  "id": {"id": "${CREDENTIAL_ID}"},
-  "deviceId": {"entityType": "DEVICE", "id": "${DEVICE_ID}"},
-  "credentialsType": "ACCESS_TOKEN",
-  "credentialsId": "${ACCESS_TOKEN}",
-  "credentialsValue": null
-}
-```
-
-The `credentialsId` is the device access token used for `POST /api/v1/{TOKEN}/telemetry`.
+**Response:** Object with `credentialsType` (ACCESS_TOKEN), `credentialsId` (the access token), and `deviceId`. The `credentialsId` is used for `POST /api/v1/{TOKEN}/telemetry`.
 
 ---
 
@@ -207,7 +176,7 @@ GET ${TB_HOST}/api/dashboard/${DASHBOARD_ID}
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:** Complete dashboard object including `configuration` with widgets, aliases, states, and layout. This is the full JSON needed for programmatic dashboard manipulation.
+**Response:** Complete dashboard object including `configuration` with widgets, aliases, states, and layout.
 
 ### Create Dashboard
 
@@ -221,19 +190,17 @@ X-Authorization: Bearer ${TB_TOKEN}
 {
   "title": "My Dashboard",
   "configuration": {
-    "widgets": { ... },
-    "entityAliases": { ... },
-    "states": { ... },
+    "widgets": { },
+    "entityAliases": { },
+    "states": { },
     "filters": {},
-    "timewindow": { ... },
-    "settings": { ... }
+    "timewindow": { },
+    "settings": { }
   }
 }
 ```
 
 See `/opt/thingsboard/.claude/templates/dashboard_skeleton.json` for a complete template.
-
-**Response:** Full dashboard object with generated `id`.
 
 ### Update Dashboard
 
@@ -273,16 +240,7 @@ GET ${TB_HOST}/api/ruleChain/${RULE_CHAIN_ID}/metadata
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-**Response:**
-```json
-{
-  "ruleChainId": {"entityType": "RULE_CHAIN", "id": "${RULE_CHAIN_ID}"},
-  "firstNodeIndex": 0,
-  "nodes": [ ... ],
-  "connections": [ ... ],
-  "ruleChainConnections": null
-}
-```
+**Response:** Object with `ruleChainId`, `firstNodeIndex`, `nodes[]`, `connections[]`, and `ruleChainConnections`.
 
 ### Update Rule Chain Metadata
 
@@ -294,8 +252,6 @@ X-Authorization: Bearer ${TB_TOKEN}
 ```
 
 **NOT** `/api/ruleChain/{id}/metadata`. The `ruleChainId` is inside the JSON body.
-
-**Request:** The full metadata object (same structure as the GET response).
 
 ### Create Empty Rule Chain
 
@@ -313,7 +269,7 @@ X-Authorization: Bearer ${TB_TOKEN}
 }
 ```
 
-**Response:** Rule chain object with generated `id`. Then set metadata via `POST /api/ruleChain/metadata`.
+Then set metadata via `POST /api/ruleChain/metadata`.
 
 ### Set as Root Rule Chain
 
@@ -349,8 +305,6 @@ X-Authorization: Bearer ${TB_TOKEN}
 
 ### Create or Update Device Profile
 
-Same endpoint for both create and update (PUT-like behavior):
-
 ```
 POST ${TB_HOST}/api/deviceProfile
 X-Authorization: Bearer ${TB_TOKEN}
@@ -378,199 +332,54 @@ See [device-profile-guide.md](device-profile-guide.md) for alarm rule configurat
 
 ---
 
-## 7. Telemetry
+## 7. Telemetry (Summary)
 
-### Read Telemetry Keys
+For full telemetry API details including aggregation, delete, and MQTT/CoAP protocols, see [telemetry-attributes-guide.md](telemetry-attributes-guide.md).
 
-```
-GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/keys/timeseries
-X-Authorization: Bearer ${TB_TOKEN}
-```
+| Operation | Endpoint |
+|-----------|----------|
+| Get timeseries keys | `GET /api/plugins/telemetry/DEVICE/${DEVICE_ID}/keys/timeseries` |
+| Get latest values | `GET /api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temp,humidity` |
+| Get with time range | `GET /api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temp&startTs=...&endTs=...&agg=NONE` |
+| Push via device token | `POST /api/v1/${DEVICE_TOKEN}/telemetry` (no JWT needed) |
+| Push via JWT (server-side) | `POST /api/plugins/telemetry/DEVICE/${DEVICE_ID}/timeseries/ANY?scope=ANY` |
 
-**Response:** `["temperature", "humidity", "voltage"]`
-
-### Read Latest Telemetry Values
-
-```
-GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temperature,humidity
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-**Response:**
-```json
-{
-  "temperature": [{"ts": 1700000000000, "value": "25.5"}],
-  "humidity": [{"ts": 1700000000000, "value": "60"}]
-}
-```
-
-### Read Telemetry with Time Range
-
-```
-GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temperature&startTs=1700000000000&endTs=1700003600000&limit=100&agg=NONE
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-| Parameter | Description |
-|-----------|-------------|
-| startTs | Start timestamp (ms since epoch) |
-| endTs | End timestamp (ms since epoch) |
-| limit | Max data points (default 100) |
-| agg | Aggregation: NONE, AVG, MIN, MAX, SUM, COUNT |
-| interval | Aggregation interval in ms (required if agg != NONE) |
-
-### Write Telemetry via Device Token
-
-No JWT needed -- uses the device access token directly:
-
-```
-POST ${TB_HOST}/api/v1/${DEVICE_TOKEN}/telemetry
-Content-Type: application/json
-```
-
-**Request (simple):**
-```json
-{"temperature": 25.5, "humidity": 60}
-```
-
-**Request (with timestamp):**
-```json
-{"ts": 1700000000000, "values": {"temperature": 25.5, "humidity": 60}}
-```
-
-### Write Telemetry via JWT (Server-Side)
-
-```
-POST ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/timeseries/ANY?scope=ANY
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-**Request:**
-```json
-{"temperature": 25.5}
-```
+Aggregation options: `NONE`, `AVG`, `MIN`, `MAX`, `SUM`, `COUNT` (requires `interval` param when not NONE).
 
 ---
 
-## 8. Attributes
+## 8. Attributes (Summary)
 
-### Scopes
+For full attribute API details including scopes, MQTT subscriptions, and best practices, see [telemetry-attributes-guide.md](telemetry-attributes-guide.md).
 
-| Scope | Description | Read By | Write By |
-|-------|-------------|---------|----------|
-| CLIENT_SCOPE | Device-reported attributes | Server, Device | Device only |
-| SERVER_SCOPE | Server-managed attributes | Server, Device | Server only |
-| SHARED_SCOPE | Pushed to device on change | Server, Device | Server only |
+| Scope | Read By | Write By |
+|-------|---------|----------|
+| CLIENT_SCOPE | Server, Device | Device only |
+| SERVER_SCOPE | Server, Device | Server only |
+| SHARED_SCOPE | Server, Device | Server only (pushed to device on change) |
 
-### Read Attributes
-
-```
-GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/attributes/SERVER_SCOPE?keys=dimLevel,status
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-**Response:**
-```json
-[
-  {"key": "dimLevel", "value": 75, "lastUpdateTs": 1700000000000},
-  {"key": "status", "value": "online", "lastUpdateTs": 1700000000000}
-]
-```
-
-Replace `SERVER_SCOPE` with `CLIENT_SCOPE` or `SHARED_SCOPE` as needed.
-
-### Read All Attributes (All Scopes)
-
-```
-GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/attributes
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### Write Server Attributes
-
-```
-POST ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/attributes/SERVER_SCOPE
-X-Authorization: Bearer ${TB_TOKEN}
-Content-Type: application/json
-```
-
-**Request:**
-```json
-{"dimLevel": 75, "status": "configured"}
-```
-
-### Write Shared Attributes (Pushes to Device)
-
-```
-POST ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/attributes/SHARED_SCOPE
-X-Authorization: Bearer ${TB_TOKEN}
-Content-Type: application/json
-```
-
-**Request:**
-```json
-{"dimLevel": 75}
-```
-
-**Note:** Devices subscribed to MQTT topic `v1/devices/me/attributes` receive shared attribute updates automatically.
-
-### Write Client Attributes (via Device Token)
-
-```
-POST ${TB_HOST}/api/v1/${DEVICE_TOKEN}/attributes
-Content-Type: application/json
-```
-
-**Request:**
-```json
-{"firmwareVersion": "1.2.3"}
-```
+| Operation | Endpoint |
+|-----------|----------|
+| Read by scope | `GET /api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/attributes/SERVER_SCOPE?keys=key1,key2` |
+| Read all scopes | `GET /api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/attributes` |
+| Write server attrs | `POST /api/plugins/telemetry/DEVICE/${DEVICE_ID}/attributes/SERVER_SCOPE` |
+| Write shared attrs | `POST /api/plugins/telemetry/DEVICE/${DEVICE_ID}/attributes/SHARED_SCOPE` |
+| Write client attrs (device) | `POST /api/v1/${DEVICE_TOKEN}/attributes` (no JWT needed) |
 
 ---
 
-## 9. RPC (Remote Procedure Call)
+## 9. RPC (Summary)
 
-### One-Way RPC (Server to Device)
+For full RPC details including persistent RPC, MQTT protocol, gotchas, and widget integration, see [rpc-guide.md](rpc-guide.md).
 
-```
-POST ${TB_HOST}/api/plugins/rpc/oneway/${DEVICE_ID}
-X-Authorization: Bearer ${TB_TOKEN}
-Content-Type: application/json
-```
+| Operation | Endpoint |
+|-----------|----------|
+| One-way RPC | `POST /api/plugins/rpc/oneway/${DEVICE_ID}` |
+| Two-way RPC | `POST /api/plugins/rpc/twoway/${DEVICE_ID}` |
 
-**Request:**
-```json
-{
-  "method": "setDim",
-  "params": {"value": 75},
-  "timeout": 5000
-}
-```
+**Request body:** `{"method": "setDim", "params": {"value": 75}, "timeout": 5000}`
 
-**Response:**
-- 200 OK if device is online and acknowledges
-- 408 Request Timeout if device is offline (but rule chain still processes the RPC message)
-
-### Two-Way RPC (Server to Device, with Response)
-
-```
-POST ${TB_HOST}/api/plugins/rpc/twoway/${DEVICE_ID}
-X-Authorization: Bearer ${TB_TOKEN}
-Content-Type: application/json
-```
-
-**Request:** Same as one-way.
-**Response:** Device's response body (JSON).
-
-### RPC Gotchas
-
-1. **408 for offline devices**: One-way RPC returns 408 timeout for offline devices, but the rule chain still processes the RPC message. This means transform nodes and external MQTT nodes will still execute.
-
-2. **Persistent RPC ignored in CE**: Setting `"requestPersistent": true` in the RPC body is silently ignored in ThingsBoard CE 4.4.0. Persistent RPC is a PE-only feature. No RPCs are saved to the database for later delivery.
-
-3. **SET_ATTRIBUTE workaround**: For dashboard widgets controlling offline devices, use `SET_ATTRIBUTE` (SHARED_SCOPE) action type instead of `EXECUTE_RPC`. This returns 200 immediately and the attribute change is picked up when the device reconnects.
-
-4. **Max concurrent sessions**: `ACTORS_MAX_CONCURRENT_SESSION_PER_DEVICE=1` (default). Do not increase to 2 -- it causes RPC to hang with HTTP 000 timeout.
+**Key gotchas:** 408 for offline devices (rule chain still processes); persistent RPC is PE-only; use SHARED_SCOPE attributes for offline device control from dashboards.
 
 ---
 
@@ -589,8 +398,6 @@ X-Authorization: Bearer ${TB_TOKEN}
 GET ${TB_HOST}/api/widgetType?fqn=system.cards.value_card
 X-Authorization: Bearer ${TB_TOKEN}
 ```
-
-**Response:** Full widget type definition including default config, descriptor, and resources.
 
 ### Get All Widget Types in a Bundle
 
@@ -617,37 +424,106 @@ Optional filters: `&status=ACTIVE_UNACK&severity=CRITICAL`
 **Status values:** `ACTIVE_UNACK`, `ACTIVE_ACK`, `CLEARED_UNACK`, `CLEARED_ACK`
 **Severity values:** `CRITICAL`, `MAJOR`, `MINOR`, `WARNING`, `INDETERMINATE`
 
-### Get Alarm by ID
+### Get / Acknowledge / Clear / Delete Alarm
 
 ```
-GET ${TB_HOST}/api/alarm/${ALARM_ID}
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### Acknowledge Alarm
-
-```
-POST ${TB_HOST}/api/alarm/${ALARM_ID}/ack
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### Clear Alarm
-
-```
-POST ${TB_HOST}/api/alarm/${ALARM_ID}/clear
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### Delete Alarm
-
-```
+GET    ${TB_HOST}/api/alarm/${ALARM_ID}
+POST   ${TB_HOST}/api/alarm/${ALARM_ID}/ack
+POST   ${TB_HOST}/api/alarm/${ALARM_ID}/clear
 DELETE ${TB_HOST}/api/alarm/${ALARM_ID}
-X-Authorization: Bearer ${TB_TOKEN}
 ```
+
+All require `X-Authorization: Bearer ${TB_TOKEN}`.
 
 ---
 
-## 12. Error Handling
+## 12. Audit Log API
+
+### Get Audit Logs for an Entity
+
+```
+GET ${TB_HOST}/api/audit/logs/entity/{entityType}/{entityId}?pageSize=20&page=0
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+### Get Tenant-Level Audit Logs
+
+```
+GET ${TB_HOST}/api/audit/logs?pageSize=20&page=0
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+**Filter parameters:** `startTime`, `endTime` (ms since epoch), `actionTypes` (comma-separated: LOGIN, LOGOUT, ADDED, DELETED, UPDATED, ATTRIBUTES_UPDATED, RPC_CALL, etc.).
+
+**Response:** Paginated list of audit log entries, each containing `entityId`, `actionType`, `actionData`, `actionStatus`, and `createdTime`.
+
+---
+
+## 13. Admin / System API
+
+### Security Settings
+
+```
+GET  ${TB_HOST}/api/admin/securitySettings
+POST ${TB_HOST}/api/admin/securitySettings
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+GET returns current security configuration (password policy, max failed login attempts, etc.). POST updates it. Requires SYS_ADMIN authority.
+
+### System Info
+
+```
+GET ${TB_HOST}/api/system/info
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+Returns system version, build timestamp, and other metadata. No special authority required.
+
+---
+
+## 14. User Management API
+
+### Create User
+
+```
+POST ${TB_HOST}/api/user
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+**Request:**
+```json
+{
+  "email": "newuser@example.com",
+  "firstName": "New",
+  "lastName": "User",
+  "authority": "TENANT_ADMIN",
+  "tenantId": {"entityType": "TENANT", "id": "${TENANT_ID}"}
+}
+```
+
+For CUSTOMER_USER authority, also include `customerId`.
+
+### Get / Delete User
+
+```
+GET    ${TB_HOST}/api/user/${USER_ID}
+DELETE ${TB_HOST}/api/user/${USER_ID}
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+### Get Activation Link
+
+```
+GET ${TB_HOST}/api/user/${USER_ID}/activationLink
+X-Authorization: Bearer ${TB_TOKEN}
+```
+
+Returns the one-time activation URL for a newly created user who has not yet set a password.
+
+---
+
+## 15. Error Handling
 
 | Status Code | Meaning | Action |
 |-------------|---------|--------|
@@ -657,92 +533,35 @@ X-Authorization: Bearer ${TB_TOKEN}
 | 404 | Entity not found | Verify entity ID exists |
 | 408 | RPC timeout | Device offline; rule chain still processes |
 | 409 | Optimistic lock conflict | GET fresh copy, re-apply changes, POST again |
+| 429 | Too Many Requests | Rate limited; retry after delay (see section 18) |
 | 500 | Internal server error | Check `docker logs signconnect` |
 
 ---
 
-## 13. Optimistic Locking Pattern
+## 16. Optimistic Locking Pattern
 
 ThingsBoard uses a `version` field on all entities for optimistic concurrency control.
 
 ### Pattern: GET -> Modify -> POST (Retry on 409)
 
-```python
-import requests
-import time
+1. `GET` the entity to obtain the current `version`
+2. Modify the fields you need to change
+3. `POST` the full entity (with `id` and `version`) back to the same endpoint
+4. If you get a **409 Conflict**, re-GET the entity (which now has a newer `version`), re-apply your changes, and POST again
 
-def update_entity(url, token, modify_fn, max_retries=3):
-    """GET-modify-POST pattern with 409 retry."""
-    headers = {"X-Authorization": f"Bearer {token}",
-               "Content-Type": "application/json"}
-
-    for attempt in range(max_retries):
-        # GET current state
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        entity = resp.json()
-
-        # Modify the entity
-        entity = modify_fn(entity)
-
-        # POST back
-        resp = requests.post(url, json=entity, headers=headers)
-        if resp.status_code == 409:
-            print(f"409 conflict, retry {attempt + 1}/{max_retries}")
-            time.sleep(0.5 * (attempt + 1))
-            continue
-        resp.raise_for_status()
-        return resp.json()
-
-    raise Exception("Failed after max retries due to optimistic lock conflicts")
-```
-
-### Key Rules
-
+**Key Rules:**
 - Always include the `version` field from the GET response in the POST body
 - Never cache entities for long periods -- always GET a fresh copy before updating
-- On 409, re-GET the entity (with updated version), re-apply your changes, and POST again
 - The `version` field auto-increments on each successful update
 
 ---
 
-## 14. Batch Operations
-
-### Push Multiple Telemetry Keys at Once
-
-```
-POST ${TB_HOST}/api/v1/${DEVICE_TOKEN}/telemetry
-Content-Type: application/json
-```
-
-```json
-[
-  {"ts": 1700000000000, "values": {"temperature": 25.5, "humidity": 60}},
-  {"ts": 1700000001000, "values": {"temperature": 25.6, "humidity": 59}}
-]
-```
-
-### Push Telemetry for Multiple Devices (Server-Side)
-
-Use a loop with JWT auth:
-
-```python
-for device_id in device_ids:
-    requests.post(
-        f"{TB_URL}/api/plugins/telemetry/DEVICE/{device_id}/timeseries/ANY?scope=ANY",
-        json={"temperature": 25.5},
-        headers={"X-Authorization": f"Bearer {token}"}
-    )
-```
-
----
-
-## 15. Useful Query Patterns
+## 17. Useful Query Patterns
 
 ### Find Device by Name
 
 ```
-GET ${TB_HOST}/api/tenant/devices?pageSize=1&page=0&textSearch=zenopix-test
+GET ${TB_HOST}/api/tenant/devices?pageSize=1&page=0&textSearch=my-device-name
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
@@ -753,16 +572,22 @@ GET ${TB_HOST}/api/tenant/dashboards?pageSize=1&page=0&textSearch=DALI
 X-Authorization: Bearer ${TB_TOKEN}
 ```
 
-### Get Device Telemetry Keys
+### Get Device Telemetry / Attribute Keys
 
 ```
 GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/keys/timeseries
-X-Authorization: Bearer ${TB_TOKEN}
-```
-
-### Get Device Attribute Keys
-
-```
 GET ${TB_HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/keys/attributes
 X-Authorization: Bearer ${TB_TOKEN}
 ```
+
+---
+
+## 18. Rate Limiting
+
+ThingsBoard enforces rate limits configured in the **Tenant Profile**.
+
+- When rate-limited, the API returns **429 Too Many Requests**
+- Check the `X-Rate-Limit-Remaining` header to monitor remaining quota
+- Rate limits apply per-tenant and cover REST API calls, telemetry messages, and rule engine operations
+- Configure limits in: **Tenant Profiles > Rate Limits** (or via `POST /api/tenantProfile` API)
+- When hitting 429, implement exponential backoff before retrying

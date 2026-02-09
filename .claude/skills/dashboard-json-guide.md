@@ -1,3 +1,6 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: Dashboard source code, ThingsBoard docs -->
+
 # Dashboard JSON Structure Guide
 
 Deep-dive reference for ThingsBoard dashboard JSON structure, widget configuration, and programmatic dashboard creation.
@@ -40,12 +43,13 @@ configuration
 │           ├── settings (widget-specific appearance/behavior)
 │           ├── actions {} (click actions, navigation)
 │           ├── targetDevice {type, deviceId} (RPC widgets only)
+│           ├── widgetCss (custom CSS for this widget)
 │           └── configMode ("basic" or "advanced")
 ├── entityAliases {uuid -> alias definition}
 │   └── {uuid}
 │       ├── alias (display name)
 │       └── filter
-│           ├── type: "singleEntity" | "entityList" | "deviceType"
+│           ├── type: "singleEntity" | "entityList" | "deviceType" | "relationsQuery" | ...
 │           └── singleEntity: {entityType, id}
 ├── states
 │   └── {stateName}
@@ -57,7 +61,8 @@ configuration
 │   ├── stateControllerId: "entity"
 │   ├── showTitle, showDashboardsSelect, showEntitiesSelect
 │   ├── showDashboardTimewindow, showDashboardExport
-│   └── toolbarAlwaysOpen
+│   ├── toolbarAlwaysOpen
+│   └── dashboardCss (custom CSS for entire dashboard)
 └── timewindow
     ├── selectedTab (0=realtime, 1=history)
     └── realtime {realtimeType, timewindowMs, interval}
@@ -66,10 +71,10 @@ configuration
 ## Entity Aliases
 
 Entity aliases decouple widgets from specific devices, allowing re-binding without widget reconfiguration.
+For the full list of alias filter types and the Entity Query API, see [entity-management.md](entity-management.md).
 
-### Alias Types
+### singleEntity
 
-#### singleEntity
 Binds to exactly one entity by ID.
 
 ```json
@@ -80,16 +85,14 @@ Binds to exactly one entity by ID.
     "filter": {
       "type": "singleEntity",
       "resolveMultiple": false,
-      "singleEntity": {
-        "entityType": "DEVICE",
-        "id": "${DEVICE_ID}"
-      }
+      "singleEntity": {"entityType": "DEVICE", "id": "${DEVICE_ID}"}
     }
   }
 }
 ```
 
-#### entityList
+### entityList
+
 Binds to multiple entities by explicit IDs.
 
 ```json
@@ -107,8 +110,9 @@ Binds to multiple entities by explicit IDs.
 }
 ```
 
-#### deviceType
-Binds to all devices of a given type. Useful for fleet dashboards.
+### deviceType
+
+Binds to all devices of a given profile type. Useful for fleet dashboards.
 
 ```json
 {
@@ -118,28 +122,40 @@ Binds to all devices of a given type. Useful for fleet dashboards.
     "filter": {
       "type": "deviceType",
       "resolveMultiple": true,
-      "deviceType": "Zenopix DALI Controller"
+      "deviceType": "Zenopix DALI Controller",
+      "deviceNameFilter": ""
     }
   }
 }
 ```
 
-#### assetType
-Same pattern as deviceType but for asset entities.
+### relationsQuery
+
+Binds to entities related to a root entity. Supports multi-level traversal and dynamic root via dashboard state.
 
 ```json
 {
-  "filter": {
-    "type": "assetType",
-    "resolveMultiple": true,
-    "assetType": "Building"
+  "alias-uuid-here": {
+    "id": "alias-uuid-here",
+    "alias": "Devices in Building",
+    "filter": {
+      "type": "relationsQuery",
+      "rootStateEntity": true,
+      "direction": "FROM",
+      "maxLevel": 5,
+      "fetchLastLevelOnly": false,
+      "filters": [{"relationType": "Contains", "entityTypes": ["DEVICE"]}]
+    }
   }
 }
 ```
 
+Set `rootStateEntity: false` and provide `rootEntity: {"entityType": "ASSET", "id": "uuid"}` for a static root.
+See [entity-management.md](entity-management.md) for all alias filter types including `assetType`, `assetSearchQuery`, `deviceSearchQuery`, and `stateEntity`.
+
 ## Widget Definitions
 
-Each widget in `configuration.widgets` is keyed by UUID.
+Each widget in `configuration.widgets` is keyed by UUID. For the full FQN catalog of built-in widgets, see [widget-catalog.md](widget-catalog.md).
 
 ### Common Widget Structure
 
@@ -159,9 +175,6 @@ Each widget in `configuration.widgets` is keyed by UUID.
       "showTitle": true,
       "title": "Temperature",
       "titleFont": {"size": 16, "sizeUnit": "px", "family": "Roboto"},
-      "showTitleIcon": false,
-      "iconColor": "rgba(0, 0, 0, 0.87)",
-      "iconSize": "24px",
       "configMode": "basic",
       "color": "#000",
       "backgroundColor": "#fff",
@@ -169,6 +182,7 @@ Each widget in `configuration.widgets` is keyed by UUID.
       "margin": "0px",
       "borderRadius": "4px",
       "widgetStyle": {},
+      "widgetCss": "",
       "titleStyle": {},
       "units": "",
       "decimals": null,
@@ -190,26 +204,7 @@ Each widget in `configuration.widgets` is keyed by UUID.
 | `alarm` | Shows alarm list/table | datasources |
 | `static` | Static content (HTML, markdown, navigation) | none or datasources |
 
-### Widget FQNs (Fully Qualified Names)
-
-Common built-in widgets:
-
-| FQN | Type | Description |
-|-----|------|-------------|
-| `system.cards.value_card` | latest | Single value display card |
-| `system.time_series_chart` | timeseries | Time-series line chart |
-| `system.cards.entities_table` | latest | Entity table with columns |
-| `system.slider` | rpc | Slider control for numeric values |
-| `system.command_button` | rpc | Button that sends RPC/attribute |
-| `system.alarms_table` | alarm | Alarm list with filtering |
-| `system.cards.simple_card` | latest | Minimal value display |
-| `system.maps.openstreet_map` | latest | OpenStreetMap widget |
-| `system.cards.progress_bar` | latest | Progress bar display |
-| `system.navigation_cards` | static | Navigation to other states |
-| `system.html_card` | static | Custom HTML content |
-| `system.gauge.radial_gauge_canvas` | latest | Radial gauge display |
-
-All built-in widgets use the `system.` prefix. Custom widgets use `tenantId.bundleAlias.widgetAlias`.
+All built-in widgets use the `system.` prefix (e.g., `system.cards.value_card`). Custom widgets use `tenantId.bundleAlias.widgetAlias`. For the complete FQN table, see [widget-catalog.md](widget-catalog.md). For widget-specific settings details, see [widget-development.md](widget-development.md).
 
 ## Datasources
 
@@ -219,40 +214,20 @@ Datasources bind widgets to entity data.
 
 ```json
 {
-  "datasources": [
-    {
-      "type": "entity",
-      "entityAliasId": "alias-uuid-here",
-      "filterId": null,
-      "dataKeys": [
-        {
-          "name": "temperature",
-          "type": "timeseries",
-          "label": "Temperature",
-          "color": "#2196f3",
-          "settings": {},
-          "funcBody": null,
-          "postFuncBody": null,
-          "_hash": 0.12345
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Attribute Datasource
-
-```json
-{
-  "dataKeys": [
-    {
-      "name": "dimLevel",
-      "type": "attribute",
-      "label": "Dim Level",
-      "settings": {}
-    }
-  ]
+  "datasources": [{
+    "type": "entity",
+    "entityAliasId": "alias-uuid-here",
+    "filterId": null,
+    "dataKeys": [{
+      "name": "temperature",
+      "type": "timeseries",
+      "label": "Temperature",
+      "color": "#2196f3",
+      "settings": {},
+      "funcBody": null,
+      "postFuncBody": null
+    }]
+  }]
 }
 ```
 
@@ -282,35 +257,21 @@ Datasources bind widgets to entity data.
 
 RPC widgets use `targetDevice` instead of or in addition to `datasources`.
 
-### Explicit Device Target
-
 ```json
-{
-  "targetDevice": {
-    "type": "device",
-    "deviceId": "${DEVICE_ID}"
-  }
-}
+{"targetDevice": {"type": "device", "deviceId": "${DEVICE_ID}"}}
 ```
 
-### Entity Alias Target
+Or via entity alias:
 
 ```json
-{
-  "targetDevice": {
-    "type": "entity",
-    "entityAliasId": "alias-uuid-here"
-  }
-}
+{"targetDevice": {"type": "entity", "entityAliasId": "alias-uuid-here"}}
 ```
 
 ## Layout and Grid System
 
 ### Grid Properties
-- 24 columns wide
-- Row/col are zero-based
-- `sizeX`: width in grid units (max 24)
-- `sizeY`: height in grid units
+- 24 columns wide, row/col are zero-based
+- `sizeX`: width in grid units (max 24), `sizeY`: height in grid units
 - Default margin: 10px between widgets
 - Widgets cannot overlap in the same layout
 
@@ -353,7 +314,6 @@ The `states.{state}.layouts.main.widgets` object maps widget UUIDs to positions:
 | 3 cards | 8 each | `col: 0, 8, 16` |
 | 2 cards | 12 each | `col: 0, 12` |
 | Full width | 24 | `col: 0` |
-| Mixed | varies | Plan carefully |
 
 ### UUID Consistency Rule
 
@@ -367,56 +327,85 @@ If these UUIDs do not match, the widget will not render. Always generate the UUI
 
 States define separate "pages" within a single dashboard. Navigation widgets switch between them.
 
-### State Definition
-
 ```json
 {
   "states": {
     "main": {
       "name": "Main",
       "root": true,
-      "layouts": {
-        "main": {
-          "widgets": { ... }
-        }
-      }
+      "layouts": {"main": {"widgets": { ... }}}
     },
     "schedule": {
       "name": "Schedule",
       "root": false,
-      "layouts": {
-        "main": {
-          "widgets": { ... }
-        }
-      }
+      "layouts": {"main": {"widgets": { ... }}}
     }
   }
 }
 ```
 
-- Exactly one state should have `"root": true`
-- The root state is shown when the dashboard first loads
+- Exactly one state should have `"root": true` (shown on first load)
 - State names are used as URL parameters
 
-### Navigation Between States
+## Dashboard Action Types
 
-Use widget actions or dedicated navigation widgets:
+Actions define what happens on user interaction (row click, button press, marker click, etc.).
+
+| Action Type | Description | Key Parameters |
+|-------------|-------------|----------------|
+| `openDashboardState` | Navigate to a named state within this dashboard | `targetDashboardStateId` |
+| `updateDashboardState` | Update state params without full navigation | `stateParams` |
+| `openDashboard` | Open a different dashboard entirely | `dashboardId`, `dashboardStateId` |
+| `custom` | Execute custom JavaScript function | `customFunction` body |
+| `customPrettyAction` | Custom JS with full code editor | `customFunction` body |
+| `mobileAction` | Trigger mobile-specific action (call, map, etc.) | `mobileActionType` |
+| `setEntityFromWidget` | Set entity context for child states | (auto from row entity) |
+
+### Action Example
 
 ```json
 {
   "actions": {
     "rowClick": {
-      "name": "Go to Schedule",
+      "name": "Go to Details",
       "type": "openDashboardState",
-      "targetDashboardStateId": "schedule",
-      "openRightLayout": false,
-      "setEntityId": false
+      "targetDashboardStateId": "device_details",
+      "setEntityId": true,
+      "openRightLayout": false
     }
   }
 }
 ```
 
 Or use `system.navigation_cards` widget to provide clickable cards that navigate to other states.
+
+## Dashboard and Widget CSS
+
+### Dashboard-Level CSS
+
+Apply global styles to the entire dashboard via `configuration.settings.dashboardCss`:
+
+```json
+{
+  "settings": {
+    "dashboardCss": ".tb-widget { border: 1px solid #ddd; }\n.mat-toolbar { background: #17212b; }"
+  }
+}
+```
+
+### Widget-Level CSS
+
+Apply scoped styles to an individual widget via `config.widgetCss`:
+
+```json
+{
+  "config": {
+    "widgetCss": ".my-class { color: red; font-weight: bold; }"
+  }
+}
+```
+
+Widget CSS is scoped to the widget container. Dashboard CSS applies globally across all widgets.
 
 ## Dashboard Settings
 
@@ -430,7 +419,8 @@ Or use `system.navigation_cards` widget to provide clickable cards that navigate
     "showFilters": false,
     "showDashboardTimewindow": true,
     "showDashboardExport": true,
-    "toolbarAlwaysOpen": true
+    "toolbarAlwaysOpen": true,
+    "dashboardCss": ""
   }
 }
 ```
@@ -444,6 +434,7 @@ Or use `system.navigation_cards` widget to provide clickable cards that navigate
 | `showDashboardTimewindow` | `true` | Show time window selector |
 | `showDashboardExport` | `true` | Show export button |
 | `toolbarAlwaysOpen` | `true` | Keep toolbar expanded |
+| `dashboardCss` | `""` | Custom CSS applied to the entire dashboard |
 
 ## Timewindow Configuration
 
@@ -458,10 +449,7 @@ Or use `system.navigation_cards` widget to provide clickable cards that navigate
     "quickInterval": "CURRENT_DAY",
     "interval": 1000
   },
-  "aggregation": {
-    "type": "NONE",
-    "limit": 50000
-  }
+  "aggregation": {"type": "NONE", "limit": 50000}
 }
 ```
 
@@ -479,147 +467,17 @@ Or use `system.navigation_cards` widget to provide clickable cards that navigate
       "endTimeMs": 1700100000000
     }
   },
-  "aggregation": {
-    "type": "AVG",
-    "limit": 25000
-  }
+  "aggregation": {"type": "AVG", "limit": 25000}
 }
 ```
 
 ### Aggregation Types
 
-| Type | Description |
-|------|-------------|
-| `NONE` | Raw data (no aggregation) |
-| `AVG` | Average |
-| `MIN` | Minimum |
-| `MAX` | Maximum |
-| `SUM` | Sum |
-| `COUNT` | Count of data points |
+`NONE` (raw), `AVG`, `MIN`, `MAX`, `SUM`, `COUNT`
 
 ### Quick Interval Values
 
-| Value | Description |
-|-------|-------------|
-| `CURRENT_DAY` | Today |
-| `CURRENT_WEEK` | This week |
-| `CURRENT_MONTH` | This month |
-| `CURRENT_YEAR` | This year |
-
-## Widget-Specific Settings
-
-### Value Card (system.cards.value_card)
-
-```json
-{
-  "settings": {
-    "layout": "square",
-    "autoScale": true,
-    "showLabel": true,
-    "labelFont": {"family": "Roboto", "size": 16, "sizeUnit": "px"},
-    "showIcon": true,
-    "iconSize": 40,
-    "iconSizeUnit": "px",
-    "icon": "thermostat",
-    "iconColor": "#5469FF",
-    "valueFont": {"family": "Roboto", "size": 52, "sizeUnit": "px"},
-    "valueColor": "#000",
-    "showDate": true,
-    "dateFormat": "yyyy-MM-dd HH:mm:ss",
-    "dateFont": {"family": "Roboto", "size": 12, "sizeUnit": "px"},
-    "dateColor": "rgba(0,0,0,0.38)",
-    "background": {"type": "color", "color": "#fff", "overlay": {"enabled": false}}
-  }
-}
-```
-
-### Time Series Chart (system.time_series_chart)
-
-```json
-{
-  "settings": {
-    "thresholds": [],
-    "yAxes": {
-      "default": {
-        "show": true,
-        "label": "Temperature (C)",
-        "min": null,
-        "max": null
-      }
-    },
-    "xAxis": {
-      "show": true,
-      "label": null
-    },
-    "animation": {"enabled": true},
-    "tooltip": {"enabled": true, "trigger": "axis"},
-    "noAggregation": false
-  }
-}
-```
-
-### Slider (system.slider)
-
-```json
-{
-  "settings": {
-    "initialValue": 50,
-    "minValue": 0,
-    "maxValue": 100,
-    "layout": "simplified",
-    "autoScale": true,
-    "showValue": true,
-    "valueFont": {"size": 28, "sizeUnit": "px"},
-    "leftIcon": "brightness_low",
-    "rightIcon": "brightness_high",
-    "thumbColor": "#305680",
-    "trackColor": "rgba(48,86,128,0.4)"
-  }
-}
-```
-
-For slider RPC: use `targetDevice` and configure the attribute or RPC method in the widget action settings. Prefer SET_ATTRIBUTE (SHARED_SCOPE) over EXECUTE_RPC for LoRaWAN devices (avoids 408 timeout).
-
-### Command Button (system.command_button)
-
-```json
-{
-  "settings": {
-    "appearance": {
-      "showLabel": true,
-      "label": "Turn ON",
-      "icon": {"show": true, "icon": "power_settings_new"},
-      "type": "outlined",
-      "autoScale": true
-    },
-    "styleButton": {
-      "isRaised": false,
-      "isPrimary": false,
-      "bgColor": "#305680",
-      "textColor": "#fff"
-    }
-  }
-}
-```
-
-### Alarm Table (system.alarms_table)
-
-```json
-{
-  "settings": {
-    "alarmsTitle": "Active Alarms",
-    "enableFilter": true,
-    "enableStickyHeader": true,
-    "enableStickyAction": true,
-    "displayDetails": true,
-    "allowAcknowledgment": true,
-    "allowClear": true,
-    "displayPagination": true,
-    "defaultPageSize": 10,
-    "defaultSortOrder": "-createdTime"
-  }
-}
-```
+`CURRENT_DAY`, `CURRENT_WEEK`, `CURRENT_MONTH`, `CURRENT_YEAR`
 
 ## Programmatic Dashboard Creation
 
@@ -632,146 +490,94 @@ For slider RPC: use `targetDevice` and configure the attribute or RPC method in 
 5. Build layout widgets dictionary with row/col/sizeX/sizeY positions
 6. Assemble states with layouts
 7. Combine into configuration
-8. POST to `/api/dashboard`
+8. POST to `${TB_HOST}/api/dashboard`
 
 ### Python Example
 
 ```python
-import uuid
-import requests
+import uuid, requests
 
 def gen_uuid():
     return str(uuid.uuid4())
 
-# Step 1: Entity alias
+# 1. Entity alias
 alias_id = gen_uuid()
 entity_aliases = {
     alias_id: {
-        "id": alias_id,
-        "alias": "My Device",
-        "filter": {
-            "type": "singleEntity",
-            "resolveMultiple": False,
-            "singleEntity": {"entityType": "DEVICE", "id": "${DEVICE_ID}"}
-        }
+        "id": alias_id, "alias": "My Device",
+        "filter": {"type": "singleEntity", "resolveMultiple": False,
+                   "singleEntity": {"entityType": "DEVICE", "id": "${DEVICE_ID}"}}
     }
 }
 
-# Step 2: Widget
+# 2. Widget
 widget_id = gen_uuid()
 widgets = {
     widget_id: {
-        "typeFullFqn": "system.cards.value_card",
-        "type": "latest",
-        "sizeX": 4,
-        "sizeY": 3,
+        "typeFullFqn": "system.cards.value_card", "type": "latest",
+        "sizeX": 4, "sizeY": 3,
         "config": {
-            "datasources": [{
-                "type": "entity",
-                "entityAliasId": alias_id,
-                "dataKeys": [{
-                    "name": "temperature",
-                    "type": "timeseries",
-                    "label": "Temperature",
-                    "color": "#2196f3",
-                    "settings": {}
-                }]
-            }],
+            "datasources": [{"type": "entity", "entityAliasId": alias_id,
+                "dataKeys": [{"name": "temperature", "type": "timeseries",
+                              "label": "Temperature", "color": "#2196f3", "settings": {}}]}],
             "settings": {"layout": "square", "autoScale": True},
-            "showTitle": True,
-            "title": "Temperature"
+            "showTitle": True, "title": "Temperature"
         }
     }
 }
 
-# Step 3: Layout
-layout_widgets = {
-    widget_id: {"sizeX": 4, "sizeY": 3, "row": 0, "col": 0}
-}
+# 3. Layout
+layout_widgets = {widget_id: {"sizeX": 4, "sizeY": 3, "row": 0, "col": 0}}
 
-# Step 4: Assemble
+# 4. Assemble and POST
 dashboard = {
     "title": "My Dashboard",
     "configuration": {
-        "widgets": widgets,
-        "entityAliases": entity_aliases,
-        "filters": {},
-        "states": {
-            "main": {
-                "name": "Main",
-                "root": True,
-                "layouts": {
-                    "main": {
-                        "widgets": layout_widgets,
-                        "gridSettings": {
-                            "backgroundColor": "#eeeeee",
-                            "columns": 24,
-                            "margin": 10,
-                            "outerMargin": True
-                        }
-                    }
-                }
-            }
-        },
-        "settings": {
-            "stateControllerId": "entity",
-            "showTitle": True,
-            "showDashboardTimewindow": True,
-            "showDashboardExport": True,
-            "toolbarAlwaysOpen": True
-        },
-        "timewindow": {
-            "selectedTab": 0,
-            "realtime": {"realtimeType": 0, "timewindowMs": 86400000},
-            "aggregation": {"type": "NONE", "limit": 50000}
-        }
+        "widgets": widgets, "entityAliases": entity_aliases, "filters": {},
+        "states": {"main": {"name": "Main", "root": True, "layouts": {"main": {
+            "widgets": layout_widgets,
+            "gridSettings": {"backgroundColor": "#eeeeee", "columns": 24, "margin": 10, "outerMargin": True}
+        }}}},
+        "settings": {"stateControllerId": "entity", "showTitle": True,
+                     "showDashboardTimewindow": True, "toolbarAlwaysOpen": True},
+        "timewindow": {"selectedTab": 0, "realtime": {"realtimeType": 0, "timewindowMs": 86400000},
+                       "aggregation": {"type": "NONE", "limit": 50000}}
     }
 }
 
-# Step 5: POST
-headers = {"X-Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+headers = {"X-Authorization": f"Bearer ${TB_TOKEN}", "Content-Type": "application/json"}
 resp = requests.post(f"${TB_HOST}/api/dashboard", json=dashboard, headers=headers)
 resp.raise_for_status()
-created = resp.json()
-print(f"Dashboard ID: {created['id']['id']}")
+print(f"Dashboard ID: {resp.json()['id']['id']}")
 ```
 
-### Update Existing Dashboard
+### Updating an Existing Dashboard
 
 Always GET first to obtain the current version, then modify and POST:
 
 ```python
-# GET current
-dash = requests.get(f"${TB_HOST}/api/dashboard/{dashboard_id}",
-                     headers=headers).json()
-
-# Modify
+dash = requests.get(f"${TB_HOST}/api/dashboard/{dashboard_id}", headers=headers).json()
 dash["configuration"]["widgets"][new_widget_id] = { ... }
 dash["configuration"]["states"]["main"]["layouts"]["main"]["widgets"][new_widget_id] = { ... }
-
-# POST back (version field enables optimistic locking)
 resp = requests.post(f"${TB_HOST}/api/dashboard", json=dash, headers=headers)
-if resp.status_code == 409:
-    # Version conflict -- re-GET and retry
-    pass
+# On 409 Conflict: re-GET and retry (version field enables optimistic locking)
 ```
 
 ## Common Mistakes
 
 1. **UUID mismatch**: Widget UUID in `widgets` dict does not match UUID in `states.*.layouts.main.widgets`. Widget silently fails to render.
-
 2. **Missing entity alias**: `datasources[].entityAliasId` references an alias UUID not present in `entityAliases`. Widget shows "Entity not found".
-
 3. **Wrong data key type**: Using `"type": "attribute"` when the key is actually telemetry (or vice versa). Widget shows no data.
-
 4. **Grid overflow**: Widget `col + sizeX > 24`. Widget wraps to next row unexpectedly.
-
 5. **RPC widget without targetDevice**: RPC widgets need `targetDevice` configuration. Without it, the RPC has no destination device.
-
 6. **Version not included on update**: Omitting the `version` field causes the POST to create a new dashboard instead of updating.
-
 7. **Stale version**: Not re-fetching before update; 409 Conflict. Always GET, modify, POST.
-
 8. **configMode mismatch**: Setting `"configMode": "basic"` but providing advanced-mode settings. The UI may not render settings correctly.
+
+## See Also
+
+- [widget-catalog.md](widget-catalog.md) -- Full FQN table of all built-in widgets with configuration details
+- [widget-development.md](widget-development.md) -- Widget controller scripts, settings schemas, custom widget creation
+- [entity-management.md](entity-management.md) -- All entity alias filter types, entity relations, and Entity Query API
 
 Reference template: `/opt/thingsboard/.claude/templates/dashboard_skeleton.json`

@@ -1,3 +1,5 @@
+<!-- Last updated: 2026-02-09 -->
+<!-- Sources: Widget type source code, ThingsBoard widget library -->
 # Widget Catalog and Configuration Reference
 
 Complete widget FQN catalog and configuration guide for ThingsBoard CE v4.4.0-SNAPSHOT dashboards.
@@ -533,6 +535,23 @@ This returns HTTP 200 immediately and the attribute change is delivered when the
 - `EXECUTE_RPC` with online device: 200 with response
 - `EXECUTE_RPC` with offline device: 408 timeout (but rule chain still processes)
 - `SET_ATTRIBUTE` with any device state: 200 immediately
+
+---
+
+## Custom Widget Creation
+
+Custom widgets use the FQN pattern `bundleAlias.widgetTypeAlias` (e.g., `my_bundle.custom_sensor_card`).
+Create via REST API: `POST ${TB_HOST}/api/widgetType` with header `X-Authorization: Bearer ${TB_TOKEN}`:
+```json
+{"name": "Custom Sensor", "bundleAlias": "my_bundle", "alias": "custom_sensor_card",
+ "type": "latest", "descriptor": {"type": "latest", "controllerScript": "...",
+ "templateHtml": "...", "templateCss": "...", "settingsSchema": {}}}
+```
+See widget-development.md for full development guide.
+
+## Widget Action Configuration
+
+Widget actions are defined in `config.actions`, keyed by source: `headerButton`, `rowClick`, `cellClick`, `tooltipClick`, `markerClick`. Each source maps to an array of action descriptors for navigation, RPC, or custom functions. See widget-development.md for action type details.
 
 ---
 

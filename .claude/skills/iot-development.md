@@ -1,3 +1,5 @@
+<!-- Last updated: 2026-02-09 -->
+
 # IoT Development Guide
 
 Main entry point for ThingsBoard IoT development on this instance.
@@ -92,13 +94,24 @@ source /opt/thingsboard/.claude/credentials.env
 |------|-------------|
 | [iot-development.md](iot-development.md) | Starting any IoT task (this file) |
 | [rest-api-reference.md](rest-api-reference.md) | You need API endpoint details, request/response formats |
+| [telemetry-attributes-guide.md](telemetry-attributes-guide.md) | You work with telemetry, attributes, scopes, aggregation, MQTT device API |
+| [entity-management.md](entity-management.md) | You need entity CRUD, relations, entity queries, dashboard aliases |
+| [rpc-guide.md](rpc-guide.md) | You need RPC (remote commands to devices), one-way/two-way/persistent |
 | [widget-catalog.md](widget-catalog.md) | You need widget FQNs or widget configuration structures |
+| [widget-development.md](widget-development.md) | You are creating custom widgets, need widgetContext API or settings schema |
 | [tbel-scripting.md](tbel-scripting.md) | You are writing TBEL/MVEL transform or filter scripts |
 | [device-profile-guide.md](device-profile-guide.md) | You need device profiles or alarm rules |
+| [rule-chain-development.md](rule-chain-development.md) | You are building rule chains via REST API (75 node catalog) |
+| [dashboard-json-guide.md](dashboard-json-guide.md) | You need dashboard JSON structure, widget config, programmatic creation |
 | [rule-engine.md](rule-engine.md) | You are building/modifying rule chains (source code level) |
 | [architecture.md](architecture.md) | You need system architecture understanding |
 | [frontend.md](frontend.md) | You are modifying the Angular UI |
 | [backend.md](backend.md) | You need Spring Boot service details |
+| [database.md](database.md) | You need PostgreSQL schema, DAO patterns, time-series storage |
+| [deployment.md](deployment.md) | You need Docker Compose deployment, scaling, production config |
+| [branding.md](branding.md) | You need white-label branding customization |
+| [ttn-lorawan-integration.md](ttn-lorawan-integration.md) | You are integrating with The Things Network (TTN) |
+| [zenopix-dali-reference.md](zenopix-dali-reference.md) | You are working with Zenopix DALI smart lighting |
 
 ### Template Files
 
