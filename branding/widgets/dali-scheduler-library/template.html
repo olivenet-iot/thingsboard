@@ -1,0 +1,246 @@
+<div id="dali-scheduler">
+  <!-- ===== LOADING OVERLAY ===== -->
+  <div id="loading-overlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+
+  <!-- ===== TOAST NOTIFICATION ===== -->
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <!-- ===== HEADER ===== -->
+  <div class="header">
+    <div class="header-left">
+      <svg class="header-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+      <h1 class="header-title">DALI Task Scheduler</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="DALI.showNewTask()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        New Task
+      </button>
+      <button class="btn btn-secondary" onclick="DALI.queryAllTasks()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        Query All
+      </button>
+      <button class="btn btn-secondary" onclick="DALI.showLocationSetup()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+        Location
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== SECTION A: TASK TABLE ===== -->
+  <div class="section">
+    <div id="task-table-container">
+      <table class="task-table" id="task-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Profile ID</th>
+            <th>Priority</th>
+            <th>Date Range</th>
+            <th>Schedule</th>
+            <th>Cyclic</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="task-table-body">
+        </tbody>
+      </table>
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="opacity:0.3"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+        <p>No tasks deployed.</p>
+        <p class="empty-hint">Click <strong>+ New Task</strong> to create your first schedule.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION C: 24-HOUR TIMELINE ===== -->
+  <div class="section">
+    <div class="section-label">24-Hour Timeline</div>
+    <div id="timeline-container" class="timeline-container">
+      <svg id="timeline-svg" width="100%" height="120" viewBox="0 0 960 120" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div id="timeline-empty" class="timeline-empty" style="display:none;">No time slots to display.</div>
+  </div>
+
+  <!-- ===== SECTION E: STATUS BAR ===== -->
+  <div class="section status-section">
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-label">Task Response:</span>
+        <span id="task-response-text" class="status-value">--</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Query Response:</span>
+        <span id="query-response-text" class="status-value">--</span>
+      </div>
+      <div class="status-item status-refresh">
+        <span id="last-refresh-text" class="status-hint">Auto-refresh: 30s</span>
+        <button class="btn btn-small" onclick="DALI.refreshStatus()">Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION B: TASK FORM (OVERLAY) ===== -->
+  <div id="task-form-overlay" class="overlay" style="display:none;">
+    <div class="overlay-backdrop" onclick="DALI.hideTaskForm()"></div>
+    <div class="form-panel">
+      <div class="form-header">
+        <h2 id="form-title">New Task</h2>
+        <button class="btn-icon" onclick="DALI.hideTaskForm()" title="Close">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="form-body">
+        <!-- Row 1: Profile + Priority + Channel -->
+        <div class="form-row three-col">
+          <div class="form-group">
+            <label>Profile ID</label>
+            <input type="number" id="f-profile-id" min="1" max="255" value="1" class="input">
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="f-priority" class="input">
+              <option value="1">1 - Highest</option>
+              <option value="2">2 - High</option>
+              <option value="3" selected>3 - Medium</option>
+              <option value="4">4 - Low</option>
+              <option value="5">5 - Lowest</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Channel</label>
+            <input type="number" id="f-channel" min="1" max="64" value="1" class="input">
+          </div>
+        </div>
+
+        <!-- Row 2: Start Date -->
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" id="f-start-date" class="input">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <div class="end-date-group">
+              <input type="date" id="f-end-date" class="input" style="flex:1">
+              <label class="checkbox-label">
+                <input type="checkbox" id="f-end-forever" checked onchange="DALI.toggleEndForever()">
+                Forever
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Cyclic -->
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label>Cyclic Type</label>
+            <select id="f-cyclic-type" class="input" onchange="DALI.onCyclicTypeChange()">
+              <option value="5">Custom (select days)</option>
+              <option value="2">Odd Days</option>
+              <option value="3">Even Days</option>
+              <option value="4">Cyclic Interval</option>
+            </select>
+          </div>
+          <div class="form-group" id="cyclic-interval-group" style="display:none;">
+            <label>Cyclic Interval (days)</label>
+            <input type="number" id="f-cyclic-time" min="1" max="365" value="7" class="input">
+          </div>
+        </div>
+
+        <!-- Row 4: Off Days (Custom only) -->
+        <div id="off-days-group" class="form-group">
+          <label>Active Days</label>
+          <div class="days-row">
+            <label class="day-checkbox"><input type="checkbox" data-day="0" checked><span>Sun</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="1" checked><span>Mon</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="2" checked><span>Tue</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="3" checked><span>Wed</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="4" checked><span>Thu</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="5" checked><span>Fri</span></label>
+            <label class="day-checkbox"><input type="checkbox" data-day="6" checked><span>Sat</span></label>
+          </div>
+        </div>
+
+        <!-- Time Slots -->
+        <div class="timeslots-header">
+          <label>Time Slots</label>
+          <button class="btn btn-small btn-primary" onclick="DALI.addTimeSlot()" id="add-slot-btn">+ Add Slot</button>
+        </div>
+        <div id="timeslots-container"></div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="DALI.hideTaskForm()">Cancel</button>
+          <button class="btn btn-primary" onclick="DALI.deployTask()" id="deploy-btn">Deploy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION D: LOCATION SETUP DIALOG ===== -->
+  <div id="location-overlay" class="overlay" style="display:none;">
+    <div class="overlay-backdrop" onclick="DALI.hideLocationSetup()"></div>
+    <div class="modal-panel">
+      <div class="form-header">
+        <h2>Location Setup</h2>
+        <button class="btn-icon" onclick="DALI.hideLocationSetup()" title="Close">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="form-body">
+        <div class="form-group">
+          <label>Presets</label>
+          <select id="loc-preset" class="input" onchange="DALI.applyLocationPreset()">
+            <option value="">-- Select Preset --</option>
+            <option value="35.19,33.36,3.0">Cyprus (Nicosia) - 35.19, 33.36, UTC+3</option>
+            <option value="34.68,33.04,3.0">Cyprus (Limassol) - 34.68, 33.04, UTC+3</option>
+            <option value="51.51,-0.13,0.0">London - 51.51, -0.13, UTC+0</option>
+            <option value="40.71,-74.01,-5.0">New York - 40.71, -74.01, UTC-5</option>
+            <option value="48.86,2.35,1.0">Paris - 48.86, 2.35, UTC+1</option>
+          </select>
+        </div>
+        <div class="form-row three-col">
+          <div class="form-group">
+            <label>Latitude</label>
+            <input type="number" id="loc-lat" step="0.01" value="35.19" class="input">
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input type="number" id="loc-lon" step="0.01" value="33.36" class="input">
+          </div>
+          <div class="form-group">
+            <label>Timezone (UTC offset)</label>
+            <input type="number" id="loc-tz" step="0.5" min="-12" max="14" value="3.0" class="input">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="DALI.hideLocationSetup()">Cancel</button>
+          <button class="btn btn-primary" onclick="DALI.sendLocationSetup()">Send to Device</button>
+          <button class="btn btn-secondary" onclick="DALI.saveLocationOnly()">Save Only</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONFIRM DELETE DIALOG ===== -->
+  <div id="confirm-overlay" class="overlay" style="display:none;">
+    <div class="overlay-backdrop" onclick="DALI.hideConfirm()"></div>
+    <div class="modal-panel modal-small">
+      <div class="form-header">
+        <h2>Confirm Delete</h2>
+      </div>
+      <div class="form-body">
+        <p id="confirm-message">Are you sure you want to delete this task?</p>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="DALI.hideConfirm()">Cancel</button>
+          <button class="btn btn-danger" onclick="DALI.confirmDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

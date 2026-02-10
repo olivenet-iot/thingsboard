@@ -1,0 +1,19 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "DALI Scheduler Settings",
+    "properties": {
+      "pollIntervalMs": {
+        "title": "Status poll interval (ms)",
+        "type": "number",
+        "default": 30000
+      },
+      "deviceId": {
+        "title": "Fallback Device ID (if no datasource)",
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "form": ["pollIntervalMs", "deviceId"]
+}
