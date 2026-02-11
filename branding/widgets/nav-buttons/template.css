@@ -1,0 +1,126 @@
+/* ===== NAV BUTTONS WIDGET ===== */
+#nav-buttons {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: transparent;
+}
+
+#nav-buttons *, #nav-buttons *::before, #nav-buttons *::after {
+  box-sizing: border-box;
+}
+
+.nav-grid {
+  display: flex !important;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== CARD ===== */
+.nav-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.nav-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.nav-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ===== ICON ===== */
+.nav-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Icon color variants */
+.nav-icon.color-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.nav-icon.color-emerald {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.nav-icon.color-indigo {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.nav-icon.color-rose {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.nav-icon.color-sky {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* ===== TEXT ===== */
+.nav-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.nav-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== ARROW ===== */
+.nav-arrow {
+  flex-shrink: 0;
+  color: #cbd5e1;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.nav-card:hover .nav-arrow {
+  color: #94a3b8;
+  transform: translateX(2px);
+}

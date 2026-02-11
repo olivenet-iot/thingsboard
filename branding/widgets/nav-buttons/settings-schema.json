@@ -1,0 +1,75 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Navigation Buttons Settings",
+    "properties": {
+      "buttons": {
+        "title": "Navigation Buttons",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "stateId": {
+              "title": "Dashboard State ID",
+              "type": "string"
+            },
+            "title": {
+              "title": "Button Title",
+              "type": "string"
+            },
+            "description": {
+              "title": "Short Description",
+              "type": "string"
+            },
+            "icon": {
+              "title": "Icon (bolt, heart, clock, chart, settings, shield)",
+              "type": "string",
+              "default": "bolt"
+            },
+            "color": {
+              "title": "Color (amber, emerald, indigo, rose, sky)",
+              "type": "string",
+              "default": "amber"
+            }
+          }
+        },
+        "default": [
+          {
+            "stateId": "energy",
+            "title": "Energy",
+            "description": "Consumption & savings",
+            "icon": "bolt",
+            "color": "amber"
+          },
+          {
+            "stateId": "health",
+            "title": "Health & Faults",
+            "description": "Diagnostics & alarms",
+            "icon": "heart",
+            "color": "emerald"
+          },
+          {
+            "stateId": "schedule",
+            "title": "Schedule",
+            "description": "Lighting programs",
+            "icon": "clock",
+            "color": "indigo"
+          }
+        ]
+      }
+    }
+  },
+  "form": [
+    {
+      "key": "buttons",
+      "type": "array",
+      "items": [
+        { "key": "buttons[].stateId" },
+        { "key": "buttons[].title" },
+        { "key": "buttons[].description" },
+        { "key": "buttons[].icon" },
+        { "key": "buttons[].color" }
+      ]
+    }
+  ]
+}
