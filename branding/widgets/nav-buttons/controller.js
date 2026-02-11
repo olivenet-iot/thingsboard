@@ -76,15 +76,26 @@ self.onInit = function () {
 
         card.addEventListener('click', function () {
             var stateId = btn.stateId;
-            if (stateId && self.ctx.stateController) {
-                console.log('[NAV] Navigate to:', stateId);
-                // Reset to root first, then open target state (flat navigation)
-                self.ctx.stateController.resetState();
-                setTimeout(function () {
-                    self.ctx.stateController.openState(stateId);
-                }, 50);
-            } else {
-                console.warn('[NAV] No stateController or stateId');
+            if (!stateId) { console.warn('[NAV] No stateId'); return; }
+
+            var sc = self.ctx.stateController;
+            if (!sc) { console.warn('[NAV] No stateController'); return; }
+
+            // Debug: log available methods
+            console.log('[NAV] Navigate to:', stateId);
+            console.log('[NAV] stateController methods:', Object.keys(sc).filter(function(k) { return typeof sc[k] === 'function'; }));
+            console.log('[NAV] getStateId:', sc.getStateId ? sc.getStateId() : 'N/A');
+
+            // Method: URL-based navigation (most reliable for flat state change)
+            try {
+                var dashPath = window.location.pathname;
+                var stateArr = JSON.stringify([{ id: stateId, params: {} }]);
+                var encoded = encodeURIComponent(stateArr);
+                window.location.href = dashPath + '?state=' + encoded;
+            } catch (e) {
+                console.error('[NAV] URL nav failed:', e);
+                // Fallback: try openState
+                sc.openState(stateId);
             }
         });
 
