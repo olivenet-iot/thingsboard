@@ -78,7 +78,11 @@ self.onInit = function () {
             var stateId = btn.stateId;
             if (stateId && self.ctx.stateController) {
                 console.log('[NAV] Navigate to:', stateId);
-                self.ctx.stateController.openState(stateId);
+                // Reset to root first, then open target state (flat navigation)
+                self.ctx.stateController.resetState();
+                setTimeout(function () {
+                    self.ctx.stateController.openState(stateId);
+                }, 50);
             } else {
                 console.warn('[NAV] No stateController or stateId');
             }
