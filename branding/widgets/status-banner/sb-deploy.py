@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Deploy Dim Control as a Widget Library widget in ThingsBoard.
+"""Deploy Status Banner as a Widget Library widget in ThingsBoard.
 
 Creates/updates:
-  - Widget bundle "Zenopix DALI" (reuses existing bundle from scheduler)
-  - Widget type "Dim Control" (static widget)
+  - Widget bundle "SignConnect"
+  - Widget type "Status Banner" (static widget)
 
 Usage:
-  python3 deploy.py              # Deploy widget only
-  python3 deploy.py --device-id UUID  # Set default device ID in settings
+  python3 deploy.py
+  python3 deploy.py --device-id UUID
 """
 
 import argparse
@@ -22,7 +22,7 @@ TB_USER = os.getenv("TB_USER", "support@lumosoft.io")
 TB_PASS = os.getenv("TB_PASS", "tenant")
 
 BUNDLE_TITLE = "SignConnect"
-WIDGET_NAME = "Dim Control"
+WIDGET_NAME = "Status Banner"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,10 +49,7 @@ def headers(token):
     }
 
 
-# ─── Widget Bundle ────────────────────────────────────────────────────────────
-
 def find_bundle(token):
-    """Find existing 'Zenopix DALI' bundle, return it or None."""
     r = requests.get(f"{TB_URL}/api/widgetsBundles", headers=headers(token))
     r.raise_for_status()
     for b in r.json():
@@ -62,7 +59,6 @@ def find_bundle(token):
 
 
 def create_bundle(token):
-    """Create a new widget bundle."""
     body = {"title": BUNDLE_TITLE}
     r = requests.post(
         f"{TB_URL}/api/widgetsBundle", headers=headers(token), json=body
@@ -71,10 +67,7 @@ def create_bundle(token):
     return r.json()
 
 
-# ─── Widget Type ──────────────────────────────────────────────────────────────
-
 def find_widget_types_by_bundle_id(token, bundle_id):
-    """Find widget types using bundle ID (TB 3.6+ API)."""
     r = requests.get(
         f"{TB_URL}/api/widgetTypesInfos?widgetsBundleId={bundle_id}"
         f"&pageSize=100&page=0&sortOrder=ASC&sortProperty=name",
@@ -99,11 +92,10 @@ def find_widget_types_by_bundle_id(token, bundle_id):
 
 def build_widget_type(template_html, template_css, controller_js,
                       settings_schema, device_id=""):
-    """Build the widget type JSON payload."""
     descriptor = {
         "type": "static",
-        "sizeX": 8,
-        "sizeY": 10,
+        "sizeX": 24,
+        "sizeY": 3,
         "resources": [],
         "templateHtml": template_html,
         "templateCss": template_css,
@@ -114,6 +106,7 @@ def build_widget_type(template_html, template_css, controller_js,
             "datasources": [],
             "settings": {
                 "pollIntervalMs": 10000,
+                "offlineThresholdMin": 60,
                 "deviceId": device_id,
             },
         }),
@@ -125,7 +118,6 @@ def build_widget_type(template_html, template_css, controller_js,
 
 
 def save_widget_type(token, widget_type_payload, existing=None):
-    """Create or update the widget type."""
     if existing:
         widget_type_payload["id"] = existing["id"]
         if "createdTime" in existing:
@@ -145,7 +137,6 @@ def save_widget_type(token, widget_type_payload, existing=None):
 
 
 def link_widget_to_bundle(token, bundle_id, widget_type_id):
-    """Link a widget type to a bundle via the dedicated API."""
     r = requests.post(
         f"{TB_URL}/api/widgetsBundle/{bundle_id}/widgetTypes",
         headers=headers(token),
@@ -154,18 +145,12 @@ def link_widget_to_bundle(token, bundle_id, widget_type_id):
     r.raise_for_status()
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--device-id",
-        default="",
-        help="Default device ID to embed in widget settings",
-    )
+    parser.add_argument("--device-id", default="",
+                        help="Default device ID for widget settings")
     args = parser.parse_args()
 
-    # Read source files
     print("Reading source files...")
     template_html = read_file("template.html")
     template_css = read_file("template.css")
@@ -176,12 +161,10 @@ def main():
     print(f"  template.css:  {len(template_css):,} bytes")
     print(f"  controller.js: {len(controller_js):,} bytes")
 
-    # Authenticate
     print("\nLogging in...")
     token = login()
     print("  Authenticated.")
 
-    # Find or create bundle
     print(f"\nLooking for bundle '{BUNDLE_TITLE}'...")
     bundle = find_bundle(token)
     if bundle:
@@ -193,16 +176,13 @@ def main():
 
     bundle_id = bundle["id"]["id"]
 
-    # Find existing widget type
     print(f"\nLooking for widget type '{WIDGET_NAME}'...")
     existing_wt = find_widget_types_by_bundle_id(token, bundle_id)
-
     if existing_wt:
         print(f"  Found: {existing_wt.get('id', {}).get('id', '?')}")
     else:
         print("  Not found. Will create new.")
 
-    # Build and save
     wt_payload = build_widget_type(
         template_html, template_css, controller_js,
         settings_schema, args.device_id,
@@ -214,7 +194,6 @@ def main():
     print(f"  Widget type ID:  {wt_id}")
     print(f"  Widget type FQN: {wt_fqn}")
 
-    # Link to bundle
     print(f"\nLinking widget type to bundle...")
     link_widget_to_bundle(token, bundle_id, wt_id)
     print("  Linked.")
@@ -228,18 +207,20 @@ def main():
     checks = [
         ("descriptor.type == 'static'",
          desc.get("type") == "static"),
-        ("templateHtml contains 'dim-control'",
-         "dim-control" in desc.get("templateHtml", "")),
-        ("templateCss contains 'dim-slider'",
-         "dim-slider" in desc.get("templateCss", "")),
+        ("sizeX == 24 (full width)",
+         desc.get("sizeX") == 24),
+        ("sizeY == 3 (banner height)",
+         desc.get("sizeY") == 3),
+        ("templateHtml contains 'status-banner'",
+         "status-banner" in desc.get("templateHtml", "")),
+        ("templateCss contains 'sb-zone'",
+         "sb-zone" in desc.get("templateCss", "")),
         ("controllerScript contains 'self.onInit'",
          "self.onInit" in desc.get("controllerScript", "")),
         ("controllerScript contains 'self.ctx.http'",
          "self.ctx.http" in desc.get("controllerScript", "")),
-        ("controllerScript contains 'DIM_CTRL'",
-         "DIM_CTRL" in desc.get("controllerScript", "")),
-        ("controllerScript contains 'SHARED_SCOPE'",
-         "SHARED_SCOPE" in desc.get("controllerScript", "")),
+        ("controllerScript contains 'FAULT_MAP'",
+         "FAULT_MAP" in desc.get("controllerScript", "")),
         ("controllerScript does NOT contain hardcoded device ID",
          "41c198d0-0582-11f1" not in desc.get("controllerScript", "")),
         ("controllerScript does NOT contain localStorage",
@@ -262,10 +243,6 @@ def main():
     print(f"  Bundle: '{BUNDLE_TITLE}'")
     print(f"  Widget: '{WIDGET_NAME}'")
     print(f"  FQN:    tenant.{wt_fqn}")
-    print(f"\nTo add to a dashboard:")
-    print(f"  1. Edit dashboard → Add widget → '{BUNDLE_TITLE}' → '{WIDGET_NAME}'")
-    print(f"  2. In widget settings, enter Device ID: 41c198d0-0582-11f1-999c-9b8fab55435e")
-    print(f"     (or configure entity alias in datasource)")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Status Banner Settings",
+    "properties": {
+      "deviceId": {
+        "title": "Device ID (fallback if no entity alias)",
+        "type": "string",
+        "default": ""
+      },
+      "pollIntervalMs": {
+        "title": "Telemetry poll interval (ms)",
+        "type": "number",
+        "default": 10000
+      },
+      "offlineThresholdMin": {
+        "title": "Offline threshold (minutes)",
+        "type": "number",
+        "default": 60
+      }
+    }
+  },
+  "form": [
+    {
+      "key": "deviceId",
+      "type": "string",
+      "placeholder": "Leave empty to use entity alias"
+    },
+    {
+      "key": "pollIntervalMs",
+      "type": "number"
+    },
+    {
+      "key": "offlineThresholdMin",
+      "type": "number"
+    }
+  ]
+}

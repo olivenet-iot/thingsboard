@@ -1,0 +1,55 @@
+<div id="status-banner">
+
+  <!-- LEFT: Device Identity + Lamp Status -->
+  <div class="sb-zone sb-zone-device">
+    <div class="sb-lamp-indicator" id="sb-lamp-dot" title="Lamp status"></div>
+    <div class="sb-device-info">
+      <div class="sb-device-name" id="sb-device-name">—</div>
+      <div class="sb-device-meta">
+        <span class="sb-badge sb-badge-type" id="sb-device-type">—</span>
+        <span class="sb-dim-label" id="sb-dim-label">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Fault Summary -->
+  <div class="sb-zone sb-zone-faults" id="sb-fault-zone">
+    <div class="sb-fault-icon" id="sb-fault-icon">
+      <svg id="sb-icon-ok" class="sb-icon" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      </svg>
+      <svg id="sb-icon-warn" class="sb-icon" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" style="display:none;">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+      </svg>
+    </div>
+    <div class="sb-fault-info">
+      <div class="sb-fault-title" id="sb-fault-title">All Systems OK</div>
+      <div class="sb-fault-detail" id="sb-fault-detail">No active faults</div>
+    </div>
+    <!-- Fault Tooltip (shown on hover/click) -->
+    <div class="sb-fault-tooltip" id="sb-fault-tooltip" style="display:none;">
+      <div class="sb-tooltip-section" id="sb-tooltip-controller" style="display:none;">
+        <div class="sb-tooltip-cat">Controller</div>
+        <ul id="sb-tooltip-controller-list"></ul>
+      </div>
+      <div class="sb-tooltip-section" id="sb-tooltip-driver" style="display:none;">
+        <div class="sb-tooltip-cat">Driver</div>
+        <ul id="sb-tooltip-driver-list"></ul>
+      </div>
+      <div class="sb-tooltip-section" id="sb-tooltip-lightsrc" style="display:none;">
+        <div class="sb-tooltip-cat">Light Source</div>
+        <ul id="sb-tooltip-lightsrc-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Connection Status -->
+  <div class="sb-zone sb-zone-connection">
+    <div class="sb-conn-dot" id="sb-conn-dot"></div>
+    <div class="sb-conn-info">
+      <div class="sb-conn-label" id="sb-conn-label">—</div>
+      <div class="sb-conn-time" id="sb-conn-time">—</div>
+    </div>
+  </div>
+
+</div>
