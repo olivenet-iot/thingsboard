@@ -8,10 +8,12 @@
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   background: #ffffff;
   color: #1e293b;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: stretch;
   gap: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 #status-banner *, #status-banner *::before, #status-banner *::after {
@@ -20,45 +22,34 @@
 
 /* ===== ZONES ===== */
 .sb-zone {
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
   gap: 10px;
   min-width: 0;
+  height: 100%;
 }
 
 .sb-zone-device {
-  flex: 1.2;
+  flex: 1 1 35% !important;
   min-width: 0;
+  border-right: 1px solid #e2e8f0;
+  padding-right: 20px;
 }
 
 .sb-zone-faults {
-  flex: 1;
-  justify-content: center;
+  flex: 1 1 40% !important;
+  justify-content: center !important;
   position: relative;
   cursor: default;
-  padding: 0 16px;
+  padding: 0 20px;
+  border-right: 1px solid #e2e8f0;
 }
 
 .sb-zone-connection {
-  flex: 0.8;
-  justify-content: flex-end;
-}
-
-/* ===== DIVIDERS ===== */
-.sb-zone-device::after,
-.sb-zone-faults::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 20%;
-  height: 60%;
-  width: 1px;
-  background: #e2e8f0;
-}
-
-.sb-zone-device,
-.sb-zone-faults {
-  position: relative;
+  flex: 0 1 25% !important;
+  justify-content: flex-end !important;
+  padding-left: 20px;
 }
 
 /* ===== LAMP INDICATOR ===== */
@@ -83,6 +74,7 @@
 /* ===== DEVICE INFO ===== */
 .sb-device-info {
   min-width: 0;
+  flex: 1;
 }
 
 .sb-device-name {
@@ -125,6 +117,8 @@
 /* ===== FAULT ZONE ===== */
 .sb-fault-icon {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .sb-icon { display: block; }
@@ -134,12 +128,14 @@
 
 .sb-fault-info {
   min-width: 0;
+  flex: 1;
 }
 
 .sb-fault-title {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .sb-fault-title.is-ok { color: #059669; }
@@ -166,7 +162,7 @@
   padding: 12px 14px;
   min-width: 200px;
   max-width: 280px;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   animation: sb-tooltip-in 0.15s ease;
 }
@@ -253,12 +249,14 @@
 
 .sb-conn-info {
   text-align: right;
+  flex: 1;
 }
 
 .sb-conn-label {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .sb-conn-label.is-online { color: #059669; }
@@ -269,18 +267,5 @@
   font-size: 10px;
   color: #94a3b8;
   margin-top: 1px;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 600px) {
-  #status-banner {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 14px;
-  }
-  .sb-zone { flex: none; width: 100%; }
-  .sb-zone-faults { justify-content: flex-start; padding: 0; }
-  .sb-zone-connection { justify-content: flex-start; }
-  .sb-zone-device::after,
-  .sb-zone-faults::after { display: none; }
+  white-space: nowrap;
 }
