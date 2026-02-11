@@ -76,18 +76,28 @@ self.onInit = function () {
 
         card.addEventListener('click', function () {
             var stateId = btn.stateId;
-            if (!stateId) { console.warn('[NAV] No stateId'); return; }
+            if (!stateId) { return; }
 
-            console.log('[NAV] Navigate to:', stateId);
-
-            // Build target URL with state parameter
-            var basePath = window.location.origin + window.location.pathname;
-            var stateParam = encodeURIComponent(JSON.stringify([{ id: stateId, params: {} }]));
-            var targetUrl = basePath + '?state=' + stateParam;
-
-            // Force full page navigation (Angular SPA won't react to just href change)
-            window.location.replace(targetUrl);
-            setTimeout(function () { window.location.reload(true); }, 100);
+            var sc = self.ctx.stateController;
+            
+            // Debug: list ALL methods and properties
+            var info = [];
+            for (var key in sc) {
+                info.push(key + ':' + typeof sc[key]);
+            }
+            console.log('[NAV] stateController keys:', info.join(', '));
+            console.log('[NAV] Target state:', stateId);
+            console.log('[NAV] Current stateId:', sc.getStateId ? sc.getStateId() : 'N/A');
+            console.log('[NAV] getStateParams:', sc.getStateParams ? JSON.stringify(sc.getStateParams()) : 'N/A');
+            console.log('[NAV] getStateIdAtIndex:', sc.getStateIdAtIndex ? sc.getStateIdAtIndex(0) : 'N/A');
+            
+            // Try: openState with params object
+            try {
+                sc.openState(stateId, {});
+                console.log('[NAV] openState(id, {}) called');
+            } catch(e) {
+                console.error('[NAV] openState failed:', e.message);
+            }
         });
 
         grid.appendChild(card);
