@@ -1,0 +1,29 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Dim Control Settings",
+    "properties": {
+      "deviceId": {
+        "title": "Device ID (fallback if no entity alias)",
+        "type": "string",
+        "default": ""
+      },
+      "pollIntervalMs": {
+        "title": "Telemetry poll interval (ms)",
+        "type": "number",
+        "default": 10000
+      }
+    }
+  },
+  "form": [
+    {
+      "key": "deviceId",
+      "type": "string",
+      "placeholder": "Leave empty to use entity alias"
+    },
+    {
+      "key": "pollIntervalMs",
+      "type": "number"
+    }
+  ]
+}

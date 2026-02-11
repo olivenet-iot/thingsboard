@@ -1,0 +1,82 @@
+<div id="dim-control">
+
+  <!-- CONFIRM DIALOG OVERLAY -->
+  <div id="dim-confirm-overlay" class="dim-confirm-overlay" style="display:none;">
+    <div class="dim-confirm-dialog">
+      <div class="dim-confirm-icon" id="dim-confirm-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
+        </svg>
+      </div>
+      <div class="dim-confirm-title" id="dim-confirm-title">Set Dim Level</div>
+      <div class="dim-confirm-text" id="dim-confirm-text">Set dim level to 100%?</div>
+      <div class="dim-confirm-sub">This will send a downlink command to the device.</div>
+      <div class="dim-confirm-actions">
+        <button class="dim-btn dim-btn-cancel" onclick="DIM_CTRL.cancelConfirm()">Cancel</button>
+        <button class="dim-btn dim-btn-confirm" id="dim-confirm-btn" onclick="DIM_CTRL.executeConfirm()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="dim-toast" class="dim-toast" style="display:none;"></div>
+
+  <!-- HEADER -->
+  <div class="dim-header">
+    <div class="dim-header-left">
+      <div class="dim-lamp-dot" id="dim-lamp-dot" title="Lamp status"></div>
+      <span class="dim-header-title">Dim Control</span>
+    </div>
+    <div class="dim-header-status" id="dim-header-status">--</div>
+  </div>
+
+  <!-- VALUE DISPLAY -->
+  <div class="dim-value-ring" id="dim-value-ring">
+    <svg class="dim-ring-svg" viewBox="0 0 120 120">
+      <circle class="dim-ring-bg" cx="60" cy="60" r="52" />
+      <circle class="dim-ring-fill" id="dim-ring-fill" cx="60" cy="60" r="52" />
+    </svg>
+    <div class="dim-value-inner">
+      <span class="dim-value-number" id="dim-current-value">--</span>
+      <span class="dim-value-unit">%</span>
+    </div>
+  </div>
+
+  <!-- SLIDER -->
+  <div class="dim-slider-section">
+    <div class="dim-slider-wrap">
+      <input type="range" id="dim-slider" class="dim-slider" min="0" max="100" value="0"
+             oninput="DIM_CTRL.onSliderInput()"
+             onchange="DIM_CTRL.onSliderCommit()" />
+    </div>
+    <div class="dim-slider-labels">
+      <span>0</span>
+      <span>25</span>
+      <span>50</span>
+      <span>75</span>
+      <span>100</span>
+    </div>
+  </div>
+
+  <!-- ON / OFF BUTTONS -->
+  <div class="dim-button-row">
+    <button class="dim-power-btn dim-power-off" id="dim-btn-off" onclick="DIM_CTRL.setDim(0)">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/>
+      </svg>
+      OFF
+    </button>
+    <button class="dim-power-btn dim-power-on" id="dim-btn-on" onclick="DIM_CTRL.setDim(100)">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/>
+      </svg>
+      ON
+    </button>
+  </div>
+
+  <!-- LAST COMMAND INFO -->
+  <div class="dim-footer" id="dim-footer">
+    <span id="dim-last-cmd">No commands sent</span>
+  </div>
+
+</div>
