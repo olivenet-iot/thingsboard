@@ -78,25 +78,16 @@ self.onInit = function () {
             var stateId = btn.stateId;
             if (!stateId) { console.warn('[NAV] No stateId'); return; }
 
-            var sc = self.ctx.stateController;
-            if (!sc) { console.warn('[NAV] No stateController'); return; }
-
-            // Debug: log available methods
             console.log('[NAV] Navigate to:', stateId);
-            console.log('[NAV] stateController methods:', Object.keys(sc).filter(function(k) { return typeof sc[k] === 'function'; }));
-            console.log('[NAV] getStateId:', sc.getStateId ? sc.getStateId() : 'N/A');
 
-            // Method: URL-based navigation (most reliable for flat state change)
-            try {
-                var dashPath = window.location.pathname;
-                var stateArr = JSON.stringify([{ id: stateId, params: {} }]);
-                var encoded = encodeURIComponent(stateArr);
-                window.location.href = dashPath + '?state=' + encoded;
-            } catch (e) {
-                console.error('[NAV] URL nav failed:', e);
-                // Fallback: try openState
-                sc.openState(stateId);
-            }
+            // Build target URL with state parameter
+            var basePath = window.location.origin + window.location.pathname;
+            var stateParam = encodeURIComponent(JSON.stringify([{ id: stateId, params: {} }]));
+            var targetUrl = basePath + '?state=' + stateParam;
+
+            // Force full page navigation (Angular SPA won't react to just href change)
+            window.location.replace(targetUrl);
+            setTimeout(function () { window.location.reload(true); }, 100);
         });
 
         grid.appendChild(card);
