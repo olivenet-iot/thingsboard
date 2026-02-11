@@ -222,7 +222,7 @@ self.onInit = function() {
     var html = '';
     tasks.forEach(function(t, idx) {
       var dateRange = formatDate(t.start_year, t.start_month, t.start_day);
-      dateRange += t.end_forever ? ' - Forever' : ' - ' + formatDate(t.end_year, t.end_month, t.end_day);
+      dateRange += t.end_forever ? ' \u2192 Forever' : ' \u2192 ' + formatDate(t.end_year, t.end_month, t.end_day);
 
       var statusClass = t._status === 'deployed' ? 'badge-success'
         : t._status === 'pending' ? 'badge-warning'
@@ -245,8 +245,8 @@ self.onInit = function() {
         + '  <button class="btn btn-small btn-danger-outline" onclick="DALI.requestDelete(' + idx + ')" title="Delete">'
         + '    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>'
         + '  </button>'
-        + '  <button class="btn btn-small btn-action" onclick="DALI.queryTask(' + idx + ')" title="Query from device">'
-        + '    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"/></svg>'
+        + '  <button class="btn btn-small btn-action" onclick="DALI.verifyTask(' + idx + ')" title="Verify on device (sends 1 downlink)">'
+        + '    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'
         + '  </button>'
         + '</td>'
         + '</tr>';
@@ -254,7 +254,7 @@ self.onInit = function() {
     tbody.innerHTML = html;
   }
 
-  // ===================== RENDER TIMELINE =====================
+  // ===================== RENDER TIMELINE (Light Theme) =====================
 
   function renderTimeline() {
     var svg = document.getElementById('timeline-svg');
@@ -289,22 +289,26 @@ self.onInit = function() {
     var neededH = margin.top + 14 + allSlots.length * (barH + 4) + margin.bottom + 10;
     var actualH = Math.max(H, neededH);
 
-    parts.push('<rect x="0" y="0" width="' + W + '" height="' + actualH + '" fill="#1e293b" rx="4"/>');
+    // Light background
+    parts.push('<rect x="0" y="0" width="' + W + '" height="' + actualH + '" fill="#f8fafc" rx="4"/>');
 
+    // Grid lines and hour labels
     for (var h = 0; h <= 24; h += 2) {
       var x = margin.left + (h / 24) * plotW;
-      parts.push('<line x1="' + x + '" y1="' + margin.top + '" x2="' + x + '" y2="' + (actualH - margin.bottom) + '" stroke="#475569" stroke-width="0.5"/>');
+      parts.push('<line x1="' + x + '" y1="' + margin.top + '" x2="' + x + '" y2="' + (actualH - margin.bottom) + '" stroke="#e2e8f0" stroke-width="0.5"/>');
       parts.push('<text x="' + x + '" y="' + (actualH - 8) + '" fill="#94a3b8" font-size="10" text-anchor="middle">' + String(h).padStart(2, '0') + ':00</text>');
     }
 
+    // Sunrise / sunset reference lines
     var sunriseX = margin.left + (6.5 / 24) * plotW;
     var sunsetX = margin.left + (18 / 24) * plotW;
     parts.push('<line x1="' + sunriseX + '" y1="' + margin.top + '" x2="' + sunriseX + '" y2="' + (actualH - margin.bottom) + '" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3"/>');
-    parts.push('<text x="' + (sunriseX + 3) + '" y="' + (margin.top + 10) + '" fill="#f59e0b" font-size="9">Sunrise</text>');
-    parts.push('<line x1="' + sunsetX + '" y1="' + margin.top + '" x2="' + sunsetX + '" y2="' + (actualH - margin.bottom) + '" stroke="#f97316" stroke-width="1" stroke-dasharray="4,3"/>');
-    parts.push('<text x="' + (sunsetX + 3) + '" y="' + (margin.top + 10) + '" fill="#f97316" font-size="9">Sunset</text>');
+    parts.push('<text x="' + (sunriseX + 3) + '" y="' + (margin.top + 10) + '" fill="#d97706" font-size="9" font-weight="600">Sunrise</text>');
+    parts.push('<line x1="' + sunsetX + '" y1="' + margin.top + '" x2="' + sunsetX + '" y2="' + (actualH - margin.bottom) + '" stroke="#ea580c" stroke-width="1" stroke-dasharray="4,3"/>');
+    parts.push('<text x="' + (sunsetX + 3) + '" y="' + (margin.top + 10) + '" fill="#ea580c" font-size="9" font-weight="600">Sunset</text>');
 
-    var colors = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#a855f7', '#06b6d4', '#ec4899', '#84cc16'];
+    // Slot bars (saturated colors for light theme contrast)
+    var colors = ['#d97706', '#2563eb', '#059669', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
 
     allSlots.forEach(function(slot, i) {
       var s = slot.data;
@@ -327,7 +331,7 @@ self.onInit = function() {
       }
 
       var dim = s.dim_value != null ? s.dim_value : 100;
-      var opacity = Math.max(0.2, dim / 100);
+      var opacity = Math.max(0.3, dim / 100);
       var color = colors[slot.task % colors.length];
       var y = margin.top + 14 + i * (barH + 4);
 
@@ -347,7 +351,7 @@ self.onInit = function() {
         parts.push('<text x="' + (x1a + w1 / 2) + '" y="' + (y + barH / 2 + 4) + '" fill="#fff" font-size="9" text-anchor="middle" font-weight="bold">' + dim + '%</text>');
       }
 
-      parts.push('<text x="' + (margin.left - 5) + '" y="' + (y + barH / 2 + 4) + '" fill="#94a3b8" font-size="9" text-anchor="end">P' + slot.profileId + '</text>');
+      parts.push('<text x="' + (margin.left - 5) + '" y="' + (y + barH / 2 + 4) + '" fill="#64748b" font-size="9" text-anchor="end" font-weight="600">P' + slot.profileId + '</text>');
     });
 
     svg.innerHTML = parts.join('\n');
@@ -452,7 +456,7 @@ self.onInit = function() {
       + '  </div>'
       + '  <div class="slot-row-dim">'
       + '    <span class="slot-dim-label">Dim</span>'
-      + '    <input type="range" class="slider slider-dim" data-slot="' + index + '" min="0" max="100" value="' + dim + '" oninput="document.getElementById(\'dim-val-' + index + '\').textContent=this.value+\'%\'" style="flex:1">'
+      + '    <input type="range" class="slider-dim" data-slot="' + index + '" min="0" max="100" value="' + dim + '" oninput="document.getElementById(\'dim-val-' + index + '\').textContent=this.value+\'%\'" style="flex:1">'
       + '    <span class="dim-val" id="dim-val-' + index + '">' + dim + '%</span>'
       + '  </div>'
       + '</div>'
@@ -835,68 +839,38 @@ self.onInit = function() {
       }
     },
 
-    queryTask: function(idx) {
+    // Single task verify - sends 1 downlink to query task from device
+    verifyTask: function(idx) {
       try {
-        showLoading('Querying task from device...');
-        var cmd = { command: 'task_request', task_index: idx };
+        var t = tasks[idx];
+        if (!t) return;
+        showLoading('Verifying task on device...');
+        var cmd = { command: 'task_request', task_index: t.profile_id };
         apiPost(BASE + '/SHARED_SCOPE', { task_command: JSON.stringify(cmd) })
           .then(function() {
             hideLoading();
-            showToast('Query sent for task index ' + idx + '. Check response below.', 'info');
-            setTimeout(loadStatus, 3000);
+            showToast('Verify sent for profile ' + t.profile_id + '. Response on next uplink (~3 min).', 'info');
+            setTimeout(loadStatus, 5000);
           })
           .catch(function(err) {
             hideLoading();
-            console.error('Query failed:', err);
+            console.error('Verify failed:', err);
             var msg = (err && err.message) ? err.message : String(err);
-            showToast('Query failed: ' + msg, 'error');
+            showToast('Verify failed: ' + msg, 'error');
           });
       } catch(e) {
         hideLoading();
-        console.error('Query error (sync):', e);
-        showToast('Query error: ' + e.message, 'error');
-      }
-    },
-
-    queryAllTasks: function() {
-      try {
-        showLoading('Querying all tasks from device...');
-
-        var chain = Promise.resolve();
-        for (var j = 0; j < 20; j++) {
-          (function(index) {
-            chain = chain.then(function() {
-              return apiPost(BASE + '/SHARED_SCOPE', {
-                task_command: JSON.stringify({ command: 'task_request', task_index: index })
-              }).catch(function() { return null; });
-            }).then(function() {
-              return new Promise(function(resolve) { setTimeout(resolve, 500); });
-            });
-          })(j);
-        }
-
-        chain.then(function() {
-          hideLoading();
-          showToast('All 20 task queries sent. Responses will arrive over the next few minutes.', 'info');
-          setTimeout(loadStatus, 5000);
-        }).catch(function(err) {
-          hideLoading();
-          console.error('Query all failed:', err);
-          showToast('Some queries failed', 'error');
-        });
-      } catch(e) {
-        hideLoading();
-        console.error('Query all error (sync):', e);
-        showToast('Query all error: ' + e.message, 'error');
+        console.error('Verify error (sync):', e);
+        showToast('Verify error: ' + e.message, 'error');
       }
     },
 
     // ===== Location Setup =====
     showLocationSetup: function() {
       if (locationSetup) {
-        document.getElementById('loc-lat').value = locationSetup.latitude || 35.19;
-        document.getElementById('loc-lon').value = locationSetup.longitude || 33.36;
-        document.getElementById('loc-tz').value = locationSetup.timezone != null ? locationSetup.timezone : 3.0;
+        document.getElementById('loc-lat').value = locationSetup.latitude || 52.37;
+        document.getElementById('loc-lon').value = locationSetup.longitude || 4.90;
+        document.getElementById('loc-tz').value = locationSetup.timezone != null ? locationSetup.timezone : 1.0;
       }
       document.getElementById('location-overlay').style.display = 'flex';
     },
@@ -925,25 +899,26 @@ self.onInit = function() {
           return;
         }
 
-        var cmd = {
-          command: 'location_setup',
-          latitude: lat,
-          longitude: lon,
-          timezone: tz
-        };
+        locationSetup = { latitude: lat, longitude: lon, timezone: tz };
 
         showLoading('Sending location to device...');
 
-        apiPost(BASE + '/SHARED_SCOPE', { task_command: JSON.stringify(cmd) })
-          .then(function() {
-            locationSetup = { latitude: lat, longitude: lon, timezone: tz };
-            return apiPost(BASE + '/SERVER_SCOPE', {
-              location_setup: JSON.stringify(locationSetup)
-            });
-          })
+        apiPost(BASE + '/SERVER_SCOPE', {
+          location_setup: JSON.stringify(locationSetup)
+        }).then(function() {
+          var cmd = {
+            command: 'location_setup',
+            latitude: lat,
+            longitude: lon,
+            timezone: tz
+          };
+          return apiPost(BASE + '/SHARED_SCOPE', {
+            task_command: JSON.stringify(cmd)
+          });
+        })
           .then(function() {
             hideLoading();
-            showToast('Location sent to device and saved', 'success');
+            showToast('Location sent to device', 'success');
             DALI.hideLocationSetup();
           })
           .catch(function(err) {
@@ -997,6 +972,7 @@ self.onInit = function() {
 };
 
 self.onDestroy = function() {
+  console.log('[DALI] onDestroy');
   if (window.DALI && window.DALI._statusInterval) {
     clearInterval(window.DALI._statusInterval);
   }

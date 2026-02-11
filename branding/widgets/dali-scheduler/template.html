@@ -19,10 +19,6 @@
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         New Task
       </button>
-      <button class="btn btn-secondary" onclick="DALI.queryAllTasks()">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-        Query All
-      </button>
       <button class="btn btn-secondary" onclick="DALI.showLocationSetup()">
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
         Location
@@ -50,7 +46,7 @@
         </tbody>
       </table>
       <div id="empty-state" class="empty-state" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="opacity:0.3"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
         <p>No tasks deployed.</p>
         <p class="empty-hint">Click <strong>+ New Task</strong> to create your first schedule.</p>
       </div>
@@ -197,25 +193,25 @@
           <label>Presets</label>
           <select id="loc-preset" class="input" onchange="DALI.applyLocationPreset()">
             <option value="">-- Select Preset --</option>
-            <option value="35.19,33.36,3.0">Cyprus (Nicosia) - 35.19, 33.36, UTC+3</option>
-            <option value="34.68,33.04,3.0">Cyprus (Limassol) - 34.68, 33.04, UTC+3</option>
+            <option value="52.37,4.90,1.0">Amsterdam - 52.37, 4.90, UTC+1</option>
+            <option value="52.52,13.41,1.0">Berlin - 52.52, 13.41, UTC+1</option>
             <option value="51.51,-0.13,0.0">London - 51.51, -0.13, UTC+0</option>
-            <option value="40.71,-74.01,-5.0">New York - 40.71, -74.01, UTC-5</option>
             <option value="48.86,2.35,1.0">Paris - 48.86, 2.35, UTC+1</option>
+            <option value="41.90,12.50,1.0">Rome - 41.90, 12.50, UTC+1</option>
           </select>
         </div>
         <div class="form-row three-col">
           <div class="form-group">
             <label>Latitude</label>
-            <input type="number" id="loc-lat" step="0.01" value="35.19" class="input">
+            <input type="number" id="loc-lat" step="0.01" value="52.37" class="input">
           </div>
           <div class="form-group">
             <label>Longitude</label>
-            <input type="number" id="loc-lon" step="0.01" value="33.36" class="input">
+            <input type="number" id="loc-lon" step="0.01" value="4.90" class="input">
           </div>
           <div class="form-group">
             <label>Timezone (UTC offset)</label>
-            <input type="number" id="loc-tz" step="0.5" min="-12" max="14" value="3.0" class="input">
+            <input type="number" id="loc-tz" step="0.5" min="-12" max="14" value="1.0" class="input">
           </div>
         </div>
         <div class="form-actions">
