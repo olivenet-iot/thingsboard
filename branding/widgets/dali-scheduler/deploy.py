@@ -3,7 +3,7 @@
 
 Creates/updates:
   - Widget bundle "SignConnect"
-  - Widget type "DALI Task Scheduler" (static widget)
+  - Widget type "Task Scheduler" (static widget)
 
 Usage:
   python3 deploy.py                          # Deploy widget only
@@ -22,7 +22,7 @@ TB_USER = os.getenv("TB_USER", "support@lumosoft.io")
 TB_PASS = os.getenv("TB_PASS", "tenant")
 
 BUNDLE_TITLE = "SignConnect"
-WIDGET_NAME = "DALI Task Scheduler"
+WIDGET_NAME = "Task Scheduler"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 

@@ -1,7 +1,7 @@
 {
   "schema": {
     "type": "object",
-    "title": "DALI Scheduler Settings",
+    "title": "Task Scheduler Settings",
     "properties": {
       "pollIntervalMs": {
         "title": "Status poll interval (ms)",
