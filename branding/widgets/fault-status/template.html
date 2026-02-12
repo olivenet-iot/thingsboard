@@ -1,0 +1,82 @@
+<div id="fault-status-root">
+  <div class="fs-header">
+    <span class="fs-title">Fault Status</span>
+    <span class="fs-badge" id="fsBadge">Loading...</span>
+  </div>
+
+  <div class="fs-body">
+    <!-- Controller Faults -->
+    <div class="fs-section">
+      <div class="fs-section-label">CONTROLLER</div>
+      <div class="fs-row" id="row-fault_overall_failure">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Overall Failure</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_under_voltage">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Under Voltage</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_over_voltage">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Over Voltage</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_power_limit">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Power Limit</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_thermal_derating">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Thermal Derating</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_thermal_shutdown">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Thermal Shutdown</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+    </div>
+
+    <!-- Light Source Faults -->
+    <div class="fs-section">
+      <div class="fs-section-label">LIGHT SOURCE</div>
+      <div class="fs-row" id="row-fault_light_src_failure">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Overall Failure</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_light_src_short_circuit">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Short Circuit</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_light_src_thermal_derate">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Thermal Derating</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+      <div class="fs-row" id="row-fault_light_src_thermal_shutdn">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Thermal Shutdown</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+    </div>
+
+    <!-- Physical -->
+    <div class="fs-section">
+      <div class="fs-section-label">PHYSICAL</div>
+      <div class="fs-row" id="row-tilt">
+        <span class="fs-dot is-ok"></span>
+        <span class="fs-label">Tilt / Tamper</span>
+        <span class="fs-status is-ok">OK</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fs-footer" id="fsFooter">
+    <span class="fs-timestamp">Last update: —</span>
+  </div>
+</div>
