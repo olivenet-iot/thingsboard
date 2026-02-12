@@ -12,7 +12,9 @@ var FAULT_KEYS = [
     { key: 'fault_light_src_failure',         rowId: 'row-fault_light_src_failure',         label: 'Light Src Failure' },
     { key: 'fault_light_src_short_circuit',   rowId: 'row-fault_light_src_short_circuit',   label: 'Short Circuit' },
     { key: 'fault_light_src_thermal_derate',  rowId: 'row-fault_light_src_thermal_derate',  label: 'Light Src Derating' },
-    { key: 'fault_light_src_thermal_shutdn',  rowId: 'row-fault_light_src_thermal_shutdn',  label: 'Light Src Shutdown' }
+    { key: 'fault_light_src_thermal_shutdn',  rowId: 'row-fault_light_src_thermal_shutdn',  label: 'Light Src Shutdown' },
+    { key: 'status_control_gear_failure',      rowId: 'row-status_control_gear_failure',     label: 'Control Gear Failure' },
+    { key: 'status_lamp_failure',              rowId: 'row-status_lamp_failure',              label: 'Lamp Failure' }
 ];
 
 var TILT_KEY = 'tilt';
