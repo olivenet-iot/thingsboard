@@ -17,6 +17,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
   background: #f8fafc;
+  flex-shrink: 0 !important;
 }
 
 .fs-title {
@@ -49,11 +50,22 @@
   color: #94a3b8;
 }
 
-/* ── Body ── */
+/* ── Body — Two Columns ── */
 .fs-body {
   flex: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
   overflow-y: auto !important;
+  padding: 0;
+}
+
+.fs-column {
+  flex: 1 !important;
   padding: 4px 0;
+}
+
+.fs-column + .fs-column {
+  border-left: 1px solid #e2e8f0;
 }
 
 /* ── Section ── */
@@ -78,12 +90,10 @@
 .fs-row {
   display: flex !important;
   align-items: center !important;
-  padding: 5px 0;
+  padding: 5px 4px;
   transition: background 0.15s ease;
   border-radius: 4px;
   margin: 0 -4px;
-  padding-left: 4px;
-  padding-right: 4px;
 }
 
 .fs-row.is-fault {
@@ -146,6 +156,7 @@
   padding: 8px 16px;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
+  flex-shrink: 0 !important;
 }
 
 .fs-timestamp {
@@ -155,13 +166,11 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .fs-section {
-    padding: 4px 12px 8px 12px;
+  .fs-body {
+    flex-direction: column !important;
   }
-  .fs-header {
-    padding: 10px 12px;
-  }
-  .fs-footer {
-    padding: 6px 12px;
+  .fs-column + .fs-column {
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
   }
 }

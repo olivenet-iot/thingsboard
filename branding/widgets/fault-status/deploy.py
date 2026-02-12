@@ -70,14 +70,14 @@ def build_descriptor(device_id=None):
         "settings": settings,
         "title": WIDGET_NAME,
         "showTitle": False,
-        "sizeX": 12,
-        "sizeY": 7
+        "sizeX": 24,
+        "sizeY": 5
     }
 
     descriptor = {
         "type": "static",
-        "sizeX": 12,
-        "sizeY": 7,
+        "sizeX": 24,
+        "sizeY": 5,
         "resources": [],
         "templateHtml": html,
         "templateCss": css,
