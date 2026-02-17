@@ -260,8 +260,8 @@ self.navigateToDashboard = function(entityId, entityName) {
               '&entityType=ASSET' +
               '&entityName=' + encodeURIComponent(entityName);
 
-    // Open in same window
-    window.open(url, '_self');
+    // Open in new tab
+    window.open(url, '_blank');
 };
 
 self.renderEmpty = function() {
