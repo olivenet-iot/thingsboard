@@ -1,0 +1,22 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fleet Map Settings",
+    "properties": {
+      "onlineThresholdMinutes": {
+        "title": "Online threshold (minutes)",
+        "type": "number",
+        "default": 10
+      },
+      "targetDashboardId": {
+        "title": "SignConnect Dashboard ID (for popup button)",
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "form": [
+    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
+    {"key": "targetDashboardId", "type": "text", "placeholder": "57108320-0764-11f1-9f20-c3880cf3b963"}
+  ]
+}
