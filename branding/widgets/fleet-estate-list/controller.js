@@ -1,7 +1,11 @@
-// Fleet Estate/Region List — Controller
+// Fleet List Widget — Controller
 // Widget type: latest
-// Reusable for both estate list (HOME) and region list (ESTATE)
-// Settings: targetState ("estate" or "region"), headerTitle ("Estates" or "Regions")
+// Reusable for estate list, region list, AND site list
+// Settings:
+//   targetState: "estate" / "region" (for state navigation)
+//   headerTitle: "Estates" / "Regions" / "Sites"
+//   navigationType: "state" (default) or "dashboard"
+//   targetDashboardId: dashboard ID to redirect to (when navigationType=dashboard)
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -12,7 +16,9 @@ self.onInit = function() {
     self.settings = {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
         targetState: self.ctx.settings.targetState || 'estate',
-        headerTitle: self.ctx.settings.headerTitle || 'Estates'
+        headerTitle: self.ctx.settings.headerTitle || 'Estates',
+        navigationType: self.ctx.settings.navigationType || 'state',
+        targetDashboardId: self.ctx.settings.targetDashboardId || ''
     };
 
     self.titleEl.text(self.settings.headerTitle);
@@ -177,6 +183,9 @@ self.renderCards = function(entityList) {
         return;
     }
 
+    // Determine if site list (shows address subtitle instead of device count for sites)
+    var isSiteList = self.settings.navigationType === 'dashboard';
+
     entityList.forEach(function(entity) {
         var stats = self.statsCache[entity.id] || {};
         var total = stats.totalDevices || 0;
@@ -185,6 +194,12 @@ self.renderCards = function(entityList) {
         var faults = stats.faults || 0;
 
         var subtitle = total + ' device' + (total !== 1 ? 's' : '');
+
+        // Fault badge for site cards
+        var faultBadge = '';
+        if (faults > 0) {
+            faultBadge = '<span class="card-fault-badge">⚠ ' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
+        }
 
         var statusHtml = '';
         statusHtml += '<span class="status-item online"><span class="dot dot-online"></span>' + online + ' online</span>';
@@ -195,14 +210,18 @@ self.renderCards = function(entityList) {
             statusHtml += '<span class="status-item fault"><span class="dot dot-fault"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
         }
 
+        // Chevron label
+        var chevronLabel = isSiteList ? '<span class="chevron-label">SignConnect</span>' : '';
+
         html += '<div class="estate-card" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
             '<div class="card-content">' +
-                '<div class="card-name">' + self.escapeHtml(entity.name) + '</div>' +
+                '<div class="card-name">' + self.escapeHtml(entity.name) + faultBadge + '</div>' +
                 '<div class="card-subtitle">' + subtitle + '</div>' +
                 '<div class="card-status">' + statusHtml + '</div>' +
             '</div>' +
             '<div class="card-chevron">' +
                 '<span class="chevron-icon">›</span>' +
+                chevronLabel +
             '</div>' +
         '</div>';
     });
@@ -212,7 +231,12 @@ self.renderCards = function(entityList) {
     self.cardsEl.find('.estate-card').on('click', function() {
         var entityId = $(this).data('entity-id');
         var entityName = $(this).data('entity-name');
-        self.navigateToState(entityId, entityName);
+
+        if (self.settings.navigationType === 'dashboard' && self.settings.targetDashboardId) {
+            self.navigateToDashboard(entityId, entityName);
+        } else {
+            self.navigateToState(entityId, entityName);
+        }
     });
 };
 
@@ -226,6 +250,18 @@ self.navigateToState = function(entityId, entityName) {
     };
 
     self.ctx.stateController.updateState(self.settings.targetState, params);
+};
+
+self.navigateToDashboard = function(entityId, entityName) {
+    // Redirect to SignConnect Dashboard with site entity as context
+    var dashboardId = self.settings.targetDashboardId;
+    var url = '/dashboards/' + dashboardId +
+              '?entityId=' + entityId +
+              '&entityType=ASSET' +
+              '&entityName=' + encodeURIComponent(entityName);
+
+    // Open in same window
+    window.open(url, '_self');
 };
 
 self.renderEmpty = function() {

@@ -17,24 +17,24 @@
         "title": "Header title",
         "type": "string",
         "default": "Estates"
+      },
+      "navigationType": {
+        "title": "Navigation type (state or dashboard)",
+        "type": "string",
+        "default": "state"
+      },
+      "targetDashboardId": {
+        "title": "Target dashboard ID (when navigationType=dashboard)",
+        "type": "string",
+        "default": ""
       }
     }
   },
   "form": [
-    {
-      "key": "onlineThresholdMinutes",
-      "type": "number",
-      "placeholder": "10"
-    },
-    {
-      "key": "targetState",
-      "type": "text",
-      "placeholder": "estate"
-    },
-    {
-      "key": "headerTitle",
-      "type": "text",
-      "placeholder": "Estates"
-    }
+    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
+    {"key": "targetState", "type": "text", "placeholder": "estate"},
+    {"key": "headerTitle", "type": "text", "placeholder": "Estates"},
+    {"key": "navigationType", "type": "text", "placeholder": "state"},
+    {"key": "targetDashboardId", "type": "text", "placeholder": "dashboard-uuid"}
   ]
 }
