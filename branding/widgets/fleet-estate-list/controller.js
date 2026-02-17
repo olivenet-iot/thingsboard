@@ -1,11 +1,7 @@
 // Fleet List Widget — Controller
 // Widget type: latest
 // Reusable for estate list, region list, AND site list
-// Settings:
-//   targetState: "estate" / "region" (for state navigation)
-//   headerTitle: "Estates" / "Regions" / "Sites"
-//   navigationType: "state" (default) or "dashboard"
-//   targetDashboardId: dashboard ID to redirect to (when navigationType=dashboard)
+// Uses openState for proper TB breadcrumb navigation
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -183,7 +179,6 @@ self.renderCards = function(entityList) {
         return;
     }
 
-    // Determine if site list (shows address subtitle instead of device count for sites)
     var isSiteList = self.settings.navigationType === 'dashboard';
 
     entityList.forEach(function(entity) {
@@ -195,7 +190,6 @@ self.renderCards = function(entityList) {
 
         var subtitle = total + ' device' + (total !== 1 ? 's' : '');
 
-        // Fault badge for site cards
         var faultBadge = '';
         if (faults > 0) {
             faultBadge = '<span class="card-fault-badge">⚠ ' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
@@ -210,7 +204,6 @@ self.renderCards = function(entityList) {
             statusHtml += '<span class="status-item fault"><span class="dot dot-fault"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
         }
 
-        // Chevron label
         var chevronLabel = isSiteList ? '<span class="chevron-label">SignConnect</span>' : '';
 
         html += '<div class="estate-card" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
@@ -241,26 +234,37 @@ self.renderCards = function(entityList) {
 };
 
 self.navigateToState = function(entityId, entityName) {
-    var params = {
-        entityId: {
-            entityType: 'ASSET',
-            id: entityId
-        },
-        entityName: entityName
-    };
+    var sc = self.ctx.stateController;
+    var targetState = self.settings.targetState;
 
-    self.ctx.stateController.updateState(self.settings.targetState, params);
+    // Use openState (not updateState) for proper TB breadcrumb/back navigation
+    if (sc && sc.openState) {
+        sc.openState(targetState, {
+            entityId: {
+                entityType: 'ASSET',
+                id: entityId
+            },
+            entityName: entityName
+        });
+    } else {
+        // Fallback
+        sc.updateState(targetState, {
+            entityId: {
+                entityType: 'ASSET',
+                id: entityId
+            },
+            entityName: entityName
+        });
+    }
 };
 
 self.navigateToDashboard = function(entityId, entityName) {
-    // Redirect to SignConnect Dashboard with site entity as context
     var dashboardId = self.settings.targetDashboardId;
     var url = '/dashboards/' + dashboardId +
               '?entityId=' + entityId +
               '&entityType=ASSET' +
               '&entityName=' + encodeURIComponent(entityName);
 
-    // Open in new tab
     window.open(url, '_blank');
 };
 
