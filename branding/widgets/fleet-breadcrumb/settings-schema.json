@@ -1,0 +1,8 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fleet Breadcrumb Settings",
+    "properties": {}
+  },
+  "form": []
+}
