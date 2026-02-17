@@ -1,6 +1,6 @@
 // Fleet Breadcrumb — Controller
 // Widget type: static
-// No datasource needed — reads state from stateController
+// Reads state from URL hash (TB encodes state as base64 JSON array in hash)
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -9,48 +9,48 @@ self.onInit = function() {
 
     self.buildBreadcrumb();
 
-    // Back button click
     self.backEl.on('click', function() {
         self.goBack();
     });
 };
 
 self.buildBreadcrumb = function() {
-    var stateCtrl = self.ctx.stateController;
-    var stateId = stateCtrl.getStateId();
-    var stateParams = stateCtrl.getStateParams();
-
-    // Determine current state and entity names from state params
-    // TB stores state hierarchy — we build crumbs from it
-    var stateObject = stateCtrl.getStateObject();
-
+    // Parse state hierarchy from URL hash
+    var stateArray = self.parseStateFromUrl();
     var crumbs = [];
-    var backTarget = null;
 
-    if (stateId === 'default' || !stateId) {
-        // HOME — just show title, no back
-        crumbs.push({ label: 'Fleet Overview', state: null, current: true });
-    } else if (stateId === 'estate') {
-        var entityName = self.getEntityName(stateParams) || 'Estate';
-        crumbs.push({ label: 'Fleet', state: 'default', current: false });
-        crumbs.push({ label: entityName, state: null, current: true });
-        backTarget = 'default';
-    } else if (stateId === 'region') {
-        var entityName = self.getEntityName(stateParams) || 'Region';
+    if (!stateArray || stateArray.length === 0 || (stateArray.length === 1 && stateArray[0].id === 'default')) {
+        // HOME
+        crumbs.push({ label: 'Fleet Overview', action: null, current: true });
+    } else {
+        // Always start with Fleet → HOME
+        crumbs.push({ label: 'Fleet', action: 'home', current: false });
 
-        crumbs.push({ label: 'Fleet', state: 'default', current: false });
+        for (var i = 0; i < stateArray.length; i++) {
+            var entry = stateArray[i];
+            if (entry.id === 'default') continue;
 
-        // Try to get parent estate name from state history
-        var parentName = self.getParentName(stateObject);
-        if (parentName) {
-            crumbs.push({ label: parentName, state: 'estate_back', current: false });
+            var name = '';
+            if (entry.params && entry.params.entityName) {
+                name = entry.params.entityName;
+            } else {
+                name = entry.id.charAt(0).toUpperCase() + entry.id.slice(1);
+            }
+
+            var isLast = (i === stateArray.length - 1);
+            crumbs.push({
+                label: name,
+                action: isLast ? null : ('go_' + i),
+                stateIndex: i,
+                current: isLast
+            });
         }
-
-        crumbs.push({ label: entityName, state: null, current: true });
-        backTarget = 'estate_back';
     }
 
-    // Render breadcrumb trail
+    // Store state array for navigation
+    self.stateArray = stateArray || [];
+
+    // Render
     var html = '';
     crumbs.forEach(function(crumb, i) {
         if (i > 0) {
@@ -59,87 +59,101 @@ self.buildBreadcrumb = function() {
         if (crumb.current) {
             html += '<span class="crumb crumb-current">' + self.escapeHtml(crumb.label) + '</span>';
         } else {
-            html += '<span class="crumb" data-state="' + (crumb.state || '') + '">' + self.escapeHtml(crumb.label) + '</span>';
+            html += '<span class="crumb" data-action="' + (crumb.action || '') + '">' + self.escapeHtml(crumb.label) + '</span>';
         }
     });
 
     self.trailEl.html(html);
 
-    // Show/hide back button
+    // Show/hide back
+    var stateId = self.getCurrentStateId();
     if (stateId && stateId !== 'default') {
         self.backEl.show();
     } else {
         self.backEl.hide();
     }
 
-    // Bind crumb clicks
+    // Bind clicks
     self.trailEl.find('.crumb:not(.crumb-current)').on('click', function() {
-        var targetState = $(this).data('state');
-        self.navigateTo(targetState);
+        var action = $(this).data('action');
+        if (action === 'home') {
+            self.ctx.stateController.updateState('default', null);
+        } else if (action && action.indexOf('go_') === 0) {
+            var idx = parseInt(action.replace('go_', ''));
+            self.navigateToIndex(idx);
+        }
     });
 };
 
-self.getEntityName = function(stateParams) {
-    // stateParams might have different structures depending on TB version
-    if (!stateParams) return null;
+self.parseStateFromUrl = function() {
+    try {
+        var hash = window.location.hash;
+        if (!hash || hash.length < 2) return null;
 
-    // Try direct entityName
-    if (stateParams.entityName) return stateParams.entityName;
+        // TB stores state as: #state=base64encodedJSON
+        var stateParam = null;
 
-    // Try nested structure
-    if (stateParams[0] && stateParams[0].entityName) return stateParams[0].entityName;
-
-    return null;
-};
-
-self.getParentName = function(stateObject) {
-    // Try to extract parent estate name from state history
-    // stateObject is an array of state entries in TB
-    if (!stateObject || !Array.isArray(stateObject)) return null;
-
-    // Look for estate entry (index 1 typically - 0=default, 1=estate, 2=region)
-    for (var i = 0; i < stateObject.length; i++) {
-        var entry = stateObject[i];
-        if (entry && entry.id === 'estate' && entry.params && entry.params.entityName) {
-            return entry.params.entityName;
-        }
-    }
-
-    return null;
-};
-
-self.navigateTo = function(targetState) {
-    var stateCtrl = self.ctx.stateController;
-    var stateObject = stateCtrl.getStateObject();
-
-    if (targetState === 'default') {
-        // Go to HOME
-        stateCtrl.updateState('default', null);
-    } else if (targetState === 'estate_back') {
-        // Go back to estate — need to find estate params from state history
-        if (stateObject && Array.isArray(stateObject)) {
-            for (var i = 0; i < stateObject.length; i++) {
-                if (stateObject[i] && stateObject[i].id === 'estate') {
-                    stateCtrl.updateState('estate', stateObject[i].params);
-                    return;
+        if (hash.indexOf('state=') !== -1) {
+            var parts = hash.substring(1).split('&');
+            for (var i = 0; i < parts.length; i++) {
+                if (parts[i].indexOf('state=') === 0) {
+                    stateParam = parts[i].substring(6);
+                    break;
                 }
             }
         }
-        // Fallback — just go home
-        stateCtrl.updateState('default', null);
+
+        if (!stateParam) return null;
+
+        // Decode base64 → JSON
+        var decoded = decodeURIComponent(stateParam);
+        var json = atob(decoded);
+        var stateArray = JSON.parse(json);
+
+        return Array.isArray(stateArray) ? stateArray : [stateArray];
+    } catch (e) {
+        return null;
+    }
+};
+
+self.getCurrentStateId = function() {
+    try {
+        return self.ctx.stateController.getStateId();
+    } catch (e) {
+        return 'default';
+    }
+};
+
+self.navigateToIndex = function(targetIndex) {
+    if (!self.stateArray || targetIndex >= self.stateArray.length) {
+        self.ctx.stateController.updateState('default', null);
+        return;
+    }
+
+    var target = self.stateArray[targetIndex];
+    if (target && target.id) {
+        self.ctx.stateController.updateState(target.id, target.params || null);
     }
 };
 
 self.goBack = function() {
-    var stateCtrl = self.ctx.stateController;
-    var stateId = stateCtrl.getStateId();
+    var stateId = self.getCurrentStateId();
 
     if (stateId === 'region') {
-        // Go back to estate
-        self.navigateTo('estate_back');
+        // Try to go back to estate
+        if (self.stateArray) {
+            for (var i = 0; i < self.stateArray.length; i++) {
+                if (self.stateArray[i].id === 'estate') {
+                    self.ctx.stateController.updateState('estate', self.stateArray[i].params);
+                    return;
+                }
+            }
+        }
+        self.ctx.stateController.updateState('default', null);
     } else if (stateId === 'estate') {
-        // Go back to home
-        self.navigateTo('default');
+        self.ctx.stateController.updateState('default', null);
+    } else {
+        self.ctx.stateController.updateState('default', null);
     }
 };
 
@@ -148,11 +162,7 @@ self.escapeHtml = function(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 };
 
-self.onDataUpdated = function() {
-    // Rebuild on data updates (state changes trigger this)
-    self.buildBreadcrumb();
-};
-
+self.onDataUpdated = function() {};
 self.onResize = function() {};
 
 self.onDestroy = function() {
