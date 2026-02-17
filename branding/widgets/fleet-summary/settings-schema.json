@@ -1,0 +1,30 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fleet Summary Cards Settings",
+    "properties": {
+      "onlineThresholdMinutes": {
+        "title": "Online threshold (minutes)",
+        "type": "number",
+        "default": 10
+      },
+      "label": {
+        "title": "Counter label",
+        "type": "string",
+        "default": "Devices"
+      }
+    }
+  },
+  "form": [
+    {
+      "key": "onlineThresholdMinutes",
+      "type": "number",
+      "placeholder": "10"
+    },
+    {
+      "key": "label",
+      "type": "text",
+      "placeholder": "Devices"
+    }
+  ]
+}
