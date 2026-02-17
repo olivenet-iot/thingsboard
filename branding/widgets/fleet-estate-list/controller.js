@@ -1,7 +1,5 @@
-// Fleet List Widget — Controller
-// Widget type: latest
-// Reusable for estate list, region list, AND site list
-// Uses openState for proper TB breadcrumb navigation
+// Fleet List Widget — Controller v2
+// Redesigned cards with status pills and colored left border
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -188,29 +186,41 @@ self.renderCards = function(entityList) {
         var offline = stats.offline || 0;
         var faults = stats.faults || 0;
 
-        var subtitle = total + ' device' + (total !== 1 ? 's' : '');
-
-        var faultBadge = '';
+        // Determine card status class for left border
+        var statusClass = 'status-offline';
         if (faults > 0) {
-            faultBadge = '<span class="card-fault-badge">⚠ ' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
+            statusClass = 'status-fault';
+        } else if (online > 0 && offline === 0) {
+            statusClass = 'status-healthy';
+        } else if (online > 0 && offline > 0) {
+            statusClass = 'status-warning';
         }
 
-        var statusHtml = '';
-        statusHtml += '<span class="status-item online"><span class="dot dot-online"></span>' + online + ' online</span>';
+        // Device count text
+        var deviceText = total + ' device' + (total !== 1 ? 's' : '');
+
+        // Build pills
+        var pillsHtml = '';
+        if (online > 0) {
+            pillsHtml += '<span class="pill pill-online"><span class="pill-dot"></span>' + online + ' online</span>';
+        }
         if (offline > 0) {
-            statusHtml += '<span class="status-item offline"><span class="dot dot-offline"></span>' + offline + ' offline</span>';
+            pillsHtml += '<span class="pill pill-offline"><span class="pill-dot"></span>' + offline + ' offline</span>';
         }
         if (faults > 0) {
-            statusHtml += '<span class="status-item fault"><span class="dot dot-fault"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
+            pillsHtml += '<span class="pill pill-fault"><span class="pill-dot"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
         }
 
+        // Chevron
         var chevronLabel = isSiteList ? '<span class="chevron-label">SignConnect</span>' : '';
 
-        html += '<div class="estate-card" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
-            '<div class="card-content">' +
-                '<div class="card-name">' + self.escapeHtml(entity.name) + faultBadge + '</div>' +
-                '<div class="card-subtitle">' + subtitle + '</div>' +
-                '<div class="card-status">' + statusHtml + '</div>' +
+        html += '<div class="estate-card ' + statusClass + '" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
+            '<div class="card-main">' +
+                '<div class="card-top-row">' +
+                    '<span class="card-name">' + self.escapeHtml(entity.name) + '</span>' +
+                    '<span class="card-device-count">' + deviceText + '</span>' +
+                '</div>' +
+                '<div class="card-pills">' + pillsHtml + '</div>' +
             '</div>' +
             '<div class="card-chevron">' +
                 '<span class="chevron-icon">›</span>' +
@@ -237,22 +247,14 @@ self.navigateToState = function(entityId, entityName) {
     var sc = self.ctx.stateController;
     var targetState = self.settings.targetState;
 
-    // Use openState (not updateState) for proper TB breadcrumb/back navigation
     if (sc && sc.openState) {
         sc.openState(targetState, {
-            entityId: {
-                entityType: 'ASSET',
-                id: entityId
-            },
+            entityId: { entityType: 'ASSET', id: entityId },
             entityName: entityName
         });
     } else {
-        // Fallback
         sc.updateState(targetState, {
-            entityId: {
-                entityType: 'ASSET',
-                id: entityId
-            },
+            entityId: { entityType: 'ASSET', id: entityId },
             entityName: entityName
         });
     }
@@ -264,7 +266,6 @@ self.navigateToDashboard = function(entityId, entityName) {
               '?entityId=' + entityId +
               '&entityType=ASSET' +
               '&entityName=' + encodeURIComponent(entityName);
-
     window.open(url, '_blank');
 };
 
