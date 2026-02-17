@@ -1,264 +1,193 @@
 #!/usr/bin/env python3
 """
 Deploy Fleet Summary Cards widget to ThingsBoard SignConnect bundle.
+Idempotent: safe to re-run.
 
 Usage:
-    python deploy.py
-    python deploy.py --url http://localhost:8080
-    python deploy.py --update   # Force update existing widget
+  cd /opt/thingsboard/branding/widgets/fleet-summary
+  python3 deploy.py
 """
 
-import requests
 import json
-import sys
 import os
-import argparse
+import sys
+import requests
 
-# --- Configuration ---
-DEFAULT_TB_URL = "http://46.225.54.21:8080"
-TB_USER = "support@lumosoft.io"
-TB_PASS = "tenant"
-BUNDLE_ID = "32a536f0-075c-11f1-9f20-c3880cf3b963"  # SignConnect bundle
-
+# ── Config ──────────────────────────────────────
+TB_URL = os.getenv("TB_URL", "http://localhost:8080")
+TB_USER = os.getenv("TB_USER", "support@lumosoft.io")
+TB_PASS = os.getenv("TB_PASS", "tenant")
+BUNDLE_NAME = "SignConnect"
+WIDGET_FQN = "fleet_summary_cards"
 WIDGET_NAME = "Fleet Summary Cards"
-WIDGET_ALIAS = "fleet_summary_cards"
-WIDGET_TYPE = "latest"
-WIDGET_SIZE_X = 24
-WIDGET_SIZE_Y = 3
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def read_file(filename):
-    filepath = os.path.join(SCRIPT_DIR, filename)
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return f.read()
-
-
-def login(base_url):
-    resp = requests.post(
-        f"{base_url}/api/auth/login",
-        json={"username": TB_USER, "password": TB_PASS},
-        headers={"Content-Type": "application/json"}
-    )
+# ── Auth ────────────────────────────────────────
+def get_token():
+    resp = requests.post(f"{TB_URL}/api/auth/login",
+                         json={"username": TB_USER, "password": TB_PASS})
     resp.raise_for_status()
     return resp.json()["token"]
 
 
-def get_bundle_widgets(base_url, token):
-    resp = requests.get(
-        f"{base_url}/api/widgetTypesInfos?widgetsBundleId={BUNDLE_ID}",
-        headers={"X-Authorization": f"Bearer {token}"}
-    )
+# ── Bundle ──────────────────────────────────────
+def find_or_create_bundle(hdrs):
+    resp = requests.get(f"{TB_URL}/api/widgetsBundles", headers=hdrs)
     resp.raise_for_status()
-    return resp.json()
-
-
-def get_widget_type(base_url, token, widget_id):
-    resp = requests.get(
-        f"{base_url}/api/widgetType/{widget_id}",
-        headers={"X-Authorization": f"Bearer {token}"}
-    )
+    for b in resp.json():
+        if b.get("title") == BUNDLE_NAME:
+            print(f"  ✓ Found bundle '{BUNDLE_NAME}' → {b['id']['id']}")
+            return b["id"]["id"]
+    payload = {"title": BUNDLE_NAME}
+    resp = requests.post(f"{TB_URL}/api/widgetsBundle", headers=hdrs, json=payload)
     resp.raise_for_status()
-    return resp.json()
+    bid = resp.json()["id"]["id"]
+    print(f"  ✓ Created bundle '{BUNDLE_NAME}' → {bid}")
+    return bid
 
 
-def save_widget_type(base_url, token, widget_json):
-    resp = requests.post(
-        f"{base_url}/api/widgetType",
-        json=widget_json,
-        headers={
-            "X-Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-    )
-    resp.raise_for_status()
-    return resp.json()
+# ── Read Files ──────────────────────────────────
+def read_file(name):
+    path = os.path.join(SCRIPT_DIR, name)
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
-def build_default_config():
-    return json.dumps({
-        "datasources": [
-            {
-                "type": "entity",
-                "dataKeys": [
-                    {
-                        "name": "dim_value",
-                        "type": "timeseries",
-                        "label": "dim_value",
-                        "settings": {},
-                        "funcBody": None,
-                        "_hash": 0.1
-                    },
-                    {
-                        "name": "fault_overall_failure",
-                        "type": "timeseries",
-                        "label": "fault_overall_failure",
-                        "settings": {},
-                        "funcBody": None,
-                        "_hash": 0.2
-                    }
-                ]
-            }
-        ],
-        "timewindow": {
-            "realtime": {
-                "timewindowMs": 600000
-            }
-        },
+# ── Build Descriptor ────────────────────────────
+def build_descriptor():
+    default_config = json.dumps({
+        "datasources": [{
+            "type": "entity",
+            "dataKeys": [
+                {"name": "dim_value", "type": "timeseries", "label": "dim_value", "settings": {}, "funcBody": None, "_hash": 0.1},
+                {"name": "fault_overall_failure", "type": "timeseries", "label": "fault_overall_failure", "settings": {}, "funcBody": None, "_hash": 0.2}
+            ]
+        }],
+        "timewindow": {"realtime": {"timewindowMs": 600000}},
         "showTitle": False,
         "backgroundColor": "transparent",
-        "color": "rgba(0, 0, 0, 0.87)",
         "padding": "0",
-        "settings": {
-            "onlineThresholdMinutes": 10,
-            "label": "Devices"
-        },
-        "title": "Fleet Summary Cards",
+        "settings": {"onlineThresholdMinutes": 10, "label": "Devices"},
+        "title": WIDGET_NAME,
         "dropShadow": False,
         "enableFullscreen": False,
-        "widgetStyle": {},
-        "titleStyle": {},
-        "showTitleIcon": False,
-        "iconColor": "rgba(0, 0, 0, 0.87)",
-        "iconSize": "24px",
-        "titleTooltip": "",
         "displayTimewindow": False
     })
 
-
-def deploy(base_url, force_update=False):
-    print(f"🔌 Connecting to {base_url}")
-    token = login(base_url)
-    print("✅ Logged in")
-
-    # Read widget files
-    template_html = read_file("template.html")
-    template_css = read_file("template.css")
-    controller_js = read_file("controller.js")
-    settings_schema = read_file("settings-schema.json")
-
-    print(f"📦 Read widget files ({len(template_html)} + {len(template_css)} + {len(controller_js)} bytes)")
-
-    # Check if widget already exists
-    widgets = get_bundle_widgets(base_url, token)
-    existing = None
-
-    for w in widgets:
-        if w.get("alias") == WIDGET_ALIAS or w.get("name") == WIDGET_NAME:
-            existing = w
-            break
-
-    # Build descriptor
-    descriptor = {
-        "type": WIDGET_TYPE,
-        "sizeX": WIDGET_SIZE_X,
-        "sizeY": WIDGET_SIZE_Y,
+    return {
+        "type": "latest",
+        "sizeX": 24,
+        "sizeY": 3,
         "resources": [],
-        "templateHtml": template_html,
-        "templateCss": template_css,
-        "controllerScript": controller_js,
-        "settingsSchema": settings_schema,
+        "templateHtml": read_file("template.html"),
+        "templateCss": read_file("template.css"),
+        "controllerScript": read_file("controller.js"),
+        "settingsSchema": read_file("settings-schema.json"),
         "dataKeySettingsSchema": "{}",
-        "defaultConfig": build_default_config()
+        "defaultConfig": default_config
     }
 
-    if existing and not force_update:
-        # Update existing widget
-        widget_id = existing["id"]["id"]
-        print(f"📝 Found existing widget: {widget_id}")
 
-        full_widget = get_widget_type(base_url, token, widget_id)
-        full_widget["descriptor"] = descriptor
-        result = save_widget_type(base_url, token, full_widget)
-        print(f"✅ Updated: {WIDGET_NAME}")
+# ── Find Existing Widget ────────────────────────
+def find_existing_widget(hdrs, bundle_id):
+    # Try paginated API first (TB 3.6+)
+    resp = requests.get(
+        f"{TB_URL}/api/widgetTypesInfos?widgetsBundleId={bundle_id}"
+        f"&pageSize=100&page=0&sortOrder=ASC&sortProperty=name",
+        headers=hdrs,
+    )
+    if resp.status_code != 200:
+        # Fallback: older API
+        resp = requests.get(
+            f"{TB_URL}/api/widgetTypes?widgetsBundleId={bundle_id}",
+            headers=hdrs,
+        )
+    if resp.status_code != 200:
+        return None
 
-    elif existing and force_update:
-        widget_id = existing["id"]["id"]
-        full_widget = get_widget_type(base_url, token, widget_id)
-        full_widget["descriptor"] = descriptor
-        result = save_widget_type(base_url, token, full_widget)
-        print(f"✅ Force updated: {WIDGET_NAME}")
+    data = resp.json()
+    items = data.get("data", data) if isinstance(data, dict) else data
 
+    for w in items:
+        if w.get("name") == WIDGET_NAME or w.get("fqn") == WIDGET_FQN:
+            wt_id = w.get("id", {}).get("id")
+            # Fetch full widget if descriptor missing
+            if wt_id and "descriptor" not in w:
+                r2 = requests.get(f"{TB_URL}/api/widgetType/{wt_id}", headers=hdrs)
+                if r2.status_code == 200:
+                    return r2.json()
+            return w
+    return None
+
+
+# ── Deploy Widget ───────────────────────────────
+def deploy_widget(hdrs, bundle_id):
+    descriptor = build_descriptor()
+    existing = find_existing_widget(hdrs, bundle_id)
+
+    payload = {
+        "bundleAlias": None,
+        "alias": WIDGET_FQN,
+        "fqn": WIDGET_FQN,
+        "name": WIDGET_NAME,
+        "descriptor": descriptor,
+        "deprecated": False
+    }
+
+    if existing:
+        payload["id"] = existing["id"]
+        if "createdTime" in existing:
+            payload["createdTime"] = existing["createdTime"]
+        payload["tenantId"] = existing.get("tenantId")
+        print(f"  ↻ Updating existing widget '{WIDGET_NAME}'...")
     else:
-        # Create new widget
-        widget_json = {
-            "name": WIDGET_NAME,
-            "alias": WIDGET_ALIAS,
-            "descriptor": descriptor
-        }
+        print(f"  + Creating new widget '{WIDGET_NAME}'...")
 
-        # Attach to bundle
-        # TB CE uses different methods depending on version
-        # Method 1: bundleAlias in body
-        # Method 2: widgetsBundleId in body
-        widget_json["id"] = None
+    resp = requests.post(
+        f"{TB_URL}/api/widgetType?widgetsBundleId={bundle_id}",
+        headers=hdrs,
+        json=payload
+    )
+    resp.raise_for_status()
+    wid = resp.json()["id"]["id"]
+    print(f"  ✓ Widget deployed → {wid}")
+    return wid
 
-        # Try saving with bundle reference
-        try:
-            # First try: save widget type and then add to bundle
-            result = save_widget_type(base_url, token, widget_json)
-            widget_type_id = result["id"]["id"]
 
-            # Add to bundle
-            resp = requests.post(
-                f"{base_url}/api/widgetType/{widget_type_id}/bundle/{BUNDLE_ID}",
-                headers={"X-Authorization": f"Bearer {token}"}
-            )
+# ── Main ────────────────────────────────────────
+def main():
+    print("═" * 50)
+    print(f"  Deploying: {WIDGET_NAME}")
+    print(f"  Target:    {TB_URL}")
+    print("═" * 50)
 
-            if resp.status_code >= 400:
-                # Alternative: include bundle in the widget type body
-                widget_json_v2 = {
-                    "name": WIDGET_NAME,
-                    "alias": WIDGET_ALIAS,
-                    "descriptor": descriptor,
-                    "widgetsBundleId": {
-                        "entityType": "WIDGETS_BUNDLE",
-                        "id": BUNDLE_ID
-                    }
-                }
-                result = save_widget_type(base_url, token, widget_json_v2)
+    token = get_token()
+    hdrs = {
+        "Content-Type": "application/json",
+        "X-Authorization": f"Bearer {token}"
+    }
 
-            print(f"✅ Created: {WIDGET_NAME} → {result['id']['id']}")
+    bundle_id = find_or_create_bundle(hdrs)
+    widget_id = deploy_widget(hdrs, bundle_id)
 
-        except Exception as e:
-            print(f"❌ Create failed: {e}")
-            print("   Trying alternative method...")
-
-            widget_json_v2 = {
-                "name": WIDGET_NAME,
-                "alias": WIDGET_ALIAS,
-                "descriptor": descriptor,
-                "widgetsBundleId": {
-                    "entityType": "WIDGETS_BUNDLE",
-                    "id": BUNDLE_ID
-                }
-            }
-            result = save_widget_type(base_url, token, widget_json_v2)
-            print(f"✅ Created (v2): {WIDGET_NAME} → {result['id']['id']}")
-
-    print(f"\n📋 Widget: {WIDGET_NAME}")
-    print(f"   Type: {WIDGET_TYPE}")
-    print(f"   Size: {WIDGET_SIZE_X} × {WIDGET_SIZE_Y}")
-    print(f"   Bundle: SignConnect ({BUNDLE_ID})")
-    print(f"   Datasource keys: dim_value, fault_overall_failure")
-    print(f"\n💡 Configure datasource with entity alias:")
-    print(f"   HOME state  → 'All Devices' alias (deviceType filter)")
-    print(f"   ESTATE state → 'Descendant Devices' alias (relationsQuery)")
-    print(f"   REGION state → 'Descendant Devices' alias (relationsQuery)")
+    print("═" * 50)
+    print(f"  ✅ Done! Widget ID: {widget_id}")
+    print(f"  Bundle: {BUNDLE_NAME}")
+    print(f"  Type: latest")
+    print(f"  Keys: dim_value, fault_overall_failure")
+    print(f"  Size: 24 × 3")
+    print("═" * 50)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Deploy Fleet Summary Cards widget")
-    parser.add_argument("--url", default=DEFAULT_TB_URL, help="ThingsBoard URL")
-    parser.add_argument("--update", action="store_true", help="Force update existing")
-    args = parser.parse_args()
-
     try:
-        deploy(args.url, force_update=args.update)
+        main()
     except requests.exceptions.HTTPError as e:
         print(f"❌ HTTP Error: {e}")
-        print(f"   Response: {e.response.text if e.response else 'N/A'}")
+        if e.response is not None:
+            print(f"   Response: {e.response.text[:500]}")
         sys.exit(1)
     except Exception as e:
         print(f"❌ Error: {e}")
