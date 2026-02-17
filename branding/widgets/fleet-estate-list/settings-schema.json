@@ -1,12 +1,22 @@
 {
   "schema": {
     "type": "object",
-    "title": "Fleet Estate List Settings",
+    "title": "Fleet List Settings",
     "properties": {
       "onlineThresholdMinutes": {
         "title": "Online threshold (minutes)",
         "type": "number",
         "default": 10
+      },
+      "targetState": {
+        "title": "Target dashboard state on click",
+        "type": "string",
+        "default": "estate"
+      },
+      "headerTitle": {
+        "title": "Header title",
+        "type": "string",
+        "default": "Estates"
       }
     }
   },
@@ -15,6 +25,16 @@
       "key": "onlineThresholdMinutes",
       "type": "number",
       "placeholder": "10"
+    },
+    {
+      "key": "targetState",
+      "type": "text",
+      "placeholder": "estate"
+    },
+    {
+      "key": "headerTitle",
+      "type": "text",
+      "placeholder": "Estates"
     }
   ]
 }
