@@ -422,39 +422,34 @@ self.onInit = function () {
             metaField('co2_per_kwh', 'CO₂ per kWh (g)', siteAttrs.co2_per_kwh || '207'),
         ]);
 
-        // Location
-        html += metaCard('Location', 'map', [
-            metaField('address', 'Address', siteAttrs.address || ''),
-            metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || ''),
-            metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || ''),
-            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
-            metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || ''),
-        ]);
-
-        // Location downlink card (always visible, independent of edit mode)
+        // Location (manually built to include inline send-location action)
         var lat = parseFloat(siteAttrs.gps_lat);
         var lng = parseFloat(siteAttrs.gps_lng);
         var tz  = parseFloat(siteAttrs.timezone_offset);
         var locReady = !isNaN(lat) && !isNaN(lng) && !isNaN(tz);
-        var locPreview = locReady
-            ? 'Lat: ' + lat.toFixed(4) + ' / Lon: ' + lng.toFixed(4) + ' / UTC+' + tz
-            : 'Save Latitude, Longitude and Timezone Offset first.';
 
-        html += '<div class="so-loc-send-card">' +
-            '<div class="so-loc-send-header">' +
-                '<div class="so-meta-icon so-meta-icon-blue">' +
-                    '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>' +
-                '</div>' +
-                'Send Location to Devices' +
+        html += '<div class="so-meta-card">' +
+            '<div class="so-meta-card-title">' +
+                '<div class="so-meta-icon so-meta-icon-amber">' + META_ICONS.map + '</div>' +
+                'Location' +
             '</div>' +
-            '<div class="so-loc-send-preview">' + esc(locPreview) + '</div>' +
-            '<div class="so-loc-send-hint">Sends a Location Setup downlink to all ' + devices.length + ' device(s) under this site. Required for sunrise/sunset scheduling.</div>' +
-            '<button class="so-loc-send-btn" data-action="send-location"' + (locReady && devices.length > 0 ? '' : ' disabled') + '>' +
-                '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>' +
-                ' Send Location Downlink' +
-            '</button>' +
-            '<div id="so-loc-status" class="so-loc-status" style="display:none;"></div>' +
-        '</div>';
+            metaField('address', 'Address', siteAttrs.address || '') +
+            metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || '') +
+            metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || '') +
+            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || '') +
+            metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || '');
+
+        // Inline send-location row (view mode only, when location is complete)
+        if (!isEditing && locReady && devices.length > 0) {
+            html += '<div class="so-loc-inline-divider"></div>' +
+                '<div class="so-loc-inline-row">' +
+                    '<span class="so-loc-inline-label">Location configured</span>' +
+                    '<span id="so-loc-inline-status" class="so-loc-inline-status"></span>' +
+                    '<button class="so-loc-inline-btn" data-action="send-location">Send to Devices &rarr;</button>' +
+                '</div>';
+        }
+
+        html += '</div>';
 
         // Contact
         html += metaCard('Site Contact', 'user', [
@@ -500,7 +495,7 @@ self.onInit = function () {
     function metaField(key, label, value) {
         if (isEditing) {
             return '<div class="so-meta-row">' +
-                '<label class="so-meta-label">' + label + '</label>' +
+                '<span class="so-meta-label">' + label + '</span>' +
                 '<input class="so-meta-input" data-attr="' + key + '" value="' + esc(value) + '" />' +
             '</div>';
         }
@@ -650,6 +645,72 @@ self.onInit = function () {
             });
         });
         return Promise.all(promises).then(function () { return results; });
+    }
+
+    // ── Location Confirm Popup Helpers ────────────────────────
+
+    function showLocConfirm() {
+        var overlay = document.getElementById('so-loc-confirm-overlay');
+        if (!overlay) return;
+        var resultEl = document.getElementById('so-loc-confirm-result');
+        var actionsEl = document.getElementById('so-loc-confirm-actions');
+        if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; resultEl.className = ''; }
+        if (actionsEl) {
+            actionsEl.innerHTML = '<button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Skip</button>' +
+                '<button class="sched-btn sched-btn-primary" data-action="loc-confirm-send">Send Now</button>';
+        }
+        overlay.style.display = 'flex';
+        bindLocConfirmEvents();
+    }
+
+    function hideLocConfirm() {
+        var overlay = document.getElementById('so-loc-confirm-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function bindLocConfirmEvents() {
+        var overlay = document.getElementById('so-loc-confirm-overlay');
+        if (!overlay) return;
+        overlay.querySelectorAll('[data-action="loc-confirm-skip"]').forEach(function (el) {
+            el.onclick = function () { hideLocConfirm(); };
+        });
+        overlay.querySelectorAll('[data-action="loc-confirm-send"]').forEach(function (el) {
+            el.onclick = function () {
+                var lat = parseFloat(siteAttrs.gps_lat);
+                var lng = parseFloat(siteAttrs.gps_lng);
+                var tz  = parseFloat(siteAttrs.timezone_offset);
+                el.disabled = true;
+                el.textContent = 'Sending\u2026';
+                sendLocationToAllDevices(lat, lng, tz)
+                    .then(function (results) {
+                        var resultEl = document.getElementById('so-loc-confirm-result');
+                        var actionsEl = document.getElementById('so-loc-confirm-actions');
+                        var ok = results.failed === 0;
+                        if (resultEl) {
+                            resultEl.className = 'so-loc-confirm-result ' + (ok ? 'so-loc-confirm-result-ok' : 'so-loc-confirm-result-err');
+                            resultEl.textContent = 'Sent to ' + results.succeeded + '/' + results.total + ' device(s)' + (ok ? ' \u2713' : ' (' + results.failed + ' failed)');
+                            resultEl.style.display = 'block';
+                        }
+                        if (actionsEl) {
+                            actionsEl.innerHTML = '<button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Close</button>';
+                            actionsEl.querySelector('[data-action="loc-confirm-skip"]').onclick = function () { hideLocConfirm(); };
+                        }
+                    })
+                    .catch(function (err) {
+                        var resultEl = document.getElementById('so-loc-confirm-result');
+                        var actionsEl = document.getElementById('so-loc-confirm-actions');
+                        if (resultEl) {
+                            resultEl.className = 'so-loc-confirm-result so-loc-confirm-result-err';
+                            resultEl.textContent = 'Failed: ' + (err.message || err);
+                            resultEl.style.display = 'block';
+                        }
+                        if (actionsEl) {
+                            actionsEl.innerHTML = '<button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Close</button>';
+                            actionsEl.querySelector('[data-action="loc-confirm-skip"]').onclick = function () { hideLocConfirm(); };
+                        }
+                    });
+            };
+        });
     }
 
     // ── Schedule Utility Functions ─────────────────────────────
@@ -1445,6 +1506,11 @@ self.onInit = function () {
         container.querySelectorAll('[data-action="toggle-edit"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 if (isEditing) {
+                    // Snapshot old location values before save
+                    var oldLat = siteAttrs.gps_lat || '';
+                    var oldLng = siteAttrs.gps_lng || '';
+                    var oldTz  = siteAttrs.timezone_offset || '';
+
                     // Save
                     var inputs = container.querySelectorAll('[data-attr]');
                     var attrs = {};
@@ -1456,6 +1522,13 @@ self.onInit = function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                         isEditing = false;
                         render();
+
+                        // Check if location fields changed
+                        var locChanged = (attrs.gps_lat !== oldLat) || (attrs.gps_lng !== oldLng) || (attrs.timezone_offset !== oldTz);
+                        var locValid = !isNaN(parseFloat(attrs.gps_lat)) && !isNaN(parseFloat(attrs.gps_lng)) && !isNaN(parseFloat(attrs.timezone_offset));
+                        if (locChanged && locValid && devices.length > 0) {
+                            showLocConfirm();
+                        }
                     }).catch(function (err) {
                         console.error('[SITE] Failed to save attributes:', err);
                     });
@@ -1466,44 +1539,37 @@ self.onInit = function () {
             });
         });
 
-        // Send location downlink to all devices
+        // Send location downlink to all devices (inline button)
         container.querySelectorAll('[data-action="send-location"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var lat = parseFloat(siteAttrs.gps_lat);
                 var lng = parseFloat(siteAttrs.gps_lng);
                 var tz  = parseFloat(siteAttrs.timezone_offset);
 
-                if (isNaN(lat) || isNaN(lng) || isNaN(tz)) {
-                    alert('Please save GPS Latitude, GPS Longitude and Timezone Offset first.');
-                    return;
-                }
+                if (isNaN(lat) || isNaN(lng) || isNaN(tz)) return;
 
-                var statusEl = document.getElementById('so-loc-status');
+                var statusEl = document.getElementById('so-loc-inline-status');
                 btn.disabled = true;
-                btn.textContent = 'Sending…';
-                if (statusEl) { statusEl.style.display = 'none'; }
+                btn.textContent = 'Sending\u2026';
+                if (statusEl) statusEl.textContent = '';
 
                 sendLocationToAllDevices(lat, lng, tz)
                     .then(function (results) {
                         btn.disabled = false;
-                        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Location Downlink';
+                        btn.innerHTML = 'Send to Devices &rarr;';
                         if (statusEl) {
                             var ok = results.failed === 0;
-                            statusEl.className = 'so-loc-status ' + (ok ? 'so-loc-status-ok' : 'so-loc-status-err');
-                            statusEl.textContent = 'Sent to ' + results.succeeded + '/' + results.total + ' device(s)' + (results.failed > 0 ? ' (' + results.failed + ' failed)' : ' ✓');
-                            statusEl.style.display = 'block';
+                            statusEl.className = 'so-loc-inline-status ' + (ok ? 'so-loc-inline-status-ok' : 'so-loc-inline-status-err');
+                            statusEl.textContent = results.succeeded + '/' + results.total + (ok ? ' sent \u2713' : ' (' + results.failed + ' failed)');
                         }
-                        console.log('[SITE] Location sent:', results);
                     })
                     .catch(function (err) {
                         btn.disabled = false;
-                        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Location Downlink';
+                        btn.innerHTML = 'Send to Devices &rarr;';
                         if (statusEl) {
-                            statusEl.className = 'so-loc-status so-loc-status-err';
-                            statusEl.textContent = 'Send failed: ' + (err.message || err);
-                            statusEl.style.display = 'block';
+                            statusEl.className = 'so-loc-inline-status so-loc-inline-status-err';
+                            statusEl.textContent = 'Failed: ' + (err.message || err);
                         }
-                        console.error('[SITE] Location send error:', err);
                     });
             });
         });
