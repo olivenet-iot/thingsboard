@@ -12,6 +12,12 @@
      3b. FAIL  → revert to pre-command value, show error
      3c. 30s   → revert, show "No response from device"
 
+   Stale telemetry protection:
+     - lastCommandSentAt records when the last command was sent
+     - dim_value telemetry with ts < lastCommandSentAt is ignored for display
+     - prevents device's 3-min periodic uplink from reverting the display
+       back to the old value before the new uplink arrives
+
    Confirm detection uses TB telemetry `ts` (server receive time in ms)
    so device clock drift doesn't matter.
    ========================================================= */
@@ -52,11 +58,11 @@ self.onInit = function () {
         ? self.ctx.settings.pollIntervalMs
         : 10000;
 
-    // How often to check for device confirm while pending — 2s
+    // How often to check for device confirm while pending
     var CONFIRM_POLL_MS = 2000;
 
     // Give up waiting for confirm after this many ms
-    var CONFIRM_TIMEOUT_MS = 60000;
+    var CONFIRM_TIMEOUT_MS = 30000;
 
     // ── State ─────────────────────────────────────────────────────
     var currentDimValue = null;   // last confirmed dim from telemetry
@@ -67,6 +73,10 @@ self.onInit = function () {
     var isPending = false;
     var pendingDimValue = null;   // value we just sent
     var sentAt = null;            // Date.now() when POST was made
+
+    // Stale telemetry guard — persists after pending clears.
+    // dim_value telemetry with ts < lastCommandSentAt is ignored for display.
+    var lastCommandSentAt = null;
 
     // Timers
     var pollTimer = null;
@@ -169,20 +179,19 @@ self.onInit = function () {
         isPending = true;
         pendingDimValue = value;
         sentAt = Date.now();
+        lastCommandSentAt = sentAt; // persists after pending clears — stale guard
 
-        // Lock slider and buttons
+        // Lock controls
         elSlider.disabled = true;
         elBtnOn.disabled = true;
         elBtnOff.disabled = true;
 
-        // Visual: ring pulses amber
+        // Ring: pulsing blue preview of pending value
         elRingFill.classList.add('is-pending');
         elRingFill.classList.remove('is-off');
-
-        // Show pending value as preview (dimmed)
-        elValue.textContent = value;
         var offset = RING_CIRC - (RING_CIRC * value / 100);
         elRingFill.style.strokeDashoffset = offset;
+        elValue.textContent = value;
 
         // Status badge
         elStatus.textContent = 'SENDING…';
@@ -191,7 +200,7 @@ self.onInit = function () {
 
         if (elPendingBadge) elPendingBadge.style.display = 'flex';
 
-        // Start fast confirm polling
+        // Fast confirm polling
         if (confirmTimer) clearInterval(confirmTimer);
         confirmTimer = setInterval(pollConfirm, CONFIRM_POLL_MS);
 
@@ -201,9 +210,9 @@ self.onInit = function () {
             if (isPending) {
                 exitPendingState();
                 showToast('No response from device', 'error', 4000);
-                // Revert display to last confirmed value
                 if (currentDimValue !== null) updateDisplay(currentDimValue);
                 elLastCmd.textContent = 'No response — reverted';
+                console.warn('[DIM] Confirm timeout after ' + CONFIRM_TIMEOUT_MS + 'ms');
             }
         }, CONFIRM_TIMEOUT_MS);
     }
@@ -212,6 +221,9 @@ self.onInit = function () {
         isPending = false;
         pendingDimValue = null;
         sentAt = null;
+        // NOTE: lastCommandSentAt is intentionally NOT cleared here.
+        // It must persist to guard the display against stale dim_value
+        // telemetry until the device sends a fresh uplink with the new value.
 
         if (confirmTimer) { clearInterval(confirmTimer); confirmTimer = null; }
         if (pendingTimeoutTimer) { clearTimeout(pendingTimeoutTimer); pendingTimeoutTimer = null; }
@@ -224,7 +236,6 @@ self.onInit = function () {
         elRingFill.classList.remove('is-pending');
         if (elPendingBadge) elPendingBadge.style.display = 'none';
 
-        // Restore lamp status label
         updateLampStatus(isLampOn);
     }
 
@@ -234,32 +245,32 @@ self.onInit = function () {
         if (!isPending) return;
 
         var url = '/api/plugins/telemetry/DEVICE/' + DEVICE_ID
-            + '/values/timeseries?keys=live_control_confirmed,live_control_time,live_control_status';
+            + '/values/timeseries?keys=live_control_confirmed,live_control_status';
 
         http.get(url).toPromise().then(function (resp) {
-            if (!isPending) return; // state may have changed while awaiting HTTP
+            if (!isPending) return;
 
             var confirmed = resp.live_control_confirmed && resp.live_control_confirmed[0];
             if (!confirmed) return;
 
             // ── Timestamp check ──────────────────────────────────
             // Use TB server receive timestamp (confirmed.ts, ms epoch).
-            // Accept confirm only if TB received it AFTER we sent the command.
-            // Allow 2s of slack for bridge processing latency.
+            // Accept only if TB received it AFTER we sent the command.
+            // 2s slack for bridge processing latency.
             var confirmTs = confirmed.ts || 0;
-            if (confirmTs < sentAt - 2000) {
-                // This is an old confirm from a previous command — ignore it
-                console.log('[DIM] Ignoring stale confirm ts=' + confirmTs + ' sentAt=' + sentAt);
+            if (confirmTs < lastCommandSentAt - 2000) {
+                console.log('[DIM] Ignoring stale confirm ts=' + confirmTs
+                    + ' lastCommandSentAt=' + lastCommandSentAt);
                 return;
             }
 
             var isPass = (confirmed.value === true || confirmed.value === 'true');
-            var capturedPendingValue = pendingDimValue; // capture before exitPendingState clears it
+            var capturedValue = pendingDimValue;
 
             exitPendingState();
 
             if (isPass) {
-                currentDimValue = capturedPendingValue;
+                currentDimValue = capturedValue;
                 updateDisplay(currentDimValue);
                 if (currentDimValue > 0) updateLampStatus(true);
                 showToast('Device confirmed: ' + currentDimValue + '%', 'success');
@@ -267,15 +278,15 @@ self.onInit = function () {
                     + new Date().toLocaleTimeString();
                 console.log('[DIM] Confirm PASS → dim=' + currentDimValue);
             } else {
-                // FAIL — revert to last known good value
                 if (currentDimValue !== null) updateDisplay(currentDimValue);
                 showToast('Device rejected command', 'error', 4000);
                 elLastCmd.textContent = 'FAILED at ' + new Date().toLocaleTimeString();
                 console.warn('[DIM] Confirm FAIL');
             }
+
         }).catch(function (err) {
             console.warn('[DIM] Confirm poll error:', err);
-            // Don't exit pending on network error — keep trying until timeout
+            // Keep trying until timeout — don't exit on network hiccup
         });
     }
 
@@ -286,22 +297,40 @@ self.onInit = function () {
             + '/values/timeseries?keys=dim_value,status_lamp_on';
 
         http.get(url).toPromise().then(function (resp) {
-            // dim_value — only update display if not currently pending
+
             if (resp.dim_value && resp.dim_value.length > 0) {
-                var newVal = parseInt(resp.dim_value[0].value);
+                var entry  = resp.dim_value[0];
+                var newVal = parseInt(entry.value);
+                var telTs  = entry.ts || 0;
+
+                // Stale guard: if this telemetry was received by TB before our
+                // last command was sent, it reflects the OLD dim value on the device.
+                // Don't let it overwrite the display — wait for the next fresh uplink.
+                var isStale = lastCommandSentAt && (telTs < lastCommandSentAt);
+
                 if (!isNaN(newVal)) {
-                    currentDimValue = newVal;
-                    if (!isPending) {
+                    if (isStale || isPending) {
+                        // Update internal state only — keep display at confirmed value
+                        currentDimValue = newVal;
+                        if (isStale) {
+                            console.log('[DIM] Stale dim_value ignored for display: '
+                                + newVal + ' (telTs=' + telTs
+                                + ', lastCmd=' + lastCommandSentAt + ')');
+                        }
+                    } else {
+                        // Fresh telemetry — safe to update display
+                        currentDimValue = newVal;
                         updateDisplay(currentDimValue);
                     }
                 }
             }
-            // status_lamp_on
+
             if (resp.status_lamp_on && resp.status_lamp_on.length > 0) {
                 var raw = resp.status_lamp_on[0].value;
                 var on = (raw === true || raw === 'true' || raw === '1');
                 updateLampStatus(on);
             }
+
         }).catch(function (err) {
             console.warn('[DIM] Poll error:', err);
         });
@@ -309,7 +338,7 @@ self.onInit = function () {
 
     // ── User Confirmation Dialog ───────────────────────────────────
 
-    var dialogPendingValue = null; // value shown in the confirm dialog
+    var dialogPendingValue = null;
 
     function showConfirm(value) {
         dialogPendingValue = value;
@@ -347,7 +376,7 @@ self.onInit = function () {
 
         console.log('[DIM] Sending dimLevel=' + value);
 
-        // Enter pending BEFORE the POST so we capture sentAt accurately
+        // Enter pending BEFORE the POST so sentAt is captured accurately
         enterPendingState(value);
         elLastCmd.textContent = 'Sending ' + value + '%…';
 
@@ -355,7 +384,7 @@ self.onInit = function () {
             showToast('Sent ' + value + '% — waiting for device…', 'info', 5000);
             console.log('[DIM] POST success, waiting for confirm');
         }).catch(function (err) {
-            // POST itself failed (network/auth) — exit pending immediately
+            // POST itself failed (network/auth) — bail out immediately
             exitPendingState();
             showToast('Send failed!', 'error');
             console.error('[DIM] POST error:', err);
@@ -376,7 +405,7 @@ self.onInit = function () {
         },
 
         onSliderInput: function () {
-            if (isPending) return; // ignore drag while pending
+            if (isPending) return;
             isSliderDragging = true;
             var val = parseInt(elSlider.value);
             elValue.textContent = val;
