@@ -9,16 +9,6 @@
 self.onInit = function () {
     'use strict';
 
-    // Allow popups/tooltips to overflow widget bounds
-    // TB CE has deep container nesting — walk up all ancestors
-    try {
-        var el = self.ctx.$container[0];
-        while (el && el !== document.body) {
-            el.style.overflow = 'visible';
-            el = el.parentElement;
-        }
-    } catch(e) {}
-
     // ── Resolve Device ID ─────────────────────────────────────────
     function resolveDeviceId() {
         // 1. Dashboard state (Fleet navigation, URL params)
@@ -63,7 +53,6 @@ self.onInit = function () {
     var STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 min = stale (warning)
 
     var pollTimer = null;
-    var tooltipVisible = false;
 
     // ── Fault Definitions ─────────────────────────────────────────
     var FAULT_MAP = {
@@ -107,18 +96,9 @@ self.onInit = function () {
     var elFaultTitle   = document.getElementById('sb-fault-title');
     var elFaultDetail  = document.getElementById('sb-fault-detail');
     var elFaultZone    = document.getElementById('sb-fault-zone');
-    var elTooltip      = document.getElementById('sb-fault-tooltip');
     var elConnDot      = document.getElementById('sb-conn-dot');
     var elConnLabel    = document.getElementById('sb-conn-label');
     var elConnTime     = document.getElementById('sb-conn-time');
-
-    // Tooltip lists
-    var elTtController     = document.getElementById('sb-tooltip-controller');
-    var elTtControllerList = document.getElementById('sb-tooltip-controller-list');
-    var elTtDriver         = document.getElementById('sb-tooltip-driver');
-    var elTtDriverList     = document.getElementById('sb-tooltip-driver-list');
-    var elTtLightsrc       = document.getElementById('sb-tooltip-lightsrc');
-    var elTtLightsrcList   = document.getElementById('sb-tooltip-lightsrc-list');
 
     // ── Fetch device name from attributes ─────────────────────────
     function fetchDeviceName() {
@@ -189,33 +169,7 @@ self.onInit = function () {
             if (activeFaults.driver.length > 0) parts.push('Driver: ' + activeFaults.driver.length);
             if (activeFaults.lightSrc.length > 0) parts.push('Light Src: ' + activeFaults.lightSrc.length);
             elFaultDetail.textContent = parts.join(' · ');
-            elFaultZone.style.cursor = 'pointer';
         }
-
-        // Build tooltip content
-        buildTooltipSection(elTtController, elTtControllerList, activeFaults.controller);
-        buildTooltipSection(elTtDriver, elTtDriverList, activeFaults.driver);
-        buildTooltipSection(elTtLightsrc, elTtLightsrcList, activeFaults.lightSrc);
-
-        // Hide tooltip if no faults
-        if (totalFaults === 0 && tooltipVisible) {
-            elTooltip.style.display = 'none';
-            tooltipVisible = false;
-        }
-    }
-
-    function buildTooltipSection(sectionEl, listEl, faults) {
-        if (faults.length === 0) {
-            sectionEl.style.display = 'none';
-            return;
-        }
-        sectionEl.style.display = 'block';
-        listEl.innerHTML = '';
-        faults.forEach(function (label) {
-            var li = document.createElement('li');
-            li.textContent = label;
-            listEl.appendChild(li);
-        });
     }
 
     function updateConnection(telemetryData) {
@@ -279,57 +233,6 @@ self.onInit = function () {
         return days + 'd ' + (hrs % 24) + 'h';
     }
 
-    // ── Tooltip helpers ───────────────────────────────────────────
-
-    function closeTooltip() {
-        if (tooltipVisible) {
-            tooltipVisible = false;
-            elTooltip.style.display = 'none';
-        }
-    }
-
-    // Store refs for onDestroy (runs outside onInit scope)
-    self._sbTooltip = elTooltip;
-    self._sbCloseTooltip = closeTooltip;
-
-    function positionTooltip() {
-        var rect = elFaultZone.getBoundingClientRect();
-        var tw = elTooltip.offsetWidth;
-        var left = rect.left + rect.width / 2 - tw / 2;
-        // Clamp to viewport edges
-        if (left < 8) left = 8;
-        if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
-        elTooltip.style.top = (rect.bottom + 8) + 'px';
-        elTooltip.style.left = left + 'px';
-    }
-
-    // ── Tooltip toggle ────────────────────────────────────────────
-    elFaultZone.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (elFaultTitle.classList.contains('is-warn')) {
-            tooltipVisible = !tooltipVisible;
-            if (tooltipVisible) {
-                document.body.appendChild(elTooltip);
-                elTooltip.style.display = 'block';
-                positionTooltip();
-            } else {
-                elTooltip.style.display = 'none';
-            }
-        }
-    });
-
-    // Close tooltip on outside click
-    document.addEventListener('click', function (e) {
-        if (tooltipVisible && !elFaultZone.contains(e.target) && !elTooltip.contains(e.target)) {
-            tooltipVisible = false;
-            elTooltip.style.display = 'none';
-        }
-    });
-
-    // Close tooltip on scroll or resize
-    window.addEventListener('scroll', closeTooltip, true);
-    window.addEventListener('resize', closeTooltip);
-
     // ── Poll ──────────────────────────────────────────────────────
 
     function poll() {
@@ -372,11 +275,4 @@ self.onDataUpdated = function () {};
 self.onDestroy = function () {
     console.log('[SB] onDestroy');
     if (self._sbPollTimer) clearInterval(self._sbPollTimer);
-    if (self._sbTooltip && self._sbTooltip.parentNode === document.body) {
-        document.body.removeChild(self._sbTooltip);
-    }
-    if (self._sbCloseTooltip) {
-        window.removeEventListener('scroll', self._sbCloseTooltip, true);
-        window.removeEventListener('resize', self._sbCloseTooltip);
-    }
 };
