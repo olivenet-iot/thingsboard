@@ -288,10 +288,8 @@ self.onInit = function () {
             '</div>' +
             '<div class="so-banner-stats">' +
                 statBox('Devices', devices.length, '') +
-                '<div class="so-stat-divider"></div>' +
                 statBox('Online', online, 'green') +
-                (faulted > 0 ? '<div class="so-stat-divider"></div>' + statBox('Faults', faulted, 'red') : '') +
-                '<div class="so-stat-divider"></div>' +
+                (faulted > 0 ? statBox('Faults', faulted, 'red') : '') +
                 statBox('Power', Math.round(totalPower) + '<span class="so-stat-unit">W</span>', '') +
                 statBox('Today', totalEnergy.toFixed(1) + '<span class="so-stat-unit">kWh</span>', '') +
             '</div>' +
