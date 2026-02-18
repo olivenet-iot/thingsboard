@@ -81,7 +81,9 @@ self.onInit = function () {
             var sc = self.ctx.stateController;
             if (sc && sc.openState) {
                 console.log('[NAV] Navigate to:', stateId);
-                sc.openState(stateId, {});
+                var params = {};
+                try { params = sc.getStateParams() || {}; } catch(e) {}
+                sc.openState(stateId, params);
             }
         });
 
