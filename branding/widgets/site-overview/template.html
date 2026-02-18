@@ -4,3 +4,129 @@
         <div class="so-loading-text">Loading site data...</div>
     </div>
 </div>
+
+<!-- ===== SCHEDULE TAB OVERLAYS ===== -->
+
+<!-- Loading Overlay -->
+<div id="sched-loading-overlay" class="sched-loading-overlay" style="display:none;">
+    <div class="sched-spinner"></div>
+    <div class="sched-loading-text">Loading...</div>
+</div>
+
+<!-- Toast Notification -->
+<div id="sched-toast" class="sched-toast" style="display:none;"></div>
+
+<!-- Task Form Overlay -->
+<div id="sched-task-form-overlay" class="sched-overlay" style="display:none;">
+    <div class="sched-overlay-backdrop" onclick="SCHED.hideTaskForm()"></div>
+    <div class="sched-form-panel">
+        <div class="sched-form-header">
+            <h2 id="sched-form-title">New Task</h2>
+            <button class="sched-btn-icon" onclick="SCHED.hideTaskForm()" title="Close">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="sched-form-body">
+            <!-- Row 1: Profile + Priority + Channel -->
+            <div class="sched-form-row sched-three-col">
+                <div class="sched-form-group">
+                    <label>Profile ID</label>
+                    <input type="number" id="sched-f-profile-id" min="1" max="255" value="1" class="sched-input">
+                </div>
+                <div class="sched-form-group">
+                    <label>Priority</label>
+                    <select id="sched-f-priority" class="sched-input">
+                        <option value="1">1 - Highest</option>
+                        <option value="2">2 - High</option>
+                        <option value="3" selected>3 - Medium</option>
+                        <option value="4">4 - Low</option>
+                        <option value="5">5 - Lowest</option>
+                    </select>
+                </div>
+                <div class="sched-form-group">
+                    <label>Channel</label>
+                    <input type="number" id="sched-f-channel" min="1" max="64" value="1" class="sched-input">
+                </div>
+            </div>
+
+            <!-- Row 2: Dates -->
+            <div class="sched-form-row sched-two-col">
+                <div class="sched-form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="sched-f-start-date" class="sched-input">
+                </div>
+                <div class="sched-form-group">
+                    <label>End Date</label>
+                    <div class="sched-end-date-group">
+                        <input type="date" id="sched-f-end-date" class="sched-input" style="flex:1">
+                        <label class="sched-checkbox-label">
+                            <input type="checkbox" id="sched-f-end-forever" checked onchange="SCHED.toggleEndForever()">
+                            Forever
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Cyclic -->
+            <div class="sched-form-row sched-two-col">
+                <div class="sched-form-group">
+                    <label>Cyclic Type</label>
+                    <select id="sched-f-cyclic-type" class="sched-input" onchange="SCHED.onCyclicTypeChange()">
+                        <option value="5">Custom (select days)</option>
+                        <option value="2">Odd Days</option>
+                        <option value="3">Even Days</option>
+                        <option value="4">Cyclic Interval</option>
+                    </select>
+                </div>
+                <div class="sched-form-group" id="sched-cyclic-interval-group" style="display:none;">
+                    <label>Cyclic Interval (days)</label>
+                    <input type="number" id="sched-f-cyclic-time" min="1" max="365" value="7" class="sched-input">
+                </div>
+            </div>
+
+            <!-- Row 4: Off Days -->
+            <div id="sched-off-days-group" class="sched-form-group">
+                <label>Active Days</label>
+                <div class="sched-days-row">
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="0" checked><span>Sun</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="1" checked><span>Mon</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="2" checked><span>Tue</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="3" checked><span>Wed</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="4" checked><span>Thu</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="5" checked><span>Fri</span></label>
+                    <label class="sched-day-checkbox"><input type="checkbox" data-day="6" checked><span>Sat</span></label>
+                </div>
+            </div>
+
+            <!-- Time Slots -->
+            <div class="sched-timeslots-header">
+                <label>Time Slots</label>
+                <button class="sched-btn sched-btn-small sched-btn-primary" onclick="SCHED.addTimeSlot()" id="sched-add-slot-btn">+ Add Slot</button>
+            </div>
+            <div id="sched-timeslots-container"></div>
+
+            <!-- Form Actions -->
+            <div class="sched-form-actions">
+                <button class="sched-btn sched-btn-secondary" onclick="SCHED.hideTaskForm()">Cancel</button>
+                <button class="sched-btn sched-btn-primary" onclick="SCHED.deployTask()" id="sched-deploy-btn">Deploy to All Devices</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete Dialog -->
+<div id="sched-confirm-overlay" class="sched-overlay" style="display:none;">
+    <div class="sched-overlay-backdrop" onclick="SCHED.hideConfirm()"></div>
+    <div class="sched-modal-panel">
+        <div class="sched-form-header">
+            <h2>Confirm Delete</h2>
+        </div>
+        <div class="sched-form-body">
+            <p id="sched-confirm-message">Are you sure you want to delete this task?</p>
+            <div class="sched-form-actions">
+                <button class="sched-btn sched-btn-secondary" onclick="SCHED.hideConfirm()">Cancel</button>
+                <button class="sched-btn sched-btn-danger" onclick="SCHED.confirmDelete()">Delete from All Devices</button>
+            </div>
+        </div>
+    </div>
+</div>
