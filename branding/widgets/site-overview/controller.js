@@ -1498,6 +1498,13 @@ self.onInit = function () {
                         var key = inp.getAttribute('data-attr');
                         attrs[key] = inp.value || '';
                     });
+                    // Sync gps_lat/gps_lng → latitude/longitude for fleet map compatibility
+                    if (attrs.gps_lat !== undefined && attrs.gps_lat !== '') {
+                        attrs.latitude = parseFloat(attrs.gps_lat);
+                    }
+                    if (attrs.gps_lng !== undefined && attrs.gps_lng !== '') {
+                        attrs.longitude = parseFloat(attrs.gps_lng);
+                    }
                     saveSiteAttributes(attrs).then(function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                         isEditing = false;
