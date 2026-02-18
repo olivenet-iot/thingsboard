@@ -427,8 +427,34 @@ self.onInit = function () {
             metaField('address', 'Address', siteAttrs.address || ''),
             metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || ''),
             metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || ''),
+            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
             metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || ''),
         ]);
+
+        // Location downlink card (always visible, independent of edit mode)
+        var lat = parseFloat(siteAttrs.gps_lat);
+        var lng = parseFloat(siteAttrs.gps_lng);
+        var tz  = parseFloat(siteAttrs.timezone_offset);
+        var locReady = !isNaN(lat) && !isNaN(lng) && !isNaN(tz);
+        var locPreview = locReady
+            ? 'Lat: ' + lat.toFixed(4) + ' / Lon: ' + lng.toFixed(4) + ' / UTC+' + tz
+            : 'Save Latitude, Longitude and Timezone Offset first.';
+
+        html += '<div class="so-loc-send-card">' +
+            '<div class="so-loc-send-header">' +
+                '<div class="so-meta-icon so-meta-icon-blue">' +
+                    '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/></svg>' +
+                '</div>' +
+                'Send Location to Devices' +
+            '</div>' +
+            '<div class="so-loc-send-preview">' + esc(locPreview) + '</div>' +
+            '<div class="so-loc-send-hint">Sends a Location Setup downlink to all ' + devices.length + ' device(s) under this site. Required for sunrise/sunset scheduling.</div>' +
+            '<button class="so-loc-send-btn" data-action="send-location"' + (locReady && devices.length > 0 ? '' : ' disabled') + '>' +
+                '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>' +
+                ' Send Location Downlink' +
+            '</button>' +
+            '<div id="so-loc-status" class="so-loc-status" style="display:none;"></div>' +
+        '</div>';
 
         // Contact
         html += metaCard('Site Contact', 'user', [
@@ -592,6 +618,27 @@ self.onInit = function () {
 
     function deployTaskToAllDevices(cmd) {
         if (devices.length === 0) return Promise.resolve({ succeeded: 0, failed: 0, total: 0 });
+        var results = { succeeded: 0, failed: 0, total: devices.length };
+        var promises = devices.map(function (dev) {
+            return schedApiPost('/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SHARED_SCOPE', {
+                task_command: JSON.stringify(cmd)
+            }).then(function () {
+                results.succeeded++;
+            }).catch(function () {
+                results.failed++;
+            });
+        });
+        return Promise.all(promises).then(function () { return results; });
+    }
+
+    function sendLocationToAllDevices(lat, lng, tz) {
+        if (devices.length === 0) return Promise.resolve({ succeeded: 0, failed: 0, total: 0 });
+        var cmd = {
+            command: 'location_setup',
+            latitude: lat,
+            longitude: lng,
+            timezone: tz
+        };
         var results = { succeeded: 0, failed: 0, total: devices.length };
         var promises = devices.map(function (dev) {
             return schedApiPost('/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SHARED_SCOPE', {
@@ -1416,6 +1463,48 @@ self.onInit = function () {
                     isEditing = true;
                     render();
                 }
+            });
+        });
+
+        // Send location downlink to all devices
+        container.querySelectorAll('[data-action="send-location"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var lat = parseFloat(siteAttrs.gps_lat);
+                var lng = parseFloat(siteAttrs.gps_lng);
+                var tz  = parseFloat(siteAttrs.timezone_offset);
+
+                if (isNaN(lat) || isNaN(lng) || isNaN(tz)) {
+                    alert('Please save GPS Latitude, GPS Longitude and Timezone Offset first.');
+                    return;
+                }
+
+                var statusEl = document.getElementById('so-loc-status');
+                btn.disabled = true;
+                btn.textContent = 'Sending…';
+                if (statusEl) { statusEl.style.display = 'none'; }
+
+                sendLocationToAllDevices(lat, lng, tz)
+                    .then(function (results) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Location Downlink';
+                        if (statusEl) {
+                            var ok = results.failed === 0;
+                            statusEl.className = 'so-loc-status ' + (ok ? 'so-loc-status-ok' : 'so-loc-status-err');
+                            statusEl.textContent = 'Sent to ' + results.succeeded + '/' + results.total + ' device(s)' + (results.failed > 0 ? ' (' + results.failed + ' failed)' : ' ✓');
+                            statusEl.style.display = 'block';
+                        }
+                        console.log('[SITE] Location sent:', results);
+                    })
+                    .catch(function (err) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Location Downlink';
+                        if (statusEl) {
+                            statusEl.className = 'so-loc-status so-loc-status-err';
+                            statusEl.textContent = 'Send failed: ' + (err.message || err);
+                            statusEl.style.display = 'block';
+                        }
+                        console.error('[SITE] Location send error:', err);
+                    });
             });
         });
 
