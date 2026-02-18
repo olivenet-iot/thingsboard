@@ -64,6 +64,39 @@
   padding: 2px 8px;
   border-radius: 10px;
   background: #f1f5f9;
+  transition: color 0.3s, background 0.3s;
+}
+
+/* ===== PENDING BADGE ===== */
+.dim-pending-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.dim-pending-badge span {
+  font-size: 11px;
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.dim-pending-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #93c5fd;
+  border-top-color: #1e40af;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: dim-spin 0.75s linear infinite;
+}
+
+@keyframes dim-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ===== VALUE RING GAUGE ===== */
@@ -99,6 +132,17 @@
 
 .dim-ring-fill.is-off {
   stroke: #94a3b8;
+}
+
+/* Pending state: pulsing blue ring */
+.dim-ring-fill.is-pending {
+  stroke: #60a5fa;
+  animation: dim-ring-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dim-ring-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
 }
 
 .dim-value-inner {
@@ -145,6 +189,13 @@
   outline: none;
   cursor: pointer;
   margin: 0;
+  transition: opacity 0.2s;
+}
+
+/* Disabled (pending) state */
+.dim-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .dim-slider::-webkit-slider-thumb {
@@ -160,11 +211,11 @@
   transition: border-color 0.2s, transform 0.15s;
 }
 
-.dim-slider::-webkit-slider-thumb:hover {
+.dim-slider:not(:disabled)::-webkit-slider-thumb:hover {
   transform: scale(1.15);
 }
 
-.dim-slider::-webkit-slider-thumb:active {
+.dim-slider:not(:disabled)::-webkit-slider-thumb:active {
   transform: scale(1.05);
   border-color: #d97706;
 }
@@ -217,12 +268,17 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s, opacity 0.2s;
   letter-spacing: 0.3px;
 }
 
-.dim-power-btn:active {
+.dim-power-btn:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.dim-power-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .dim-power-off {
@@ -230,7 +286,7 @@
   color: #475569;
 }
 
-.dim-power-off:hover {
+.dim-power-off:not(:disabled):hover {
   background: #e2e8f0;
 }
 
@@ -245,7 +301,7 @@
   color: #92400e;
 }
 
-.dim-power-on:hover {
+.dim-power-on:not(:disabled):hover {
   background: #fde68a;
 }
 
@@ -285,12 +341,12 @@
 }
 
 .dim-toast.success { background: #059669; }
-.dim-toast.error { background: #dc2626; }
-.dim-toast.info { background: #2563eb; }
+.dim-toast.error   { background: #dc2626; }
+.dim-toast.info    { background: #2563eb; }
 
 @keyframes dim-toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ===== CONFIRM DIALOG ===== */
@@ -308,7 +364,7 @@
 
 @keyframes dim-fade-in {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 .dim-confirm-dialog {
@@ -323,7 +379,7 @@
 
 @keyframes dim-dialog-in {
   from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .dim-confirm-icon {
