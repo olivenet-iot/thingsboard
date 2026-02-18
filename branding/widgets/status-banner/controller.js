@@ -10,13 +10,12 @@ self.onInit = function () {
     'use strict';
 
     // Allow popups/tooltips to overflow widget bounds
+    // TB CE has deep container nesting — walk up all ancestors
     try {
-        var widgetEl = self.ctx.$container[0];
-        if (widgetEl) {
-            widgetEl.style.overflow = 'visible';
-            if (widgetEl.parentElement) {
-                widgetEl.parentElement.style.overflow = 'visible';
-            }
+        var el = self.ctx.$container[0];
+        while (el && el !== document.body) {
+            el.style.overflow = 'visible';
+            el = el.parentElement;
         }
     } catch(e) {}
 
