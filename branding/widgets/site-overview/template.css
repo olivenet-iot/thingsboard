@@ -11,6 +11,7 @@
     box-sizing: border-box;
     width: 100%;
     overflow-y: auto;
+    overflow-anchor: none;
 }
 
 .so-root *, .so-root *::before, .so-root *::after {
@@ -497,6 +498,7 @@
     font-family: inherit;
     max-width: 220px;
     transition: border-color 0.15s;
+    scroll-margin: 0;
 }
 
 .so-meta-input:focus {
@@ -520,6 +522,7 @@
     box-sizing: border-box;
     line-height: 1.5;
     transition: border-color 0.15s;
+    scroll-margin: 0;
 }
 
 .so-meta-textarea:focus {
@@ -1238,46 +1241,6 @@ select.sched-input { cursor: pointer; }
     .sched-status-bar { flex-direction: column; align-items: flex-start; }
     .sched-status-refresh { margin-left: 0; }
 }
-
-/* ===== LOCATION INLINE SEND ROW ===== */
-.so-loc-inline-divider { border-top: 1px dashed #e2e8f0; margin: 10px 0; }
-
-.so-loc-inline-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-}
-
-.so-loc-inline-label {
-    font-size: 12px;
-    color: #059669;
-    font-weight: 500;
-}
-
-.so-loc-inline-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
-    font-family: inherit;
-    margin-left: auto;
-}
-
-.so-loc-inline-btn:hover:not(:disabled) { background: #1d4ed8; }
-.so-loc-inline-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.so-loc-inline-status { font-size: 11px; margin-left: auto; }
-.so-loc-inline-status-ok { color: #059669; font-weight: 500; }
-.so-loc-inline-status-err { color: #dc2626; font-weight: 500; }
 
 /* ===== LOCATION CONFIRM POPUP ===== */
 .so-loc-confirm-hint { font-size: 12px; color: #94a3b8; margin: 0 0 12px 0; }

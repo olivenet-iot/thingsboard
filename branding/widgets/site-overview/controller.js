@@ -422,34 +422,14 @@ self.onInit = function () {
             metaField('co2_per_kwh', 'CO₂ per kWh (g)', siteAttrs.co2_per_kwh || '207'),
         ]);
 
-        // Location (manually built to include inline send-location action)
-        var lat = parseFloat(siteAttrs.gps_lat);
-        var lng = parseFloat(siteAttrs.gps_lng);
-        var tz  = parseFloat(siteAttrs.timezone_offset);
-        var locReady = !isNaN(lat) && !isNaN(lng) && !isNaN(tz);
-
-        html += '<div class="so-meta-card">' +
-            '<div class="so-meta-card-title">' +
-                '<div class="so-meta-icon so-meta-icon-amber">' + META_ICONS.map + '</div>' +
-                'Location' +
-            '</div>' +
-            metaField('address', 'Address', siteAttrs.address || '') +
-            metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || '') +
-            metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || '') +
-            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || '') +
-            metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || '');
-
-        // Inline send-location row (view mode only, when location is complete)
-        if (!isEditing && locReady && devices.length > 0) {
-            html += '<div class="so-loc-inline-divider"></div>' +
-                '<div class="so-loc-inline-row">' +
-                    '<span class="so-loc-inline-label">Location configured</span>' +
-                    '<span id="so-loc-inline-status" class="so-loc-inline-status"></span>' +
-                    '<button class="so-loc-inline-btn" data-action="send-location">Send to Devices &rarr;</button>' +
-                '</div>';
-        }
-
-        html += '</div>';
+        // Location
+        html += metaCard('Location', 'map', [
+            metaField('address', 'Address', siteAttrs.address || ''),
+            metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || ''),
+            metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || ''),
+            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
+            metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || ''),
+        ]);
 
         // Contact
         html += metaCard('Site Contact', 'user', [
@@ -1539,41 +1519,6 @@ self.onInit = function () {
             });
         });
 
-        // Send location downlink to all devices (inline button)
-        container.querySelectorAll('[data-action="send-location"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var lat = parseFloat(siteAttrs.gps_lat);
-                var lng = parseFloat(siteAttrs.gps_lng);
-                var tz  = parseFloat(siteAttrs.timezone_offset);
-
-                if (isNaN(lat) || isNaN(lng) || isNaN(tz)) return;
-
-                var statusEl = document.getElementById('so-loc-inline-status');
-                btn.disabled = true;
-                btn.textContent = 'Sending\u2026';
-                if (statusEl) statusEl.textContent = '';
-
-                sendLocationToAllDevices(lat, lng, tz)
-                    .then(function (results) {
-                        btn.disabled = false;
-                        btn.innerHTML = 'Send to Devices &rarr;';
-                        if (statusEl) {
-                            var ok = results.failed === 0;
-                            statusEl.className = 'so-loc-inline-status ' + (ok ? 'so-loc-inline-status-ok' : 'so-loc-inline-status-err');
-                            statusEl.textContent = results.succeeded + '/' + results.total + (ok ? ' sent \u2713' : ' (' + results.failed + ' failed)');
-                        }
-                    })
-                    .catch(function (err) {
-                        btn.disabled = false;
-                        btn.innerHTML = 'Send to Devices &rarr;';
-                        if (statusEl) {
-                            statusEl.className = 'so-loc-inline-status so-loc-inline-status-err';
-                            statusEl.textContent = 'Failed: ' + (err.message || err);
-                        }
-                    });
-            });
-        });
-
         // Save alarm settings
         container.querySelectorAll('[data-action="save-alarms"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1595,6 +1540,15 @@ self.onInit = function () {
                     isSaving = false;
                     render();
                 });
+            });
+        });
+
+        // Prevent scroll jump when focusing inputs in edit mode
+        container.querySelectorAll('.so-meta-input, .so-meta-textarea').forEach(function (inp) {
+            inp.addEventListener('mousedown', function (e) {
+                if (document.activeElement === inp) return; // already focused, let normal click work
+                e.preventDefault();
+                inp.focus({ preventScroll: true });
             });
         });
     }
