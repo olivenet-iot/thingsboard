@@ -56,7 +56,7 @@ self.onInit = function () {
     var CONFIRM_POLL_MS = 2000;
 
     // Give up waiting for confirm after this many ms
-    var CONFIRM_TIMEOUT_MS = 30000;
+    var CONFIRM_TIMEOUT_MS = 60000;
 
     // ── State ─────────────────────────────────────────────────────
     var currentDimValue = null;   // last confirmed dim from telemetry
