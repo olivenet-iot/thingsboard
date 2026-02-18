@@ -10,18 +10,31 @@ self.onInit = function () {
     'use strict';
 
     // ── Resolve Device ID ─────────────────────────────────────────
-    var DEVICE_ID = null;
-    var ds = self.ctx.datasources;
+    function resolveDeviceId() {
+        // 1. Dashboard state (Fleet navigation, URL params)
+        try {
+            var stateParams = self.ctx.stateController.getStateParams();
+            if (stateParams && stateParams.entityId && stateParams.entityId.id) {
+                return stateParams.entityId.id;
+            }
+        } catch (e) { /* stateController unavailable */ }
+
+        // 2. Datasource entity (entity alias)
+        try {
+            var ds = self.ctx.datasources;
+            if (ds && ds.length > 0 && ds[0].entity) {
+                var eid = ds[0].entity.id;
+                return (typeof eid === 'object' && eid !== null) ? eid.id : eid;
+            }
+        } catch (e) { /* datasource unavailable */ }
+
+        // 3. Fallback: widget settings
+        return (self.ctx.settings && self.ctx.settings.deviceId) || null;
+    }
 
     console.log('[SB] onInit started');
-    console.log('[SB] datasources:', JSON.stringify(ds));
 
-    if (ds && ds.length > 0 && ds[0].entity) {
-        DEVICE_ID = ds[0].entity.id;
-    }
-    if (!DEVICE_ID && self.ctx.settings && self.ctx.settings.deviceId) {
-        DEVICE_ID = self.ctx.settings.deviceId;
-    }
+    var DEVICE_ID = resolveDeviceId();
 
     console.log('[SB] DEVICE_ID:', DEVICE_ID);
 
