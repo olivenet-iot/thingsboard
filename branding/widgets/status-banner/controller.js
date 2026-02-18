@@ -9,6 +9,17 @@
 self.onInit = function () {
     'use strict';
 
+    // Allow popups/tooltips to overflow widget bounds
+    try {
+        var widgetEl = self.ctx.$container[0];
+        if (widgetEl) {
+            widgetEl.style.overflow = 'visible';
+            if (widgetEl.parentElement) {
+                widgetEl.parentElement.style.overflow = 'visible';
+            }
+        }
+    } catch(e) {}
+
     // ── Resolve Device ID ─────────────────────────────────────────
     function resolveDeviceId() {
         // 1. Dashboard state (Fleet navigation, URL params)
