@@ -1,0 +1,30 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "Site Overview Settings",
+        "properties": {
+            "siteAssetId": {
+                "title": "Site Asset ID (fallback)",
+                "type": "string",
+                "description": "Used when dashboard state params are not available (e.g. direct access without Fleet navigation)"
+            },
+            "pollInterval": {
+                "title": "Telemetry poll interval (ms)",
+                "type": "number",
+                "default": 15000,
+                "description": "How often to refresh device telemetry data"
+            },
+            "autoRedirectSingleDevice": {
+                "title": "Auto-redirect for single device",
+                "type": "boolean",
+                "default": false,
+                "description": "If site has only one device, automatically open Overview state"
+            }
+        }
+    },
+    "form": [
+        "siteAssetId",
+        "pollInterval",
+        "autoRedirectSingleDevice"
+    ]
+}
