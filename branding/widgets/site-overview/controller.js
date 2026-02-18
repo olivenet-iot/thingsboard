@@ -10,6 +10,8 @@
 // Queries relations to find child devices, polls telemetry.
 // ═══════════════════════════════════════════════════════════════
 
+var pollTimer = null; // outer scope — accessible by onDestroy
+
 self.onInit = function () {
     'use strict';
 
@@ -17,14 +19,19 @@ self.onInit = function () {
     var FRESHNESS_ONLINE = 600000;  // 10 min
     var FRESHNESS_STALE  = 3600000; // 60 min
 
-    var container = self.ctx.$container[0];
+    var $root = self.ctx.$container[0];
+    var container = $root.querySelector('.so-root');
+    if (!container) {
+        // Fallback: create so-root if template didn't load
+        $root.innerHTML = '<div class="so-root"></div>';
+        container = $root.querySelector('.so-root');
+    }
     var http = self.ctx.http;
 
     var siteId = null;
     var devices = [];       // [{id, name, type, telemetry: {...}, lastActivity}]
     var siteAttrs = {};     // server attributes on site asset
     var activeTab = 'devices';
-    var pollTimer = null;
     var isEditing = false;
     var isSaving = false;
 
@@ -53,13 +60,34 @@ self.onInit = function () {
     }
 
     // ── API Helpers ───────────────────────────────────────────
+    // TB CE http.get/post return RxJS Observables, not Promises.
+    // Convert via .toPromise() for easier chaining.
 
     function apiGet(path) {
-        return http.get('/api' + path);
+        var obs = http.get('/api' + path);
+        if (obs && typeof obs.toPromise === 'function') {
+            return obs.toPromise();
+        }
+        // Fallback: wrap Observable manually
+        return new Promise(function (resolve, reject) {
+            obs.subscribe(
+                function (data) { resolve(data); },
+                function (err) { reject(err); }
+            );
+        });
     }
 
     function apiPost(path, body) {
-        return http.post('/api' + path, body);
+        var obs = http.post('/api' + path, body);
+        if (obs && typeof obs.toPromise === 'function') {
+            return obs.toPromise();
+        }
+        return new Promise(function (resolve, reject) {
+            obs.subscribe(
+                function (data) { resolve(data); },
+                function (err) { reject(err); }
+            );
+        });
     }
 
     // ── Fetch Devices via Relations ───────────────────────────
@@ -657,7 +685,7 @@ self.onInit = function () {
 // ═══ LIFECYCLE ════════════════════════════════════════════════
 
 self.onDestroy = function () {
-    if (typeof pollTimer !== 'undefined' && pollTimer) {
+    if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
     }
