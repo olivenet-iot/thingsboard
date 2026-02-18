@@ -260,12 +260,31 @@ self.navigateToState = function(entityId, entityName) {
     }
 };
 
+// ── TB CE State Encoding ─────────────────────────────────────
+// TB CE uses base64-encoded JSON state array in URL, not raw query params.
+// Format: ?state={base64(encodeURIComponent(JSON.stringify(stateArray)))}
+// Source: ThingsBoard ui-ngx/src/app/core/utils.ts (objToBase64URI)
+self.objToBase64 = function(obj) {
+    var json = JSON.stringify(obj);
+    return btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+        function(match, p1) {
+            return String.fromCharCode(Number('0x' + p1));
+        }));
+};
+
 self.navigateToDashboard = function(entityId, entityName) {
     var dashboardId = self.settings.targetDashboardId;
-    var url = '/dashboards/' + dashboardId +
-              '?entityId=' + entityId +
-              '&entityType=ASSET' +
-              '&entityName=' + encodeURIComponent(entityName);
+
+    var stateArray = [{
+        id: 'site',
+        params: {
+            entityId: { id: entityId, entityType: 'ASSET' },
+            entityName: entityName
+        }
+    }];
+    var stateParam = encodeURIComponent(self.objToBase64(stateArray));
+    var url = '/dashboards/' + dashboardId + '?state=' + stateParam;
+
     window.open(url, '_blank');
 };
 
