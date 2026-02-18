@@ -19,10 +19,6 @@
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         New Task
       </button>
-      <button class="btn btn-secondary" onclick="DALI.showLocationSetup()">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
-        Location
-      </button>
     </div>
   </div>
 
@@ -173,51 +169,6 @@
         <div class="form-actions">
           <button class="btn btn-secondary" onclick="DALI.hideTaskForm()">Cancel</button>
           <button class="btn btn-primary" onclick="DALI.deployTask()" id="deploy-btn">Deploy</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== SECTION D: LOCATION SETUP DIALOG ===== -->
-  <div id="location-overlay" class="overlay" style="display:none;">
-    <div class="overlay-backdrop" onclick="DALI.hideLocationSetup()"></div>
-    <div class="modal-panel">
-      <div class="form-header">
-        <h2>Location Setup</h2>
-        <button class="btn-icon" onclick="DALI.hideLocationSetup()" title="Close">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </div>
-      <div class="form-body">
-        <div class="form-group">
-          <label>Presets</label>
-          <select id="loc-preset" class="input" onchange="DALI.applyLocationPreset()">
-            <option value="">-- Select Preset --</option>
-            <option value="52.37,4.90,1.0">Amsterdam - 52.37, 4.90, UTC+1</option>
-            <option value="52.52,13.41,1.0">Berlin - 52.52, 13.41, UTC+1</option>
-            <option value="51.51,-0.13,0.0">London - 51.51, -0.13, UTC+0</option>
-            <option value="48.86,2.35,1.0">Paris - 48.86, 2.35, UTC+1</option>
-            <option value="41.90,12.50,1.0">Rome - 41.90, 12.50, UTC+1</option>
-          </select>
-        </div>
-        <div class="form-row three-col">
-          <div class="form-group">
-            <label>Latitude</label>
-            <input type="number" id="loc-lat" step="0.01" value="52.37" class="input">
-          </div>
-          <div class="form-group">
-            <label>Longitude</label>
-            <input type="number" id="loc-lon" step="0.01" value="4.90" class="input">
-          </div>
-          <div class="form-group">
-            <label>Timezone (UTC offset)</label>
-            <input type="number" id="loc-tz" step="0.5" min="-12" max="14" value="1.0" class="input">
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" onclick="DALI.hideLocationSetup()">Cancel</button>
-          <button class="btn btn-primary" onclick="DALI.sendLocationSetup()">Send to Device</button>
-          <button class="btn btn-secondary" onclick="DALI.saveLocationOnly()">Save Only</button>
         </div>
       </div>
     </div>

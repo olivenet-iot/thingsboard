@@ -40,7 +40,6 @@ self.onInit = function() {
 
   var BASE = '/api/plugins/telemetry/DEVICE/' + DEVICE_ID;
   var tasks = [];
-  var locationSetup = null;
   var editingIndex = -1;
   var pendingDeleteIndex = -1;
   var timeSlotCount = 0;
@@ -140,10 +139,9 @@ self.onInit = function() {
   // ===================== DATA LOADING =====================
 
   function loadTasksData() {
-    return apiGet(BASE + '/values/attributes/SERVER_SCOPE?keys=tasks_data,location_setup')
+    return apiGet(BASE + '/values/attributes/SERVER_SCOPE?keys=tasks_data')
       .then(function(data) {
         tasks = [];
-        locationSetup = null;
         if (data && data.length) {
           data.forEach(function(attr) {
             if (attr.key === 'tasks_data') {
@@ -151,11 +149,6 @@ self.onInit = function() {
                 tasks = typeof attr.value === 'string' ? JSON.parse(attr.value) : attr.value;
                 if (!Array.isArray(tasks)) tasks = [];
               } catch(e) { tasks = []; }
-            }
-            if (attr.key === 'location_setup') {
-              try {
-                locationSetup = typeof attr.value === 'string' ? JSON.parse(attr.value) : attr.value;
-              } catch(e) { locationSetup = null; }
             }
           });
         }
@@ -876,101 +869,6 @@ self.onInit = function() {
         hideLoading();
         console.error('Verify error (sync):', e);
         showToast('Verify error: ' + e.message, 'error');
-      }
-    },
-
-    // ===== Location Setup =====
-    showLocationSetup: function() {
-      if (locationSetup) {
-        document.getElementById('loc-lat').value = locationSetup.latitude || 52.37;
-        document.getElementById('loc-lon').value = locationSetup.longitude || 4.90;
-        document.getElementById('loc-tz').value = locationSetup.timezone != null ? locationSetup.timezone : 1.0;
-      }
-      document.getElementById('location-overlay').style.display = 'flex';
-    },
-
-    hideLocationSetup: function() {
-      document.getElementById('location-overlay').style.display = 'none';
-    },
-
-    applyLocationPreset: function() {
-      var val = document.getElementById('loc-preset').value;
-      if (!val) return;
-      var parts = val.split(',');
-      document.getElementById('loc-lat').value = parts[0];
-      document.getElementById('loc-lon').value = parts[1];
-      document.getElementById('loc-tz').value = parts[2];
-    },
-
-    sendLocationSetup: function() {
-      try {
-        var lat = parseFloat(document.getElementById('loc-lat').value);
-        var lon = parseFloat(document.getElementById('loc-lon').value);
-        var tz = parseFloat(document.getElementById('loc-tz').value);
-
-        if (isNaN(lat) || isNaN(lon) || isNaN(tz)) {
-          showToast('Invalid location values', 'error');
-          return;
-        }
-
-        locationSetup = { latitude: lat, longitude: lon, timezone: tz };
-
-        showLoading('Sending location to device...');
-
-        apiPost(BASE + '/SERVER_SCOPE', {
-          location_setup: JSON.stringify(locationSetup)
-        }).then(function() {
-          var cmd = {
-            command: 'location_setup',
-            latitude: lat,
-            longitude: lon,
-            timezone: tz
-          };
-          return apiPost(BASE + '/SHARED_SCOPE', {
-            task_command: JSON.stringify(cmd)
-          });
-        })
-          .then(function() {
-            hideLoading();
-            showToast('Location sent to device', 'success');
-            DALI.hideLocationSetup();
-          })
-          .catch(function(err) {
-            hideLoading();
-            console.error('Location setup failed:', err);
-            var msg = (err && err.message) ? err.message : String(err);
-            showToast('Location setup failed: ' + msg, 'error');
-          });
-      } catch(e) {
-        hideLoading();
-        console.error('Location setup error (sync):', e);
-        showToast('Location setup error: ' + e.message, 'error');
-      }
-    },
-
-    saveLocationOnly: function() {
-      try {
-        var lat = parseFloat(document.getElementById('loc-lat').value);
-        var lon = parseFloat(document.getElementById('loc-lon').value);
-        var tz = parseFloat(document.getElementById('loc-tz').value);
-
-        locationSetup = { latitude: lat, longitude: lon, timezone: tz };
-
-        apiPost(BASE + '/SERVER_SCOPE', {
-          location_setup: JSON.stringify(locationSetup)
-        })
-          .then(function() {
-            showToast('Location saved (not sent to device)', 'info');
-            DALI.hideLocationSetup();
-          })
-          .catch(function(err) {
-            console.error('Save location failed:', err);
-            var msg = (err && err.message) ? err.message : String(err);
-            showToast('Save failed: ' + msg, 'error');
-          });
-      } catch(e) {
-        console.error('Save location error (sync):', e);
-        showToast('Save error: ' + e.message, 'error');
       }
     },
 
