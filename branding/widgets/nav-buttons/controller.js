@@ -80,9 +80,14 @@ self.onInit = function () {
 
             var sc = self.ctx.stateController;
             if (sc && sc.openState) {
-                console.log('[NAV] Navigate to:', stateId);
                 var params = {};
-                try { params = sc.getStateParams() || {}; } catch(e) {}
+                try {
+                    params = sc.getStateParams() || {};
+                    console.log('[NAV] getStateParams returned:', JSON.stringify(params));
+                } catch (e) {
+                    console.log('[NAV] getStateParams error:', e);
+                }
+                console.log('[NAV] Opening', stateId, 'with params:', JSON.stringify(params));
                 sc.openState(stateId, params);
             }
         });
