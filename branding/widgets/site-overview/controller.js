@@ -425,8 +425,8 @@ self.onInit = function () {
         // Location
         html += metaCard('Location', 'map', [
             metaField('address', 'Address', siteAttrs.address || ''),
-            metaField('gps_lat', 'GPS Latitude', siteAttrs.gps_lat || ''),
-            metaField('gps_lng', 'GPS Longitude', siteAttrs.gps_lng || ''),
+            metaField('latitude', 'Latitude', siteAttrs.latitude || ''),
+            metaField('longitude', 'Longitude', siteAttrs.longitude || ''),
             metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
             metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || ''),
         ]);
@@ -656,8 +656,8 @@ self.onInit = function () {
         });
         overlay.querySelectorAll('[data-action="loc-confirm-send"]').forEach(function (el) {
             el.onclick = function () {
-                var lat = parseFloat(siteAttrs.gps_lat);
-                var lng = parseFloat(siteAttrs.gps_lng);
+                var lat = parseFloat(siteAttrs.latitude);
+                var lng = parseFloat(siteAttrs.longitude);
                 var tz  = parseFloat(siteAttrs.timezone_offset);
                 el.disabled = true;
                 el.textContent = 'Sending\u2026';
@@ -1487,8 +1487,8 @@ self.onInit = function () {
             btn.addEventListener('click', function () {
                 if (isEditing) {
                     // Snapshot old location values before save
-                    var oldLat = siteAttrs.gps_lat || '';
-                    var oldLng = siteAttrs.gps_lng || '';
+                    var oldLat = siteAttrs.latitude || '';
+                    var oldLng = siteAttrs.longitude || '';
                     var oldTz  = siteAttrs.timezone_offset || '';
 
                     // Save
@@ -1498,21 +1498,14 @@ self.onInit = function () {
                         var key = inp.getAttribute('data-attr');
                         attrs[key] = inp.value || '';
                     });
-                    // Sync gps_lat/gps_lng → latitude/longitude for fleet map compatibility
-                    if (attrs.gps_lat !== undefined && attrs.gps_lat !== '') {
-                        attrs.latitude = parseFloat(attrs.gps_lat);
-                    }
-                    if (attrs.gps_lng !== undefined && attrs.gps_lng !== '') {
-                        attrs.longitude = parseFloat(attrs.gps_lng);
-                    }
                     saveSiteAttributes(attrs).then(function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                         isEditing = false;
                         render();
 
                         // Check if location fields changed
-                        var locChanged = (attrs.gps_lat !== oldLat) || (attrs.gps_lng !== oldLng) || (attrs.timezone_offset !== oldTz);
-                        var locValid = !isNaN(parseFloat(attrs.gps_lat)) && !isNaN(parseFloat(attrs.gps_lng)) && !isNaN(parseFloat(attrs.timezone_offset));
+                        var locChanged = (attrs.latitude !== oldLat) || (attrs.longitude !== oldLng) || (attrs.timezone_offset !== oldTz);
+                        var locValid = !isNaN(parseFloat(attrs.latitude)) && !isNaN(parseFloat(attrs.longitude)) && !isNaN(parseFloat(attrs.timezone_offset));
                         if (locChanged && locValid && devices.length > 0) {
                             showLocConfirm();
                         }
