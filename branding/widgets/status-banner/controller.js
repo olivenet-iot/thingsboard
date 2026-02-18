@@ -279,22 +279,56 @@ self.onInit = function () {
         return days + 'd ' + (hrs % 24) + 'h';
     }
 
+    // ── Tooltip helpers ───────────────────────────────────────────
+
+    function closeTooltip() {
+        if (tooltipVisible) {
+            tooltipVisible = false;
+            elTooltip.style.display = 'none';
+        }
+    }
+
+    // Store refs for onDestroy (runs outside onInit scope)
+    self._sbTooltip = elTooltip;
+    self._sbCloseTooltip = closeTooltip;
+
+    function positionTooltip() {
+        var rect = elFaultZone.getBoundingClientRect();
+        var tw = elTooltip.offsetWidth;
+        var left = rect.left + rect.width / 2 - tw / 2;
+        // Clamp to viewport edges
+        if (left < 8) left = 8;
+        if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+        elTooltip.style.top = (rect.bottom + 8) + 'px';
+        elTooltip.style.left = left + 'px';
+    }
+
     // ── Tooltip toggle ────────────────────────────────────────────
-    elFaultZone.addEventListener('click', function () {
-        // Only toggle if there are faults
+    elFaultZone.addEventListener('click', function (e) {
+        e.stopPropagation();
         if (elFaultTitle.classList.contains('is-warn')) {
             tooltipVisible = !tooltipVisible;
-            elTooltip.style.display = tooltipVisible ? 'block' : 'none';
+            if (tooltipVisible) {
+                document.body.appendChild(elTooltip);
+                elTooltip.style.display = 'block';
+                positionTooltip();
+            } else {
+                elTooltip.style.display = 'none';
+            }
         }
     });
 
     // Close tooltip on outside click
     document.addEventListener('click', function (e) {
-        if (tooltipVisible && !elFaultZone.contains(e.target)) {
+        if (tooltipVisible && !elFaultZone.contains(e.target) && !elTooltip.contains(e.target)) {
             tooltipVisible = false;
             elTooltip.style.display = 'none';
         }
     });
+
+    // Close tooltip on scroll or resize
+    window.addEventListener('scroll', closeTooltip, true);
+    window.addEventListener('resize', closeTooltip);
 
     // ── Poll ──────────────────────────────────────────────────────
 
@@ -338,4 +372,11 @@ self.onDataUpdated = function () {};
 self.onDestroy = function () {
     console.log('[SB] onDestroy');
     if (self._sbPollTimer) clearInterval(self._sbPollTimer);
+    if (self._sbTooltip && self._sbTooltip.parentNode === document.body) {
+        document.body.removeChild(self._sbTooltip);
+    }
+    if (self._sbCloseTooltip) {
+        window.removeEventListener('scroll', self._sbCloseTooltip, true);
+        window.removeEventListener('resize', self._sbCloseTooltip);
+    }
 };

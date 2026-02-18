@@ -152,17 +152,14 @@
 
 /* ===== FAULT TOOLTIP ===== */
 .sb-fault-tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
+  z-index: 10000;
   background: #0f172a;
   color: #e2e8f0;
   border-radius: 8px;
   padding: 12px 14px;
   min-width: 200px;
   max-width: 280px;
-  z-index: 1000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   animation: sb-tooltip-in 0.15s ease;
 }
@@ -179,8 +176,8 @@
 }
 
 @keyframes sb-tooltip-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .sb-tooltip-section {
