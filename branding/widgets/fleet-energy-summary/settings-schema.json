@@ -1,0 +1,20 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fleet Energy Summary Settings",
+    "properties": {
+      "headerTitle": {
+        "title": "Header title",
+        "type": "string",
+        "default": "Energy Overview"
+      }
+    }
+  },
+  "form": [
+    {
+      "key": "headerTitle",
+      "type": "text",
+      "placeholder": "Energy Overview"
+    }
+  ]
+}

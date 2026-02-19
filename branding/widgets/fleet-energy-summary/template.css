@@ -1,0 +1,167 @@
+/* Fleet Energy Summary — SignConnect Design System */
+
+.fleet-energy-summary {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 4px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Header row */
+.energy-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+  padding: 0 2px !important;
+}
+
+.energy-header .header-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: #64748b !important;
+}
+
+.energy-header .header-period {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+}
+
+/* Cards container */
+.energy-cards {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  flex: 1 !important;
+  align-content: flex-start !important;
+}
+
+/* Individual entity card */
+.energy-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  min-width: 200px !important;
+  flex: 1 1 200px !important;
+  max-width: 320px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.energy-card:hover {
+  border-color: #cbd5e1 !important;
+}
+
+/* Top row: entity name + device count */
+.card-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.card-entity-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.card-device-count {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+}
+
+/* Metrics row */
+.card-metrics {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 16px !important;
+}
+
+.metric-block {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.metric-value {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+}
+
+.metric-unit {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+}
+
+.metric-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  color: #94a3b8 !important;
+}
+
+/* Energy color (emerald) */
+.metric-energy .metric-value {
+  color: #059669 !important;
+}
+
+/* CO2 color (slate) */
+.metric-co2 .metric-value {
+  color: #64748b !important;
+}
+
+/* Loading state */
+.energy-card.loading .metric-value {
+  color: #cbd5e1 !important;
+}
+
+/* Loading placeholder */
+.loading-placeholder {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 20px !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* Empty state */
+.energy-empty {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 20px !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* Responsive: stack vertically on small screens */
+@media (max-width: 640px) {
+  .energy-cards {
+    flex-direction: column !important;
+  }
+
+  .energy-card {
+    max-width: 100% !important;
+  }
+
+  .metric-value {
+    font-size: 18px !important;
+  }
+}
