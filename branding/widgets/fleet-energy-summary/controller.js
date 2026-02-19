@@ -18,6 +18,13 @@ self.onInit = function() {
     self.energyCache = {};   // entityId → { deviceCount, energyWh, co2Grams, fetchedAt }
     self.fetchInProgress = {};
     self.lastTimewindowKey = '';
+
+    // Subscribe to dashboard timewindow changes (onDataUpdated won't fire
+    // for latest-type widgets with no dataKeys when timewindow changes)
+    var twSub = self.ctx.dashboard.dashboardTimewindowChanged.subscribe(function() {
+        self.onDataUpdated();
+    });
+    self.twSubscription = twSub;
 };
 
 self.onDataUpdated = function() {
@@ -282,4 +289,9 @@ self.escapeHtml = function(text) {
 
 self.onResize = function() {};
 
-self.onDestroy = function() {};
+self.onDestroy = function() {
+    if (self.twSubscription) {
+        self.twSubscription.unsubscribe();
+        self.twSubscription = null;
+    }
+};
