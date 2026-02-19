@@ -19,6 +19,14 @@
   padding: 0 2px !important;
 }
 
+.energy-header .header-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: #64748b !important;
+}
+
 .energy-header .header-count {
   font-size: 11px !important;
   font-weight: 500 !important;

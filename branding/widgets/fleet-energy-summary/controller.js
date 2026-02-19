@@ -8,6 +8,8 @@ self.onInit = function() {
     self.cardsEl = self.$container.find('#energy-cards');
     self.periodEl = self.$container.find('#energy-period');
     self.countEl = self.$container.find('#energy-count');
+    self.titleEl = self.$container.find('.header-title');
+
     self.settings = {
         headerTitle: self.ctx.settings.headerTitle || 'Estates',
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
@@ -15,6 +17,8 @@ self.onInit = function() {
         navigationType: self.ctx.settings.navigationType || 'state',
         targetDashboardId: self.ctx.settings.targetDashboardId || ''
     };
+
+    self.titleEl.text(self.settings.headerTitle);
 
     self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault}], fetchedAt }
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, fetchedAt }
