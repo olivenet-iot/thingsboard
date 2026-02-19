@@ -7,7 +7,6 @@ self.onInit = function() {
     self.$container = self.ctx.$container;
     self.cardsEl = self.$container.find('#energy-cards');
     self.periodEl = self.$container.find('#energy-period');
-    self.countEl = self.$container.find('#energy-count');
     self.titleEl = self.$container.find('.header-title');
 
     self.settings = {
@@ -55,10 +54,6 @@ self.onDataUpdated = function() {
     });
 
     var entityList = Object.values(entities);
-
-    // Update count label
-    var label = self.settings.headerTitle.toLowerCase();
-    self.countEl.text(entityList.length + ' ' + (entityList.length === 1 ? label.replace(/s$/, '') : label));
 
     // Extract timewindow
     var tw = self.extractTimewindow();
@@ -415,8 +410,7 @@ self.renderCards = function(entityList, loading) {
 };
 
 self.renderEmpty = function() {
-    self.countEl.text('0 ' + self.settings.headerTitle.toLowerCase());
-    self.cardsEl.html('<div class="energy-empty">No ' + self.settings.headerTitle.toLowerCase() + ' found</div>');
+    self.cardsEl.html('<div class="energy-empty">No data found</div>');
 };
 
 // ── Navigation ─────────────────────────────────────────────────
