@@ -1,13 +1,8 @@
 {
   "schema": {
     "type": "object",
-    "title": "Fleet Energy Summary Settings",
+    "title": "Fleet List Settings",
     "properties": {
-      "headerTitle": {
-        "title": "Header title",
-        "type": "string",
-        "default": "Energy Overview"
-      },
       "onlineThresholdMinutes": {
         "title": "Online threshold (minutes)",
         "type": "number",
@@ -17,6 +12,11 @@
         "title": "Target dashboard state on click",
         "type": "string",
         "default": "estate"
+      },
+      "headerTitle": {
+        "title": "Header title",
+        "type": "string",
+        "default": "Estates"
       },
       "navigationType": {
         "title": "Navigation type (state or dashboard)",
@@ -31,9 +31,9 @@
     }
   },
   "form": [
-    {"key": "headerTitle", "type": "text", "placeholder": "Energy Overview"},
     {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
     {"key": "targetState", "type": "text", "placeholder": "estate"},
+    {"key": "headerTitle", "type": "text", "placeholder": "Estates"},
     {"key": "navigationType", "type": "text", "placeholder": "state"},
     {"key": "targetDashboardId", "type": "text", "placeholder": "dashboard-uuid"}
   ]

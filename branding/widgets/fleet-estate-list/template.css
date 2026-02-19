@@ -1,0 +1,214 @@
+/* Fleet List Widget — SignConnect Design System v2 */
+
+.fleet-estate-list {
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 4px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  overflow-y: auto !important;
+}
+
+/* Header */
+.list-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+  padding: 0 2px !important;
+}
+
+.header-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.header-count {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+}
+
+/* Cards container */
+.estate-cards {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Individual card */
+.estate-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 3px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.estate-card:hover {
+  border-left-color: #f59e0b !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  transform: translateX(2px) !important;
+}
+
+.estate-card:active {
+  background: #fefce8 !important;
+}
+
+/* Status border colors */
+.estate-card.status-healthy {
+  border-left-color: #059669 !important;
+}
+
+.estate-card.status-warning {
+  border-left-color: #f59e0b !important;
+}
+
+.estate-card.status-fault {
+  border-left-color: #ef4444 !important;
+}
+
+.estate-card.status-offline {
+  border-left-color: #94a3b8 !important;
+}
+
+/* Card left: name + device count */
+.card-main {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.card-top-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 6px !important;
+}
+
+.card-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.card-device-count {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Status pills row */
+.card-pills {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.pill-online {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.pill-offline {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.pill-fault {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.pill-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+.pill-online .pill-dot {
+  background: #059669 !important;
+}
+
+.pill-offline .pill-dot {
+  background: #94a3b8 !important;
+}
+
+.pill-fault .pill-dot {
+  background: #ef4444 !important;
+  animation: pulse-fault 2s ease-in-out infinite !important;
+}
+
+@keyframes pulse-fault {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Chevron */
+.card-chevron {
+  display: flex !important;
+  align-items: center !important;
+  margin-left: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.chevron-icon {
+  font-size: 18px !important;
+  color: #cbd5e1 !important;
+  line-height: 1 !important;
+  transition: all 0.15s ease !important;
+}
+
+.estate-card:hover .chevron-icon {
+  color: #f59e0b !important;
+  transform: translateX(2px) !important;
+}
+
+.chevron-label {
+  font-size: 8px !important;
+  color: #94a3b8 !important;
+  margin-left: 2px !important;
+  white-space: nowrap !important;
+}
+
+.estate-card:hover .chevron-label {
+  color: #f59e0b !important;
+}
+
+/* Loading / empty states */
+.loading-placeholder {
+  text-align: center !important;
+  padding: 20px !important;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+}
+
+.empty-state {
+  text-align: center !important;
+  padding: 24px 16px !important;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+}
