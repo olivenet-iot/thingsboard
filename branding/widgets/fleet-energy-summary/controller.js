@@ -11,7 +11,7 @@ self.onInit = function() {
     self.titleEl = self.$container.find('.header-title');
 
     self.settings = {
-        headerTitle: self.ctx.settings.headerTitle || 'Energy Overview',
+        headerTitle: self.ctx.settings.headerTitle || 'Estates',
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
         targetState: self.ctx.settings.targetState || 'estate',
         navigationType: self.ctx.settings.navigationType || 'state',

@@ -63,7 +63,7 @@ def build_descriptor():
         "backgroundColor": "transparent",
         "padding": "0",
         "settings": {
-            "headerTitle": "Energy Overview",
+            "headerTitle": "Estates",
             "onlineThresholdMinutes": 10,
             "targetState": "estate",
             "navigationType": "state",

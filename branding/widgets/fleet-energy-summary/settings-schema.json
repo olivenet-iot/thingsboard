@@ -6,7 +6,7 @@
       "headerTitle": {
         "title": "Header title",
         "type": "string",
-        "default": "Energy Overview"
+        "default": "Estates"
       },
       "onlineThresholdMinutes": {
         "title": "Online threshold (minutes)",
@@ -31,7 +31,7 @@
     }
   },
   "form": [
-    {"key": "headerTitle", "type": "text", "placeholder": "Energy Overview"},
+    {"key": "headerTitle", "type": "text", "placeholder": "Estates"},
     {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
     {"key": "targetState", "type": "text", "placeholder": "estate"},
     {"key": "navigationType", "type": "text", "placeholder": "state"},
