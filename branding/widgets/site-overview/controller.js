@@ -1536,8 +1536,6 @@ self.onInit = function () {
         // Save alarm settings
         container.querySelectorAll('[data-action="save-alarms"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                isSaving = true;
-                render();
                 var attrs = {};
                 container.querySelectorAll('[data-alarm-toggle]').forEach(function (cb) {
                     attrs[cb.getAttribute('data-alarm-toggle')] = cb.checked ? 'true' : 'false';
@@ -1545,6 +1543,8 @@ self.onInit = function () {
                 container.querySelectorAll('[data-alarm]').forEach(function (inp) {
                     attrs[inp.getAttribute('data-alarm')] = inp.value || '';
                 });
+                isSaving = true;
+                render();
                 saveSiteAttributes(attrs).then(function () {
                     Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                     isSaving = false;
