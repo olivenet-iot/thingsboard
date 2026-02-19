@@ -1498,6 +1498,20 @@ self.onInit = function () {
                         var key = inp.getAttribute('data-attr');
                         attrs[key] = inp.value || '';
                     });
+                    // Propagate co2_per_kwh to all child devices (rule chain reads this)
+                    if (attrs.co2_per_kwh !== undefined && attrs.co2_per_kwh !== '') {
+                        var co2Val = parseFloat(attrs.co2_per_kwh);
+                        if (!isNaN(co2Val)) {
+                            devices.forEach(function (dev) {
+                                apiPost(
+                                    '/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SERVER_SCOPE',
+                                    { co2_per_kwh: co2Val }
+                                ).catch(function (err) {
+                                    console.warn('[SITE] co2_per_kwh propagate failed for ' + dev.id, err);
+                                });
+                            });
+                        }
+                    }
                     saveSiteAttributes(attrs).then(function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                         isEditing = false;
