@@ -7,14 +7,34 @@
         "title": "Header title",
         "type": "string",
         "default": "Energy Overview"
+      },
+      "onlineThresholdMinutes": {
+        "title": "Online threshold (minutes)",
+        "type": "number",
+        "default": 10
+      },
+      "targetState": {
+        "title": "Target dashboard state on click",
+        "type": "string",
+        "default": "estate"
+      },
+      "navigationType": {
+        "title": "Navigation type (state or dashboard)",
+        "type": "string",
+        "default": "state"
+      },
+      "targetDashboardId": {
+        "title": "Target dashboard ID (when navigationType=dashboard)",
+        "type": "string",
+        "default": ""
       }
     }
   },
   "form": [
-    {
-      "key": "headerTitle",
-      "type": "text",
-      "placeholder": "Energy Overview"
-    }
+    {"key": "headerTitle", "type": "text", "placeholder": "Energy Overview"},
+    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
+    {"key": "targetState", "type": "text", "placeholder": "estate"},
+    {"key": "navigationType", "type": "text", "placeholder": "state"},
+    {"key": "targetDashboardId", "type": "text", "placeholder": "dashboard-uuid"}
   ]
 }
