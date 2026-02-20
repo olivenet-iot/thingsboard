@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 import config
+from routers.reports import router as reports_router
 
 
 @asynccontextmanager
@@ -23,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(reports_router, prefix="/api/report")
 
 
 @app.get("/health")
