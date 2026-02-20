@@ -1,0 +1,113 @@
+/* ═══════════════════════════════════════════════════════════════
+   SignConnect — Report Manager Widget (template.css)
+   Design system: amber accent (#f59e0b), slate tones, Inter/Segoe
+   ═══════════════════════════════════════════════════════════════ */
+
+.rpt-root {
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    color: #1e293b;
+    padding: 12px 16px;
+    min-height: 100%;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-y: auto;
+    overflow-anchor: none;
+}
+
+.rpt-root *, .rpt-root *::before, .rpt-root *::after {
+    box-sizing: border-box;
+}
+
+/* ── Loading ─────────────────────────────────────────────────── */
+
+.rpt-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 12px;
+}
+
+.rpt-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f1f5f9;
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: rpt-spin 0.7s linear infinite;
+}
+
+@keyframes rpt-spin {
+    to { transform: rotate(360deg); }
+}
+
+.rpt-loading-text {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* ── Back Button Header ──────────────────────────────────────── */
+
+.rpt-back-header {
+    margin-bottom: 16px;
+}
+
+.rpt-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.rpt-back-btn:hover {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.rpt-back-btn svg {
+    flex-shrink: 0;
+}
+
+/* ── Section Card ────────────────────────────────────────────── */
+
+.rpt-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+
+.rpt-section-header {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #0f172a;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #f59e0b;
+}
+
+/* ── Placeholder ─────────────────────────────────────────────── */
+
+.rpt-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    font-size: 13px;
+    color: #94a3b8;
+    font-style: italic;
+}

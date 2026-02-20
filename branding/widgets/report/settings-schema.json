@@ -1,0 +1,31 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "Report Manager Settings",
+        "properties": {
+            "reportsApiUrl": {
+                "title": "Reports Service URL",
+                "type": "string",
+                "default": "http://46.225.54.21:5000",
+                "description": "Base URL of the reports-service Python backend"
+            },
+            "defaultSections": {
+                "title": "Default Report Sections",
+                "type": "string",
+                "default": "energy,co2,faults,summary",
+                "description": "Comma-separated list of report sections to include by default"
+            },
+            "maxHistoryItems": {
+                "title": "Max History Items",
+                "type": "number",
+                "default": 10,
+                "description": "Maximum number of report history entries to display"
+            }
+        }
+    },
+    "form": [
+        "reportsApiUrl",
+        "defaultSections",
+        "maxHistoryItems"
+    ]
+}
