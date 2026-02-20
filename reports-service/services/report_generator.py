@@ -6,8 +6,10 @@ pipeline triggered by a ReportRequest.
 
 from __future__ import annotations
 
+import calendar
 import logging
 import os
+import time
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -77,9 +79,11 @@ def _make_period_label(start_iso: str, end_iso: str) -> str:
     s = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
     e = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
 
-    # Same month
+    # Exact calendar month (1st to last day)
     if s.year == e.year and s.month == e.month:
-        return s.strftime("%B %Y")
+        last_day = calendar.monthrange(e.year, e.month)[1]
+        if s.day == 1 and e.day >= last_day:
+            return s.strftime("%B %Y")
 
     # Full year (Jan 1 - Dec 31)
     if s.month == 1 and s.day == 1 and e.month == 12 and e.day == 31 and s.year == e.year:
@@ -230,8 +234,14 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 total_energy_wh += dev_energy
                 total_co2_grams += dev_co2
 
-                # Device status
-                active = tb.is_device_active(device.id)
+                # Device status + last activity time (single API call)
+                attrs = tb.get_attributes(device.id, "DEVICE", "SERVER_SCOPE", ["lastActivityTime"])
+                last_ts = attrs.get("lastActivityTime", 0)
+                active = bool(last_ts and (time.time() * 1000 - last_ts) < 600_000)
+                last_active_str = ""
+                if last_ts:
+                    last_active_str = datetime.utcfromtimestamp(last_ts / 1000).strftime("%d %b %H:%M")
+
                 if active:
                     total_online += 1
                 else:
@@ -260,6 +270,7 @@ def generate_report(request: ReportRequest) -> ReportResult:
                     "name": device.name,
                     "site": site.name,
                     "status": "Online" if active else "Offline",
+                    "last_active": last_active_str,
                     "energy_kwh": round(dev_energy / 1000, 2),
                     "co2_kg": round(dev_co2 / 1000, 2),
                 })

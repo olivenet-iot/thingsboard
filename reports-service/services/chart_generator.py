@@ -100,7 +100,6 @@ def _auto_date_format(ax: plt.Axes, num_points: int) -> None:
 
 def _make_trend_area_chart(
     trend_data: list[dict],
-    title: str,
     ylabel: str,
     fill_color: str,
     line_color: str,
@@ -111,7 +110,7 @@ def _make_trend_area_chart(
     *trend_data* is ``[{ts: int, value: float}, ...]`` sorted by ts.
     """
     if not trend_data:
-        return _empty_chart_placeholder(title)
+        return _empty_chart_placeholder()
 
     dates, values = _ts_to_dates(trend_data)
 
@@ -119,7 +118,6 @@ def _make_trend_area_chart(
     if len(dates) == 1:
         fig, ax = plt.subplots(figsize=(7, 2.5))
         ax.bar(dates, values, width=0.6, color=fill_color, edgecolor=edge_color, linewidth=0.8)
-        ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left")
         ax.set_ylabel(ylabel, fontsize=8)
         _apply_clean_style(ax)
         _auto_date_format(ax, 1)
@@ -135,7 +133,6 @@ def _make_trend_area_chart(
     if len(dates) <= 31:
         ax.scatter(dates, values, color=edge_color, s=12, zorder=5, linewidths=0)
 
-    ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left")
     ax.set_ylabel(ylabel, fontsize=8)
     ax.set_ylim(bottom=0)
     _apply_clean_style(ax)
@@ -145,13 +142,11 @@ def _make_trend_area_chart(
     return _render_to_png(fig)
 
 
-def _empty_chart_placeholder(title: str) -> bytes:
+def _empty_chart_placeholder() -> bytes:
     """Generate a small 'no data' placeholder chart."""
     fig, ax = plt.subplots(figsize=(7, 2))
     ax.text(0.5, 0.5, "No data available", transform=ax.transAxes,
             ha="center", va="center", fontsize=10, color=_SLATE_400)
-    ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left",
-                 color=_SLATE_900)
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():
@@ -168,7 +163,6 @@ def energy_trend_chart(trend_data: list[dict]) -> bytes:
     """Amber area chart for energy consumption trend. Y-axis in kWh."""
     return _make_trend_area_chart(
         trend_data,
-        title="Energy Consumption",
         ylabel="kWh",
         fill_color=_AMBER_LIGHT,
         line_color=_AMBER,
@@ -180,7 +174,6 @@ def co2_trend_chart(trend_data: list[dict]) -> bytes:
     """Emerald area chart for CO2 emissions trend. Y-axis in kg."""
     return _make_trend_area_chart(
         trend_data,
-        title="CO\u2082 Emissions",
         ylabel="kg",
         fill_color=_EMERALD_LIGHT,
         line_color=_EMERALD,
@@ -191,7 +184,7 @@ def co2_trend_chart(trend_data: list[dict]) -> bytes:
 def dim_trend_chart(trend_data: list[dict]) -> bytes:
     """Indigo step chart for dim level trend. Y-axis 0-100%."""
     if not trend_data:
-        return _empty_chart_placeholder("Dim Level")
+        return _empty_chart_placeholder()
 
     dates, values = _ts_to_dates(trend_data)
 
@@ -201,7 +194,6 @@ def dim_trend_chart(trend_data: list[dict]) -> bytes:
                     step="post", linewidth=0)
     ax.step(dates, values, where="post", color=_INDIGO, linewidth=1.5)
 
-    ax.set_title("Dim Level", fontsize=10, fontweight="bold", pad=8, loc="left")
     ax.set_ylabel("%", fontsize=8)
     ax.set_ylim(0, 105)
     _apply_clean_style(ax)

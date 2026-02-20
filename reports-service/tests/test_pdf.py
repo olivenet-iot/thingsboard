@@ -32,17 +32,17 @@ def _build_report_data(include_charts: bool = True) -> dict:
     """Build a complete report_data dict with devices, faults, trends, and KPIs."""
     devices = [
         {"name": "Sign-AMS-01", "site": "McDonald's Amsterdam", "status": "Online",
-         "energy_kwh": 12.5, "co2_kg": 5.4},
+         "last_active": "20 Feb 14:30", "energy_kwh": 12.5, "co2_kg": 5.4},
         {"name": "Sign-AMS-02", "site": "McDonald's Amsterdam", "status": "Online",
-         "energy_kwh": 9.8, "co2_kg": 4.2},
+         "last_active": "20 Feb 14:28", "energy_kwh": 9.8, "co2_kg": 4.2},
         {"name": "Sign-RTD-01", "site": "Burger King Rotterdam", "status": "Online",
-         "energy_kwh": 18.2, "co2_kg": 7.8},
+         "last_active": "20 Feb 14:25", "energy_kwh": 18.2, "co2_kg": 7.8},
         {"name": "Sign-NOR-01", "site": "Premier Inn Northampton", "status": "Offline",
-         "energy_kwh": 6.7, "co2_kg": 2.9},
+         "last_active": "18 Feb 09:15", "energy_kwh": 6.7, "co2_kg": 2.9},
         {"name": "Sign-NOR-02", "site": "Premier Inn Northampton", "status": "Online",
-         "energy_kwh": 8.4, "co2_kg": 3.6},
+         "last_active": "20 Feb 14:22", "energy_kwh": 8.4, "co2_kg": 3.6},
         {"name": "Sign-LDS-01", "site": "Tesco Express Leeds", "status": "Online",
-         "energy_kwh": 11.0, "co2_kg": 4.7},
+         "last_active": "20 Feb 14:18", "energy_kwh": 11.0, "co2_kg": 4.7},
     ]
 
     energy_trend = _make_trend(14, 8.0)

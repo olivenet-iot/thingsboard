@@ -81,6 +81,7 @@
     padding-bottom: 3px;
     border-bottom: 2px solid #f59e0b;
     display: inline-block;
+    page-break-after: avoid;
   }
 
   /* ── KPI cards ──────────────────────────────────────── */
@@ -149,12 +150,14 @@
   }
 
   .device-table-wrap {
-    flex: 7;
+    width: 68%;
+    flex-shrink: 0;
     min-width: 0;
   }
 
   .device-donut-wrap {
-    flex: 3;
+    width: 28%;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -354,8 +357,9 @@
       <thead>
         <tr>
           <th>Device</th>
-          <th>Site</th>
+          {% if entity_type != "site" %}<th>Site</th>{% endif %}
           <th>Status</th>
+          <th>Last Active</th>
           <th class="num">Energy (kWh)</th>
           <th class="num">CO&#x2082; (kg)</th>
         </tr>
@@ -364,11 +368,12 @@
         {% for dev in devices %}
         <tr>
           <td>{{ dev.name }}</td>
-          <td>{{ dev.site }}</td>
+          {% if entity_type != "site" %}<td>{{ dev.site }}</td>{% endif %}
           <td>
             <span class="status-dot {{ 'online' if dev.status == 'Online' else 'offline' }}"></span>
             {{ dev.status }}
           </td>
+          <td>{{ dev.last_active }}</td>
           <td class="num">{{ "%.1f"|format(dev.energy_kwh) }}</td>
           <td class="num">{{ "%.1f"|format(dev.co2_kg) }}</td>
         </tr>
