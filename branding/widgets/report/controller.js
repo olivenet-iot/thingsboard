@@ -288,11 +288,10 @@ self.onInit = function () {
         var body = {
             entityId: scope.entityId,
             entityType: selectedLevel,
-            periodStart: period.start,
-            periodEnd: period.end,
+            period: { start: period.start, end: period.end },
             sections: sections,
             sendEmail: sendEmail,
-            recipients: emails
+            emails: emails
         };
 
         fetchApi(reportsApiUrl + '/api/report/generate', {
