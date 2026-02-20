@@ -80,7 +80,8 @@
     margin-bottom: 10px;
     padding-bottom: 3px;
     border-bottom: 2px solid #f59e0b;
-    display: inline-block;
+    display: block;
+    width: fit-content;
     page-break-after: avoid;
   }
 
@@ -143,24 +144,24 @@
 
   /* ── Device overview (table + donut side by side) ──── */
   .device-overview {
-    display: flex;
-    gap: 16px;
+    overflow: hidden;  /* clearfix for floats */
     margin-bottom: 18px;
-    align-items: flex-start;
   }
 
   .device-table-wrap {
-    width: 68%;
-    flex-shrink: 0;
-    min-width: 0;
+    float: left;
+    width: 70%;
+  }
+
+  .device-table-wrap table {
+    margin-bottom: 0;
   }
 
   .device-donut-wrap {
-    width: 28%;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    float: right;
+    width: 26%;
+    text-align: center;
+    padding-top: 10px;
   }
 
   .device-donut-wrap img {
@@ -350,8 +351,8 @@
 
 <!-- ══════════════ DEVICE OVERVIEW ══════════════ -->
 {% if "summary" in sections and devices %}
-<div class="section-title">Device Overview</div>
 <div class="device-overview">
+  <div class="section-title">Device Overview</div>
   <div class="device-table-wrap">
     <table>
       <thead>
