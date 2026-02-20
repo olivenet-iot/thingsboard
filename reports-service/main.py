@@ -11,6 +11,8 @@ from routers.reports import router as reports_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from services.scheduler import init_scheduler, shutdown_scheduler
+    from services.report_store import init_report_store
+    init_report_store()
     init_scheduler()
     yield
     shutdown_scheduler()

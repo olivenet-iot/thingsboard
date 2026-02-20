@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 
 import config
 from services.report_generator import ReportRequest, ReportResult, generate_report
+from services.report_store import get_report_history
 from services.scheduler import (
     ScheduleRequest,
     ScheduleResponse,
@@ -36,6 +37,13 @@ def generate(req: ReportRequest):
     except Exception:
         logger.exception("Report generation failed")
         raise HTTPException(status_code=500, detail="Internal error during report generation")
+
+
+@router.get("/history/{entity_id}")
+def history(entity_id: str, limit: int = 10, offset: int = 0):
+    """Browse paginated report history for an entity."""
+    reports, total = get_report_history(entity_id, limit=limit, offset=offset)
+    return {"reports": reports, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/download/{report_id}")

@@ -151,102 +151,142 @@ def generate_report(request: ReportRequest) -> ReportResult:
     report_id = f"rpt-{uuid.uuid4()}"
     logger.info("Starting report %s for %s/%s", report_id, request.entityType, request.entityId)
 
-    tb = TBClient()
-    tb.authenticate()
+    try:
+        tb = TBClient()
+        tb.authenticate()
 
-    tb_entity_type = _map_entity_type(request.entityType)
-    hierarchy = tb.resolve_hierarchy(request.entityId, tb_entity_type)
+        tb_entity_type = _map_entity_type(request.entityType)
+        hierarchy = tb.resolve_hierarchy(request.entityId, tb_entity_type)
 
-    start_ts = _iso_to_epoch_ms(request.period.start)
-    end_ts = _iso_to_epoch_ms(request.period.end)
-    period_label = _make_period_label(request.period.start, request.period.end)
+        start_ts = _iso_to_epoch_ms(request.period.start)
+        end_ts = _iso_to_epoch_ms(request.period.end)
+        period_label = _make_period_label(request.period.start, request.period.end)
 
-    sites_data: list[dict] = []
-    all_faults: list[dict] = []
+        sites_data: list[dict] = []
+        all_faults: list[dict] = []
 
-    for site in hierarchy.sites:
-        site_energy_wh = 0.0
-        site_co2_grams = 0.0
-        site_online = 0
-        site_offline = 0
+        for site in hierarchy.sites:
+            site_energy_wh = 0.0
+            site_co2_grams = 0.0
+            site_online = 0
+            site_offline = 0
 
-        for device in site.devices:
-            site_energy_wh += tb.get_telemetry_sum(device.id, "energy_wh", start_ts, end_ts)
-            site_co2_grams += tb.get_telemetry_sum(device.id, "co2_grams", start_ts, end_ts)
-            if tb.is_device_active(device.id):
-                site_online += 1
-            else:
-                site_offline += 1
+            for device in site.devices:
+                site_energy_wh += tb.get_telemetry_sum(device.id, "energy_wh", start_ts, end_ts)
+                site_co2_grams += tb.get_telemetry_sum(device.id, "co2_grams", start_ts, end_ts)
+                if tb.is_device_active(device.id):
+                    site_online += 1
+                else:
+                    site_offline += 1
 
-        site_faults: list[dict] = []
-        if "faults" in request.sections:
-            raw_alarms = tb.get_alarm_history(site.id, "ASSET", start_ts, end_ts)
-            site_faults = _transform_alarms(raw_alarms, site.name)
-            all_faults.extend(site_faults)
+            site_faults: list[dict] = []
+            if "faults" in request.sections:
+                raw_alarms = tb.get_alarm_history(site.id, "ASSET", start_ts, end_ts)
+                site_faults = _transform_alarms(raw_alarms, site.name)
+                all_faults.extend(site_faults)
 
-        sites_data.append({
-            "name": site.name,
-            "device_count": len(site.devices),
-            "energy_wh": site_energy_wh,
-            "co2_grams": site_co2_grams,
-            "online_count": site_online,
-            "offline_count": site_offline,
-            "fault_count": len(site_faults),
+            sites_data.append({
+                "name": site.name,
+                "device_count": len(site.devices),
+                "energy_wh": site_energy_wh,
+                "co2_grams": site_co2_grams,
+                "online_count": site_online,
+                "offline_count": site_offline,
+                "fault_count": len(site_faults),
+            })
+
+        totals = calculate_totals(sites_data)
+
+        report_data = {
+            "entity_name": hierarchy.name,
+            "entity_type": request.entityType,
+            "period": period_label,
+            "generated_date": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "sites": sites_data,
+            "faults": all_faults,
+            "totals": totals,
+            "charts": {},
+        }
+
+        if sites_data:
+            report_data["charts"] = generate_all_charts(report_data, request.sections)
+
+        pdf_bytes = pdf_renderer.render(report_data, request.sections)
+        save_pdf(report_id, pdf_bytes)
+
+        # Save success metadata
+        from services.report_store import save_report_metadata
+        pdf_path = os.path.join(config.PDF_STORAGE_PATH, f"{report_id}.pdf")
+        save_report_metadata({
+            "id": report_id,
+            "entity_id": request.entityId,
+            "entity_type": request.entityType,
+            "period_start": request.period.start,
+            "period_end": request.period.end,
+            "sections": request.sections,
+            "recipients": request.emails,
+            "status": "success",
+            "error_message": None,
+            "pdf_path": pdf_path,
+            "file_size_bytes": len(pdf_bytes),
+            "generated_at": datetime.utcnow().isoformat() + "Z",
         })
 
-    totals = calculate_totals(sites_data)
+        # Email delivery (optional)
+        email_result = None
+        if request.sendEmail and request.emails:
+            from services.email_sender import send_report
 
-    report_data = {
-        "entity_name": hierarchy.name,
-        "entity_type": request.entityType,
-        "period": period_label,
-        "generated_date": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
-        "sites": sites_data,
-        "faults": all_faults,
-        "totals": totals,
-        "charts": {},
-    }
+            smtp_config = {
+                "host": config.SMTP_HOST,
+                "port": config.SMTP_PORT,
+                "username": config.SMTP_USERNAME,
+                "password": config.SMTP_PASSWORD,
+                "from_addr": config.SMTP_FROM,
+            }
+            subject = f"SignConnect Report: {hierarchy.name} — {period_label}"
+            email_result = send_report(request.emails, subject, pdf_path, report_data, smtp_config)
 
-    if sites_data:
-        report_data["charts"] = generate_all_charts(report_data, request.sections)
+        generated_at = datetime.utcnow().isoformat() + "Z"
+        download_url = f"/api/report/download/{report_id}"
 
-    pdf_bytes = pdf_renderer.render(report_data, request.sections)
-    save_pdf(report_id, pdf_bytes)
+        logger.info("Report %s complete — %d sites, %d faults", report_id, len(sites_data), len(all_faults))
 
-    # Email delivery (optional)
-    email_result = None
-    if request.sendEmail and request.emails:
-        from services.email_sender import send_report
+        # Build result message based on email outcome
+        if email_result and email_result["sent"]:
+            n = len(request.emails)
+            message = f"Report generated for {hierarchy.name} ({period_label}) and sent to {n} recipient(s)"
+        elif email_result and not email_result["sent"]:
+            message = f"Report generated for {hierarchy.name} ({period_label}). Email failed: {email_result['error']}"
+        else:
+            message = f"Report generated for {hierarchy.name} ({period_label})"
 
-        smtp_config = {
-            "host": config.SMTP_HOST,
-            "port": config.SMTP_PORT,
-            "username": config.SMTP_USERNAME,
-            "password": config.SMTP_PASSWORD,
-            "from_addr": config.SMTP_FROM,
-        }
-        pdf_path = os.path.join(config.PDF_STORAGE_PATH, f"{report_id}.pdf")
-        subject = f"SignConnect Report: {hierarchy.name} — {period_label}"
-        email_result = send_report(request.emails, subject, pdf_path, report_data, smtp_config)
+        return ReportResult(
+            status="success",
+            reportId=report_id,
+            message=message,
+            downloadUrl=download_url,
+            generatedAt=generated_at,
+        )
 
-    generated_at = datetime.utcnow().isoformat() + "Z"
-    download_url = f"/api/report/download/{report_id}"
-
-    logger.info("Report %s complete — %d sites, %d faults", report_id, len(sites_data), len(all_faults))
-
-    # Build result message based on email outcome
-    if email_result and email_result["sent"]:
-        n = len(request.emails)
-        message = f"Report generated for {hierarchy.name} ({period_label}) and sent to {n} recipient(s)"
-    elif email_result and not email_result["sent"]:
-        message = f"Report generated for {hierarchy.name} ({period_label}). Email failed: {email_result['error']}"
-    else:
-        message = f"Report generated for {hierarchy.name} ({period_label})"
-
-    return ReportResult(
-        status="success",
-        reportId=report_id,
-        message=message,
-        downloadUrl=download_url,
-        generatedAt=generated_at,
-    )
+    except Exception as exc:
+        # Save failure metadata so the history records the attempt
+        try:
+            from services.report_store import save_report_metadata
+            save_report_metadata({
+                "id": report_id,
+                "entity_id": request.entityId,
+                "entity_type": request.entityType,
+                "period_start": request.period.start,
+                "period_end": request.period.end,
+                "sections": request.sections,
+                "recipients": request.emails,
+                "status": "failed",
+                "error_message": str(exc),
+                "pdf_path": None,
+                "file_size_bytes": None,
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+            })
+        except Exception:
+            logger.exception("Failed to save failure metadata for %s", report_id)
+        raise
