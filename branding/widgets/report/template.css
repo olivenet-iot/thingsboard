@@ -111,3 +111,77 @@
     color: #94a3b8;
     font-style: italic;
 }
+
+/* ── Scope Selection ─────────────────────────────────────────── */
+
+.rpt-sub-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.rpt-scope-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.rpt-form-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.rpt-form-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    width: 60px;
+    flex-shrink: 0;
+}
+
+.rpt-select {
+    flex: 1;
+    max-width: 280px;
+    padding: 7px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1e293b;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    appearance: auto;
+}
+
+.rpt-select:hover {
+    border-color: #cbd5e1;
+}
+
+.rpt-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.rpt-scope-loading {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #f1f5f9;
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: rpt-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.rpt-hidden {
+    display: none !important;
+}

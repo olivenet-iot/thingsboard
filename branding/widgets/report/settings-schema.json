@@ -20,12 +20,19 @@
                 "type": "number",
                 "default": 10,
                 "description": "Maximum number of report history entries to display"
+            },
+            "customerId": {
+                "title": "Customer ID",
+                "type": "string",
+                "default": "6e1b23e0-fc24-11f0-999c-9b8fab55435e",
+                "description": "Customer ID for asset hierarchy (required for tenant admin)"
             }
         }
     },
     "form": [
         "reportsApiUrl",
         "defaultSections",
-        "maxHistoryItems"
+        "maxHistoryItems",
+        "customerId"
     ]
 }

@@ -16,7 +16,43 @@
         <!-- Generate Report Section -->
         <div class="rpt-section">
             <div class="rpt-section-header">Generate Report</div>
-            <div class="rpt-empty">Scope selection, period, and generate controls</div>
+
+            <div class="rpt-scope-group">
+                <div class="rpt-sub-header">Report Scope</div>
+
+                <div class="rpt-form-row">
+                    <label class="rpt-form-label" for="rpt-level">Level</label>
+                    <select id="rpt-level" class="rpt-select">
+                        <option value="estate">Estate</option>
+                        <option value="region">Region</option>
+                        <option value="site">Site</option>
+                    </select>
+                </div>
+
+                <div class="rpt-form-row" id="rpt-estate-row">
+                    <label class="rpt-form-label" for="rpt-estate">Estate</label>
+                    <select id="rpt-estate" class="rpt-select">
+                        <option value="">— Select estate —</option>
+                    </select>
+                    <span class="rpt-scope-loading rpt-hidden" id="rpt-estate-loading"></span>
+                </div>
+
+                <div class="rpt-form-row rpt-hidden" id="rpt-region-row">
+                    <label class="rpt-form-label" for="rpt-region">Region</label>
+                    <select id="rpt-region" class="rpt-select">
+                        <option value="">— Select region —</option>
+                    </select>
+                    <span class="rpt-scope-loading rpt-hidden" id="rpt-region-loading"></span>
+                </div>
+
+                <div class="rpt-form-row rpt-hidden" id="rpt-site-row">
+                    <label class="rpt-form-label" for="rpt-site">Site</label>
+                    <select id="rpt-site" class="rpt-select">
+                        <option value="">— Select site —</option>
+                    </select>
+                    <span class="rpt-scope-loading rpt-hidden" id="rpt-site-loading"></span>
+                </div>
+            </div>
         </div>
 
         <!-- Scheduled Reports Section -->
