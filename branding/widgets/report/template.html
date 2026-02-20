@@ -119,15 +119,83 @@
         </div>
 
         <!-- Scheduled Reports Section -->
-        <div class="rpt-section">
+        <div class="rpt-section" id="rpt-schedule-section">
             <div class="rpt-section-header">Scheduled Reports</div>
-            <div class="rpt-empty">Schedule configuration</div>
+
+            <div class="rpt-schedule-form">
+                <div class="rpt-sub-header">Schedule Configuration</div>
+                <div class="rpt-sched-row">
+                    <div class="rpt-sched-field">
+                        <label class="rpt-form-label" for="rpt-sched-freq">Frequency</label>
+                        <select id="rpt-sched-freq" class="rpt-select">
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="rpt-sched-field">
+                        <label class="rpt-form-label" for="rpt-sched-day">Day</label>
+                        <select id="rpt-sched-day" class="rpt-select">
+                            <!-- Options 1-28, populated by JS -->
+                        </select>
+                    </div>
+                    <div class="rpt-sched-field">
+                        <label class="rpt-form-label" for="rpt-sched-time">Time UTC</label>
+                        <input type="time" id="rpt-sched-time" class="rpt-date-input" value="06:00">
+                    </div>
+                </div>
+
+                <div class="rpt-content-group">
+                    <div class="rpt-sub-header">Content</div>
+                    <div class="rpt-checkbox-row">
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-sched-section" value="energy" checked> Energy Usage
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-sched-section" value="co2" checked> CO₂ Emissions
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-sched-section" value="faults" checked> Fault Log
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-sched-section" value="summary" checked> Site Summary
+                        </label>
+                    </div>
+                </div>
+
+                <div class="rpt-recipients-group">
+                    <div class="rpt-sub-header">Recipients</div>
+                    <textarea id="rpt-sched-emails" class="rpt-textarea" rows="2"
+                        placeholder="Enter email addresses, one per line"></textarea>
+                </div>
+            </div>
+
+            <div class="rpt-sched-status" id="rpt-sched-status">
+                <span id="rpt-sched-status-text">No schedule configured</span>
+            </div>
+
+            <div class="rpt-btn-row" id="rpt-sched-btn-row">
+                <button type="button" id="rpt-sched-save" class="rpt-btn rpt-btn-primary">Save Schedule</button>
+                <button type="button" id="rpt-sched-disable" class="rpt-btn rpt-btn-secondary rpt-hidden">Disable</button>
+                <button type="button" id="rpt-sched-delete" class="rpt-btn rpt-btn-danger rpt-hidden">Delete</button>
+                <span class="rpt-gen-spinner rpt-hidden" id="rpt-sched-spinner"></span>
+            </div>
         </div>
 
         <!-- Report History Section -->
-        <div class="rpt-section">
+        <div class="rpt-section" id="rpt-history-section">
             <div class="rpt-section-header">Report History</div>
-            <div class="rpt-empty">Report history table</div>
+            <div id="rpt-history-content">
+                <div class="rpt-empty" id="rpt-history-empty">No reports generated yet.</div>
+                <table class="rpt-table rpt-hidden" id="rpt-history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th><th>Period</th><th>Status</th><th>Size</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rpt-history-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

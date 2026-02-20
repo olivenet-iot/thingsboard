@@ -87,6 +87,24 @@ self.onInit = function () {
     var resultMsgEl = container.querySelector('#rpt-result-message');
     var resultDownloadEl = container.querySelector('#rpt-result-download');
 
+    // Schedule section
+    var schedFreqSelect = container.querySelector('#rpt-sched-freq');
+    var schedDaySelect = container.querySelector('#rpt-sched-day');
+    var schedTimeInput = container.querySelector('#rpt-sched-time');
+    var schedSectionCheckboxes = container.querySelectorAll('input[name="rpt-sched-section"]');
+    var schedEmailsTextarea = container.querySelector('#rpt-sched-emails');
+    var schedSaveBtn = container.querySelector('#rpt-sched-save');
+    var schedDisableBtn = container.querySelector('#rpt-sched-disable');
+    var schedDeleteBtn = container.querySelector('#rpt-sched-delete');
+    var schedSpinner = container.querySelector('#rpt-sched-spinner');
+    var schedStatusEl = container.querySelector('#rpt-sched-status');
+    var schedStatusTextEl = container.querySelector('#rpt-sched-status-text');
+
+    // History section
+    var historyEmptyEl = container.querySelector('#rpt-history-empty');
+    var historyTableEl = container.querySelector('#rpt-history-table');
+    var historyBodyEl = container.querySelector('#rpt-history-body');
+
     // ── State ───────────────────────────────────────────────────
 
     var customerId = settings.customerId || '6e1b23e0-fc24-11f0-999c-9b8fab55435e';
@@ -99,6 +117,7 @@ self.onInit = function () {
     var selectedSiteId = null;
     var selectedPeriod = 'last_month';
     var isGenerating = false;
+    var currentSchedule = null;
 
     // ── Helpers ─────────────────────────────────────────────────
 
@@ -296,6 +315,296 @@ self.onInit = function () {
         });
     }
 
+    // ── Schedule & History ──────────────────────────────────────
+
+    function refreshScopeData() {
+        var scope = getSelectedScope();
+        if (!scope) {
+            currentSchedule = null;
+            updateScheduleStatus();
+            clearHistory();
+            return;
+        }
+        loadSchedule(scope.entityId);
+        loadHistory(scope.entityId);
+    }
+
+    function loadSchedule(entityId) {
+        toggleLoading(schedSpinner, true);
+        fetch(reportsApiUrl + '/api/report/schedule/' + entityId, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (resp) {
+            if (resp.status === 404) {
+                currentSchedule = null;
+                updateScheduleStatus();
+                return;
+            }
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        }).then(function (data) {
+            if (!data) return;
+            currentSchedule = data;
+            // Pre-fill frequency from response
+            if (schedFreqSelect && data.frequency) {
+                schedFreqSelect.value = data.frequency;
+            }
+            updateScheduleStatus();
+        }).catch(function (err) {
+            console.error('[REPORT] Failed to load schedule:', err);
+            currentSchedule = null;
+            if (schedStatusTextEl) {
+                schedStatusTextEl.innerHTML = '<span class="rpt-sched-status-dot none"></span>Report service unavailable';
+            }
+        }).then(function () {
+            toggleLoading(schedSpinner, false);
+        });
+    }
+
+    function loadHistory(entityId) {
+        fetch(reportsApiUrl + '/api/report/history/' + entityId + '?limit=' + maxHistoryItems, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        }).then(function (data) {
+            var reports = data.reports || [];
+            if (reports.length === 0) {
+                clearHistory();
+                return;
+            }
+            if (historyEmptyEl) historyEmptyEl.classList.add('rpt-hidden');
+            if (historyTableEl) historyTableEl.classList.remove('rpt-hidden');
+            if (historyBodyEl) {
+                historyBodyEl.innerHTML = '';
+                reports.forEach(function (report) {
+                    historyBodyEl.appendChild(renderHistoryRow(report));
+                });
+            }
+        }).catch(function (err) {
+            console.error('[REPORT] Failed to load history:', err);
+            if (historyEmptyEl) {
+                historyEmptyEl.textContent = 'Report service unavailable';
+                historyEmptyEl.classList.remove('rpt-hidden');
+            }
+            if (historyTableEl) historyTableEl.classList.add('rpt-hidden');
+        });
+    }
+
+    function clearHistory() {
+        if (historyEmptyEl) {
+            historyEmptyEl.textContent = 'No reports generated yet.';
+            historyEmptyEl.classList.remove('rpt-hidden');
+        }
+        if (historyTableEl) historyTableEl.classList.add('rpt-hidden');
+        if (historyBodyEl) historyBodyEl.innerHTML = '';
+    }
+
+    function renderHistoryRow(report) {
+        var tr = document.createElement('tr');
+
+        // Date
+        var tdDate = document.createElement('td');
+        tdDate.textContent = report.generated_at
+            ? new Date(report.generated_at).toLocaleDateString()
+            : '—';
+        tr.appendChild(tdDate);
+
+        // Period
+        var tdPeriod = document.createElement('td');
+        tdPeriod.textContent = formatPeriod(report.period_start, report.period_end);
+        tr.appendChild(tdPeriod);
+
+        // Status
+        var tdStatus = document.createElement('td');
+        var status = (report.status || '').toLowerCase();
+        var badgeClass = status === 'success' ? 'rpt-badge-success'
+            : status === 'error' ? 'rpt-badge-error' : 'rpt-badge-pending';
+        tdStatus.innerHTML = '<span class="rpt-badge ' + badgeClass + '">' +
+            (report.status || 'Unknown') + '</span>';
+        tr.appendChild(tdStatus);
+
+        // Size
+        var tdSize = document.createElement('td');
+        tdSize.textContent = report.file_size_bytes
+            ? Math.round(report.file_size_bytes / 1024) + ' KB'
+            : '—';
+        tr.appendChild(tdSize);
+
+        // Actions
+        var tdActions = document.createElement('td');
+        if (status === 'success' && report.id) {
+            var url = reportsApiUrl + '/api/report/download/' + report.id;
+            tdActions.innerHTML = '<a class="rpt-download-link" href="' + url +
+                '" target="_blank" data-download="true">Download</a>';
+        } else {
+            tdActions.textContent = '—';
+        }
+        tr.appendChild(tdActions);
+
+        return tr;
+    }
+
+    function formatPeriod(start, end) {
+        if (!start || !end) return '—';
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var s = new Date(start);
+        var e = new Date(end);
+        var sMonth = months[s.getMonth()];
+        var eMonth = months[e.getMonth()];
+        var sYear = s.getFullYear();
+        var eYear = e.getFullYear();
+        if (sYear === eYear && s.getMonth() === e.getMonth()) {
+            return sMonth + ' ' + sYear;
+        }
+        if (sYear === eYear) {
+            return sMonth + '–' + eMonth + ' ' + sYear;
+        }
+        return sMonth + ' ' + sYear + ' – ' + eMonth + ' ' + eYear;
+    }
+
+    function saveSchedule() {
+        var scope = getSelectedScope();
+        if (!scope) {
+            alert('Please select a scope first.');
+            return;
+        }
+
+        var schedSections = [];
+        schedSectionCheckboxes.forEach(function (cb) {
+            if (cb.checked) schedSections.push(cb.value);
+        });
+        if (schedSections.length === 0) {
+            alert('Please select at least one content section.');
+            return;
+        }
+
+        var emails = [];
+        if (schedEmailsTextarea) {
+            emails = schedEmailsTextarea.value.split('\n').map(function (s) {
+                return s.trim();
+            }).filter(function (s) { return s.length > 0; });
+        }
+
+        var body = {
+            entityId: scope.entityId,
+            entityType: selectedLevel,
+            frequency: schedFreqSelect ? schedFreqSelect.value : 'monthly',
+            dayOfMonth: schedDaySelect ? parseInt(schedDaySelect.value, 10) : 1,
+            timeUtc: schedTimeInput ? schedTimeInput.value : '06:00',
+            sections: schedSections,
+            emails: emails,
+            enabled: true
+        };
+
+        toggleLoading(schedSpinner, true);
+        fetchApi(reportsApiUrl + '/api/report/schedule', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        }).then(function (resp) {
+            currentSchedule = resp;
+            // Ensure enabled flag is set
+            if (currentSchedule && currentSchedule.enabled === undefined) {
+                currentSchedule.enabled = true;
+            }
+            updateScheduleStatus();
+        }).catch(function (err) {
+            console.error('[REPORT] Failed to save schedule:', err);
+            alert('Failed to save schedule: ' + err.message);
+        }).then(function () {
+            toggleLoading(schedSpinner, false);
+        });
+    }
+
+    function disableSchedule() {
+        var scope = getSelectedScope();
+        if (!scope || !currentSchedule) return;
+
+        var body = {
+            entityId: scope.entityId,
+            entityType: selectedLevel,
+            frequency: schedFreqSelect ? schedFreqSelect.value : 'monthly',
+            dayOfMonth: schedDaySelect ? parseInt(schedDaySelect.value, 10) : 1,
+            timeUtc: schedTimeInput ? schedTimeInput.value : '06:00',
+            sections: [],
+            emails: [],
+            enabled: false
+        };
+
+        toggleLoading(schedSpinner, true);
+        fetchApi(reportsApiUrl + '/api/report/schedule', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        }).then(function (resp) {
+            currentSchedule = resp;
+            if (currentSchedule) currentSchedule.enabled = false;
+            updateScheduleStatus();
+        }).catch(function (err) {
+            console.error('[REPORT] Failed to disable schedule:', err);
+            alert('Failed to disable schedule: ' + err.message);
+        }).then(function () {
+            toggleLoading(schedSpinner, false);
+        });
+    }
+
+    function deleteSchedule() {
+        var scope = getSelectedScope();
+        if (!scope) return;
+
+        toggleLoading(schedSpinner, true);
+        fetch(reportsApiUrl + '/api/report/schedule/' + scope.entityId, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        }).then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        }).then(function () {
+            currentSchedule = null;
+            resetScheduleForm();
+            updateScheduleStatus();
+        }).catch(function (err) {
+            console.error('[REPORT] Failed to delete schedule:', err);
+            alert('Failed to delete schedule: ' + err.message);
+        }).then(function () {
+            toggleLoading(schedSpinner, false);
+        });
+    }
+
+    function resetScheduleForm() {
+        if (schedFreqSelect) schedFreqSelect.value = 'monthly';
+        if (schedDaySelect) schedDaySelect.value = '1';
+        if (schedTimeInput) schedTimeInput.value = '06:00';
+        schedSectionCheckboxes.forEach(function (cb) {
+            cb.checked = defaults.indexOf(cb.value) !== -1;
+        });
+        if (schedEmailsTextarea) schedEmailsTextarea.value = '';
+    }
+
+    function updateScheduleStatus() {
+        if (!schedStatusTextEl) return;
+
+        if (!currentSchedule) {
+            schedStatusTextEl.innerHTML = '<span class="rpt-sched-status-dot none"></span>No schedule configured';
+            if (schedDisableBtn) schedDisableBtn.classList.add('rpt-hidden');
+            if (schedDeleteBtn) schedDeleteBtn.classList.add('rpt-hidden');
+            return;
+        }
+
+        if (currentSchedule.enabled === false) {
+            schedStatusTextEl.innerHTML = '<span class="rpt-sched-status-dot paused"></span>Paused';
+            if (schedDisableBtn) schedDisableBtn.classList.add('rpt-hidden');
+            if (schedDeleteBtn) schedDeleteBtn.classList.remove('rpt-hidden');
+            return;
+        }
+
+        var nextRun = currentSchedule.nextRun || currentSchedule.next_run || '';
+        var nextText = nextRun ? ' — Next run: ' + new Date(nextRun).toLocaleDateString() : '';
+        schedStatusTextEl.innerHTML = '<span class="rpt-sched-status-dot active"></span>Active' + nextText;
+        if (schedDisableBtn) schedDisableBtn.classList.remove('rpt-hidden');
+        if (schedDeleteBtn) schedDeleteBtn.classList.remove('rpt-hidden');
+    }
+
     // ── Hierarchy Loaders ───────────────────────────────────────
 
     function loadEstates() {
@@ -412,9 +721,13 @@ self.onInit = function () {
             if (selectedEstateId && (selectedLevel === 'region' || selectedLevel === 'site')) {
                 loadRegions(selectedEstateId).then(function () {
                     if (selectedLevel === 'site' && selectedRegionId) {
-                        loadSites(selectedRegionId);
+                        return loadSites(selectedRegionId);
                     }
+                }).then(function () {
+                    refreshScopeData();
                 });
+            } else {
+                refreshScopeData();
             }
         });
     }
@@ -429,9 +742,13 @@ self.onInit = function () {
             if (selectedEstateId && (selectedLevel === 'region' || selectedLevel === 'site')) {
                 loadRegions(selectedEstateId).then(function () {
                     if (selectedLevel === 'site' && selectedRegionId) {
-                        loadSites(selectedRegionId);
+                        return loadSites(selectedRegionId);
                     }
+                }).then(function () {
+                    refreshScopeData();
                 });
+            } else {
+                refreshScopeData();
             }
         });
     }
@@ -442,7 +759,11 @@ self.onInit = function () {
             selectedSiteId = null;
             populateSelect(siteSelect, [], '\u2014 Select site \u2014');
             if (selectedRegionId && selectedLevel === 'site') {
-                loadSites(selectedRegionId);
+                loadSites(selectedRegionId).then(function () {
+                    refreshScopeData();
+                });
+            } else {
+                refreshScopeData();
             }
         });
     }
@@ -450,6 +771,7 @@ self.onInit = function () {
     if (siteSelect) {
         siteSelect.addEventListener('change', function () {
             selectedSiteId = siteSelect.value || null;
+            refreshScopeData();
         });
     }
 
@@ -489,11 +811,56 @@ self.onInit = function () {
         });
     }
 
+    // Schedule buttons
+    if (schedSaveBtn) {
+        schedSaveBtn.addEventListener('click', function () {
+            saveSchedule();
+        });
+    }
+
+    if (schedDisableBtn) {
+        schedDisableBtn.addEventListener('click', function () {
+            disableSchedule();
+        });
+    }
+
+    if (schedDeleteBtn) {
+        schedDeleteBtn.addEventListener('click', function () {
+            deleteSchedule();
+        });
+    }
+
+    // History download links (event delegation)
+    if (historyBodyEl) {
+        historyBodyEl.addEventListener('click', function (e) {
+            var link = e.target.closest('.rpt-download-link');
+            if (link) {
+                e.preventDefault();
+                window.open(link.href, '_blank');
+            }
+        });
+    }
+
     // ── Init: Load Estates & Show Content ───────────────────────
 
     // Apply default sections from settings
     var defaults = defaultSections.split(',').map(function (s) { return s.trim(); });
     sectionCheckboxes.forEach(function (cb) {
+        cb.checked = defaults.indexOf(cb.value) !== -1;
+    });
+
+    // Populate day-of-month dropdown (1-28)
+    if (schedDaySelect) {
+        for (var d = 1; d <= 28; d++) {
+            var dayOpt = document.createElement('option');
+            dayOpt.value = d;
+            dayOpt.textContent = d;
+            schedDaySelect.appendChild(dayOpt);
+        }
+    }
+
+    // Apply default sections to schedule checkboxes
+    schedSectionCheckboxes.forEach(function (cb) {
         cb.checked = defaults.indexOf(cb.value) !== -1;
     });
 
@@ -505,9 +872,13 @@ self.onInit = function () {
         if (selectedEstateId && (selectedLevel === 'region' || selectedLevel === 'site')) {
             loadRegions(selectedEstateId).then(function () {
                 if (selectedLevel === 'site' && selectedRegionId) {
-                    loadSites(selectedRegionId);
+                    return loadSites(selectedRegionId);
                 }
+            }).then(function () {
+                refreshScopeData();
             });
+        } else {
+            refreshScopeData();
         }
         console.log('[REPORT] Widget initialized. API:', reportsApiUrl, 'Customer:', customerId);
     });
