@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SignConnect Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      font-size: 8pt;
+      color: #94a3b8;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 10pt;
+    color: #0f172a;
+    line-height: 1.5;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  .header-accent {
+    height: 4px;
+    background: #f59e0b;
+    margin-bottom: 16px;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .header-brand {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+
+  .header-tag {
+    font-size: 9pt;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-entity {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .header-period {
+    font-size: 10pt;
+    color: #334155;
+    margin-bottom: 12px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 12px 0 20px 0;
+  }
+
+  /* ── Section titles ─────────────────────────────────── */
+  .section-title {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #f59e0b;
+    display: inline-block;
+  }
+
+  /* ── Metric cards ───────────────────────────────────── */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .metric-value {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .metric-label {
+    font-size: 8pt;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+  }
+
+  /* ── Charts ─────────────────────────────────────────── */
+  .charts-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .chart-half {
+    flex: 1;
+  }
+
+  .chart-half img {
+    width: 100%;
+    height: auto;
+  }
+
+  .chart-center {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .chart-center img {
+    width: 55%;
+    height: auto;
+  }
+
+  /* ── Tables ─────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-size: 9pt;
+  }
+
+  thead th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  thead th.num {
+    text-align: right;
+  }
+
+  tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  tbody td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  tbody tr {
+    page-break-inside: avoid;
+  }
+
+  .totals-row td {
+    font-weight: 700;
+    border-top: 2px solid #0f172a;
+    padding-top: 9px;
+    background: transparent !important;
+  }
+
+  /* ── Severity badges ────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-critical {
+    background: #fef2f2;
+    color: #ef4444;
+  }
+
+  .badge-major {
+    background: #fffbeb;
+    color: #f59e0b;
+  }
+
+  .badge-warning {
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .badge-minor {
+    background: #f8fafc;
+    color: #94a3b8;
+  }
+
+  /* ── Footer ─────────────────────────────────────────── */
+  .footer {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 8pt;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<div class="header-accent"></div>
+<div class="header-row">
+  <span class="header-brand">SignConnect</span>
+  <span class="header-tag">Report</span>
+</div>
+<div class="header-entity">{{ entity_name }}</div>
+<div class="header-period">{{ period }}</div>
+<hr class="divider">
+
+<!-- ══════════════ EXECUTIVE SUMMARY ══════════════ -->
+{% if "summary" in sections %}
+<div class="section-title">Executive Summary</div>
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="metric-value">{{ totals.site_count }}</div>
+    <div class="metric-label">Sites</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ totals.device_count }}</div>
+    <div class="metric-label">Devices</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ "%.1f"|format(totals.energy_kwh) }}</div>
+    <div class="metric-label">Energy kWh</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">{{ "%.1f"|format(totals.co2_kg) }}</div>
+    <div class="metric-label">CO&#x2082; kg</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══════════════ CHARTS ══════════════ -->
+{% if charts %}
+{% if charts.energy_bar or charts.co2_bar %}
+<div class="charts-row">
+  {% if charts.energy_bar %}
+  <div class="chart-half">
+    <img src="{{ charts.energy_bar }}" alt="Energy consumption by site">
+  </div>
+  {% endif %}
+  {% if charts.co2_bar %}
+  <div class="chart-half">
+    <img src="{{ charts.co2_bar }}" alt="CO2 emissions by site">
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if charts.status_donut %}
+<div class="chart-center">
+  <img src="{{ charts.status_donut }}" alt="Device status breakdown">
+</div>
+{% endif %}
+{% endif %}
+
+<!-- ══════════════ SITE BREAKDOWN ══════════════ -->
+{% if "energy" in sections %}
+<div class="section-title">Site Breakdown</div>
+<table>
+  <thead>
+    <tr>
+      <th>Site</th>
+      <th class="num">Devices</th>
+      <th class="num">Online</th>
+      <th class="num">Offline</th>
+      <th class="num">Faults</th>
+      <th class="num">Energy (kWh)</th>
+      <th class="num">CO&#x2082; (kg)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for site in sites %}
+    <tr>
+      <td>{{ site.name }}</td>
+      <td class="num">{{ site.online_count + site.offline_count + site.fault_count }}</td>
+      <td class="num">{{ site.online_count }}</td>
+      <td class="num">{{ site.offline_count }}</td>
+      <td class="num">{{ site.fault_count }}</td>
+      <td class="num">{{ "%.1f"|format(site.energy_wh / 1000) }}</td>
+      <td class="num">{{ "%.1f"|format(site.co2_grams / 1000) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td>Total</td>
+      <td class="num">{{ totals.device_count }}</td>
+      <td class="num">{{ totals.online_count }}</td>
+      <td class="num">{{ totals.offline_count }}</td>
+      <td class="num">{{ totals.fault_count }}</td>
+      <td class="num">{{ "%.1f"|format(totals.energy_kwh) }}</td>
+      <td class="num">{{ "%.1f"|format(totals.co2_kg) }}</td>
+    </tr>
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ══════════════ FAULT LOG ══════════════ -->
+{% if "faults" in sections and faults %}
+<div class="section-title">Fault Log</div>
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Site</th>
+      <th>Device</th>
+      <th>Alarm Type</th>
+      <th>Severity</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in faults %}
+    <tr>
+      <td>{{ f.date }}</td>
+      <td>{{ f.site }}</td>
+      <td>{{ f.device }}</td>
+      <td>{{ f.alarm_type }}</td>
+      <td>
+        {% if f.severity == "CRITICAL" %}
+        <span class="badge badge-critical">{{ f.severity }}</span>
+        {% elif f.severity == "MAJOR" %}
+        <span class="badge badge-major">{{ f.severity }}</span>
+        {% elif f.severity == "WARNING" %}
+        <span class="badge badge-warning">{{ f.severity }}</span>
+        {% else %}
+        <span class="badge badge-minor">{{ f.severity }}</span>
+        {% endif %}
+      </td>
+      <td>{{ f.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<div class="footer">
+  Generated by SignConnect &nbsp;|&nbsp; lumosoft.io &nbsp;|&nbsp; {{ generated_date }}
+</div>
+
+</body>
+</html>
