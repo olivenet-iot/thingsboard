@@ -10,9 +10,10 @@ from routers.reports import router as reports_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # TODO: start APScheduler here
+    from services.scheduler import init_scheduler, shutdown_scheduler
+    init_scheduler()
     yield
-    # TODO: shut down APScheduler here
+    shutdown_scheduler()
 
 
 app = FastAPI(title="SignConnect Reports Service", lifespan=lifespan)

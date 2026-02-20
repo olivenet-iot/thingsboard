@@ -9,6 +9,14 @@ from fastapi.responses import FileResponse
 
 import config
 from services.report_generator import ReportRequest, ReportResult, generate_report
+from services.scheduler import (
+    ScheduleRequest,
+    ScheduleResponse,
+    add_report_schedule,
+    remove_report_schedule,
+    get_schedule,
+    get_all_schedules,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,3 +53,40 @@ def download(report_id: str):
         media_type="application/pdf",
         filename=f"{safe_id}.pdf",
     )
+
+
+# ---------------------------------------------------------------------------
+# Schedule endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/schedule", response_model=ScheduleResponse)
+def create_schedule(req: ScheduleRequest):
+    """Create or replace a report schedule."""
+    try:
+        return add_report_schedule(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/schedule/{entity_id}", response_model=ScheduleResponse)
+def read_schedule(entity_id: str):
+    """Get a report schedule by entity ID."""
+    result = get_schedule(f"schedule_{entity_id}")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return result
+
+
+@router.delete("/schedule/{entity_id}", response_model=ScheduleResponse)
+def delete_schedule(entity_id: str):
+    """Remove a report schedule."""
+    try:
+        return remove_report_schedule(f"schedule_{entity_id}")
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+
+@router.get("/schedules", response_model=list[ScheduleResponse])
+def list_schedules():
+    """List all report schedules."""
+    return get_all_schedules()
