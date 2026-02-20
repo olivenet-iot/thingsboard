@@ -41,3 +41,6 @@ rebuild-docker.sh
 .claude/settings.json
 .claude/tools/
 __pycache__/
+reports-service/venv/
+reports-service/data/*.pdf
+reports-service/data/schedules.db
