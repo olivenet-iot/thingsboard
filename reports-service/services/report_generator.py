@@ -213,15 +213,40 @@ def generate_report(request: ReportRequest) -> ReportResult:
     pdf_bytes = pdf_renderer.render(report_data, request.sections)
     save_pdf(report_id, pdf_bytes)
 
+    # Email delivery (optional)
+    email_result = None
+    if request.sendEmail and request.emails:
+        from services.email_sender import send_report
+
+        smtp_config = {
+            "host": config.SMTP_HOST,
+            "port": config.SMTP_PORT,
+            "username": config.SMTP_USERNAME,
+            "password": config.SMTP_PASSWORD,
+            "from_addr": config.SMTP_FROM,
+        }
+        pdf_path = os.path.join(config.PDF_STORAGE_PATH, f"{report_id}.pdf")
+        subject = f"SignConnect Report: {hierarchy.name} — {period_label}"
+        email_result = send_report(request.emails, subject, pdf_path, report_data, smtp_config)
+
     generated_at = datetime.utcnow().isoformat() + "Z"
     download_url = f"/api/report/download/{report_id}"
 
     logger.info("Report %s complete — %d sites, %d faults", report_id, len(sites_data), len(all_faults))
 
+    # Build result message based on email outcome
+    if email_result and email_result["sent"]:
+        n = len(request.emails)
+        message = f"Report generated for {hierarchy.name} ({period_label}) and sent to {n} recipient(s)"
+    elif email_result and not email_result["sent"]:
+        message = f"Report generated for {hierarchy.name} ({period_label}). Email failed: {email_result['error']}"
+    else:
+        message = f"Report generated for {hierarchy.name} ({period_label})"
+
     return ReportResult(
         status="success",
         reportId=report_id,
-        message=f"Report generated for {hierarchy.name} ({period_label})",
+        message=message,
         downloadUrl=download_url,
         generatedAt=generated_at,
     )
