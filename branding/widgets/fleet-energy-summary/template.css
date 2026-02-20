@@ -34,6 +34,34 @@
   margin-left: auto !important;
 }
 
+.energy-header .header-reports-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  font-family: inherit !important;
+  margin-left: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.energy-header .header-reports-btn:hover {
+  background: #fffbeb !important;
+  color: #d97706 !important;
+  border-color: #f59e0b !important;
+}
+
+.energy-header .header-reports-btn svg {
+  flex-shrink: 0 !important;
+}
+
 /* Cards container */
 .energy-cards {
   display: flex !important;

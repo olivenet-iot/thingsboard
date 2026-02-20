@@ -2,6 +2,7 @@
 
 import pathlib
 import sys
+import time
 
 import pytest
 
@@ -9,25 +10,41 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from services.chart_generator import (  # noqa: E402
-    co2_bar_chart,
-    energy_bar_chart,
+    co2_trend_chart,
+    device_status_chart,
+    dim_trend_chart,
+    energy_trend_chart,
     generate_all_charts,
-    status_donut_chart,
     to_base64_img,
 )
 
 # ---------------------------------------------------------------------------
 # Shared mock data
 # ---------------------------------------------------------------------------
-MOCK_DATA: dict = {
-    "sites": [
-        {"name": "McDonald's Amsterdam", "energy_wh": 12500, "co2_grams": 5400, "online_count": 3, "offline_count": 1, "fault_count": 1},
-        {"name": "Burger King Rotterdam", "energy_wh": 9800, "co2_grams": 4200, "online_count": 2, "offline_count": 0, "fault_count": 0},
-        {"name": "Premier Inn Northampton West", "energy_wh": 18200, "co2_grams": 7800, "online_count": 5, "offline_count": 2, "fault_count": 1},
-        {"name": "Tesco Express Leeds", "energy_wh": 6700, "co2_grams": 2900, "online_count": 1, "offline_count": 1, "fault_count": 0},
-        {"name": "Costa Coffee Bristol", "energy_wh": 8400, "co2_grams": 3600, "online_count": 2, "offline_count": 0, "fault_count": 1},
-        {"name": "Greggs Manchester Piccadilly", "energy_wh": 11000, "co2_grams": 4700, "online_count": 4, "offline_count": 1, "fault_count": 0},
-    ],
+
+def _make_trend(num_points: int = 14, base_value: float = 10.0) -> list[dict]:
+    """Generate fake trend data: [{ts, value}, ...]."""
+    now_ms = int(time.time() * 1000)
+    day_ms = 86_400_000
+    return [
+        {"ts": now_ms - (num_points - i) * day_ms,
+         "value": round(base_value + i * 0.5 + (i % 3) * 2.0, 2)}
+        for i in range(num_points)
+    ]
+
+
+MOCK_ENERGY_TREND = _make_trend(14, 8.0)
+MOCK_CO2_TREND = _make_trend(14, 3.5)
+MOCK_DIM_TREND = _make_trend(14, 60.0)
+
+MOCK_REPORT_DATA: dict = {
+    "energy_trend": MOCK_ENERGY_TREND,
+    "co2_trend": MOCK_CO2_TREND,
+    "dim_trend": MOCK_DIM_TREND,
+    "device_count": 22,
+    "online_count": 17,
+    "offline_count": 3,
+    "fault_count": 2,
 }
 
 PNG_MAGIC = b"\x89PNG"
@@ -38,40 +55,73 @@ PNG_MAGIC = b"\x89PNG"
 # ---------------------------------------------------------------------------
 
 class TestCharts:
-    def test_energy_bar_chart(self):
-        png = energy_bar_chart(MOCK_DATA)
+    def test_energy_trend_chart(self):
+        png = energy_trend_chart(MOCK_ENERGY_TREND)
         assert isinstance(png, bytes)
         assert len(png) > 1000
         assert png[:4] == PNG_MAGIC
 
-    def test_co2_bar_chart(self):
-        png = co2_bar_chart(MOCK_DATA)
+    def test_energy_trend_single_point(self):
+        """Single data point falls back to bar chart."""
+        png = energy_trend_chart([{"ts": 1700000000000, "value": 5.0}])
+        assert png[:4] == PNG_MAGIC
+
+    def test_energy_trend_empty(self):
+        """Empty data produces a placeholder chart."""
+        png = energy_trend_chart([])
+        assert png[:4] == PNG_MAGIC
+
+    def test_co2_trend_chart(self):
+        png = co2_trend_chart(MOCK_CO2_TREND)
         assert isinstance(png, bytes)
         assert len(png) > 1000
         assert png[:4] == PNG_MAGIC
 
-    def test_status_donut_chart(self):
-        png = status_donut_chart(MOCK_DATA)
+    def test_dim_trend_chart(self):
+        png = dim_trend_chart(MOCK_DIM_TREND)
         assert isinstance(png, bytes)
         assert len(png) > 1000
+        assert png[:4] == PNG_MAGIC
+
+    def test_dim_trend_empty(self):
+        png = dim_trend_chart([])
+        assert png[:4] == PNG_MAGIC
+
+    def test_device_status_chart(self):
+        png = device_status_chart(online=17, offline=3, fault=2, total=22)
+        assert isinstance(png, bytes)
+        assert len(png) > 1000
+        assert png[:4] == PNG_MAGIC
+
+    def test_device_status_all_zeros(self):
+        """Edge case: no devices — should still render."""
+        png = device_status_chart(online=0, offline=0, fault=0, total=0)
         assert png[:4] == PNG_MAGIC
 
     def test_generate_all_charts(self):
-        charts = generate_all_charts(MOCK_DATA, ["energy", "co2", "summary"])
-        assert "energy_bar" in charts
-        assert "co2_bar" in charts
+        charts = generate_all_charts(MOCK_REPORT_DATA, ["energy", "co2", "summary"])
+        assert "energy_trend" in charts
+        assert "co2_trend" in charts
+        assert "dim_trend" in charts
         assert "status_donut" in charts
+        # All values should be base64 data URIs
         for v in charts.values():
-            assert v[:4] == PNG_MAGIC
+            assert isinstance(v, str)
+            assert v.startswith("data:image/png;base64,")
 
     def test_generate_all_charts_subset(self):
-        charts = generate_all_charts(MOCK_DATA, ["energy"])
-        assert "energy_bar" in charts
-        assert "co2_bar" not in charts
+        charts = generate_all_charts(MOCK_REPORT_DATA, ["energy"])
+        assert "energy_trend" in charts
+        assert "co2_trend" not in charts
         assert "status_donut" in charts
 
+    def test_generate_all_charts_no_dim(self):
+        data = {**MOCK_REPORT_DATA, "dim_trend": None}
+        charts = generate_all_charts(data, ["energy", "co2"])
+        assert "dim_trend" not in charts
+
     def test_to_base64_img(self):
-        png = energy_bar_chart(MOCK_DATA)
+        png = energy_trend_chart(MOCK_ENERGY_TREND)
         uri = to_base64_img(png)
         assert uri.startswith("data:image/png;base64,")
         assert len(uri) > 100
@@ -86,9 +136,10 @@ if __name__ == "__main__":
     data_dir.mkdir(exist_ok=True)
 
     charts = {
-        "test_energy_bar.png": energy_bar_chart(MOCK_DATA),
-        "test_co2_bar.png": co2_bar_chart(MOCK_DATA),
-        "test_status_donut.png": status_donut_chart(MOCK_DATA),
+        "test_energy_trend.png": energy_trend_chart(MOCK_ENERGY_TREND),
+        "test_co2_trend.png": co2_trend_chart(MOCK_CO2_TREND),
+        "test_dim_trend.png": dim_trend_chart(MOCK_DIM_TREND),
+        "test_status_donut.png": device_status_chart(17, 3, 2, 22),
     }
 
     for name, png in charts.items():

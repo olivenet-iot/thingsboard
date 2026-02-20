@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from collections import defaultdict
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -52,10 +53,7 @@ class ReportResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _iso_to_epoch_ms(iso_str: str) -> int:
-    """Convert an ISO-8601 string to epoch milliseconds.
-
-    Handles the ``Z`` suffix that Python 3.10's ``fromisoformat`` rejects.
-    """
+    """Convert an ISO-8601 string to epoch milliseconds."""
     s = iso_str.replace("Z", "+00:00")
     return int(datetime.fromisoformat(s).timestamp() * 1000)
 
@@ -83,7 +81,7 @@ def _make_period_label(start_iso: str, end_iso: str) -> str:
     if s.year == e.year and s.month == e.month:
         return s.strftime("%B %Y")
 
-    # Full year (Jan 1 – Dec 31)
+    # Full year (Jan 1 - Dec 31)
     if s.month == 1 and s.day == 1 and e.month == 12 and e.day == 31 and s.year == e.year:
         return str(s.year)
 
@@ -96,8 +94,25 @@ def _make_period_label(start_iso: str, end_iso: str) -> str:
             and s.year == e.year):
         return f"{quarter_starts[s.month]} {s.year}"
 
-    # Fallback: "1 Jan – 31 Mar 2026"
+    # Fallback: "1 Jan - 31 Mar 2026"
     return f"{s.day} {s.strftime('%b')} \u2013 {e.day} {e.strftime('%b')} {e.year}"
+
+
+def _calculate_interval_ms(start_ts: int, end_ts: int) -> tuple[int, str]:
+    """Pick a trend interval based on the period length.
+
+    Returns (interval_ms, label) where label is 'hourly'/'daily'/'weekly'.
+    """
+    duration_ms = end_ts - start_ts
+    one_day = 86_400_000
+    one_hour = 3_600_000
+
+    if duration_ms <= 3 * one_day:
+        return one_hour, "hourly"
+    elif duration_ms <= 62 * one_day:
+        return one_day, "daily"
+    else:
+        return 7 * one_day, "weekly"
 
 
 def _transform_alarms(alarms: list[dict], site_name: str) -> list[dict]:
@@ -105,8 +120,28 @@ def _transform_alarms(alarms: list[dict], site_name: str) -> list[dict]:
     faults: list[dict] = []
     for a in alarms:
         created_ms = a.get("createdTime", 0)
-        date_str = datetime.utcfromtimestamp(created_ms / 1000).strftime("%Y-%m-%d")
+        cleared_ms = a.get("endTs", 0) or a.get("clearTs", 0)
+        created_dt = datetime.utcfromtimestamp(created_ms / 1000)
+        date_str = created_dt.strftime("%d %b %H:%M")
+
+        # Compute duration
+        duration_str = ""
         status_raw = a.get("status", "")
+        if cleared_ms and cleared_ms > created_ms:
+            delta_s = (cleared_ms - created_ms) / 1000
+            if delta_s < 3600:
+                duration_str = f"{int(delta_s / 60)}m"
+            elif delta_s < 86400:
+                hours = int(delta_s / 3600)
+                mins = int((delta_s % 3600) / 60)
+                duration_str = f"{hours}h {mins}m"
+            else:
+                days = int(delta_s / 86400)
+                hours = int((delta_s % 86400) / 3600)
+                duration_str = f"{days}d {hours}h"
+        elif status_raw.startswith("ACTIVE"):
+            duration_str = "ongoing"
+
         faults.append({
             "date": date_str,
             "site": site_name,
@@ -114,21 +149,26 @@ def _transform_alarms(alarms: list[dict], site_name: str) -> list[dict]:
             "alarm_type": a.get("type", "Unknown"),
             "severity": a.get("severity", "MAJOR"),
             "status": "Active" if status_raw.startswith("ACTIVE") else "Cleared",
+            "duration": duration_str,
         })
     return faults
 
 
-def calculate_totals(sites: list[dict]) -> dict:
-    """Aggregate totals across all sites."""
-    return {
-        "site_count": len(sites),
-        "device_count": sum(s["device_count"] for s in sites),
-        "energy_kwh": round(sum(s["energy_wh"] for s in sites) / 1000, 2),
-        "co2_kg": round(sum(s["co2_grams"] for s in sites) / 1000, 2),
-        "online_count": sum(s["online_count"] for s in sites),
-        "offline_count": sum(s["offline_count"] for s in sites),
-        "fault_count": sum(s["fault_count"] for s in sites),
-    }
+def _aggregate_trend(
+    all_device_trends: list[dict[str, list[dict]]],
+    key: str,
+) -> list[dict]:
+    """Aggregate trend data across devices into a single time series.
+
+    Each device trend is {key: [{ts, value}, ...]}.  Sum values that
+    share the same timestamp bucket.
+    """
+    bucket_sums: dict[int, float] = defaultdict(float)
+    for device_trend in all_device_trends:
+        for point in device_trend.get(key, []):
+            bucket_sums[point["ts"]] += point["value"]
+
+    return [{"ts": ts, "value": val} for ts, val in sorted(bucket_sums.items())]
 
 
 def save_pdf(report_id: str, pdf_bytes: bytes) -> str:
@@ -161,54 +201,152 @@ def generate_report(request: ReportRequest) -> ReportResult:
         start_ts = _iso_to_epoch_ms(request.period.start)
         end_ts = _iso_to_epoch_ms(request.period.end)
         period_label = _make_period_label(request.period.start, request.period.end)
+        interval_ms, interval_label = _calculate_interval_ms(start_ts, end_ts)
 
-        sites_data: list[dict] = []
+        # -- Collect per-device data ----------------------------------------
+        devices_detail: list[dict] = []
         all_faults: list[dict] = []
+        energy_trends: list[dict[str, list[dict]]] = []
+        co2_trends: list[dict[str, list[dict]]] = []
+        dim_trends: list[dict[str, list[dict]]] = []
+
+        total_online = 0
+        total_offline = 0
+        total_fault = 0
+        total_energy_wh = 0.0
+        total_co2_grams = 0.0
 
         for site in hierarchy.sites:
-            site_energy_wh = 0.0
-            site_co2_grams = 0.0
-            site_online = 0
-            site_offline = 0
-
-            for device in site.devices:
-                site_energy_wh += tb.get_telemetry_sum(device.id, "energy_wh", start_ts, end_ts)
-                site_co2_grams += tb.get_telemetry_sum(device.id, "co2_grams", start_ts, end_ts)
-                if tb.is_device_active(device.id):
-                    site_online += 1
-                else:
-                    site_offline += 1
-
             site_faults: list[dict] = []
             if "faults" in request.sections:
                 raw_alarms = tb.get_alarm_history(site.id, "ASSET", start_ts, end_ts)
                 site_faults = _transform_alarms(raw_alarms, site.name)
                 all_faults.extend(site_faults)
 
-            sites_data.append({
-                "name": site.name,
-                "device_count": len(site.devices),
-                "energy_wh": site_energy_wh,
-                "co2_grams": site_co2_grams,
-                "online_count": site_online,
-                "offline_count": site_offline,
-                "fault_count": len(site_faults),
-            })
+            for device in site.devices:
+                # Energy + CO2 totals
+                dev_energy = tb.get_telemetry_sum(device.id, "energy_wh", start_ts, end_ts)
+                dev_co2 = tb.get_telemetry_sum(device.id, "co2_grams", start_ts, end_ts)
+                total_energy_wh += dev_energy
+                total_co2_grams += dev_co2
 
-        totals = calculate_totals(sites_data)
+                # Device status
+                active = tb.is_device_active(device.id)
+                if active:
+                    total_online += 1
+                else:
+                    total_offline += 1
 
+                # Trend data for charts
+                if "energy" in request.sections or "co2" in request.sections:
+                    trend = tb.get_telemetry_trend(
+                        device.id, "energy_wh,co2_grams", start_ts, end_ts, interval_ms
+                    )
+                    energy_trends.append(trend)
+                    co2_trends.append(trend)
+
+                # Dim level trend (best-effort)
+                try:
+                    dim = tb.get_telemetry_trend(
+                        device.id, "dim_level", start_ts, end_ts, interval_ms
+                    )
+                    if dim.get("dim_level"):
+                        dim_trends.append(dim)
+                except Exception:
+                    pass
+
+                # Per-device detail record
+                devices_detail.append({
+                    "name": device.name,
+                    "site": site.name,
+                    "status": "Online" if active else "Offline",
+                    "energy_kwh": round(dev_energy / 1000, 2),
+                    "co2_kg": round(dev_co2 / 1000, 2),
+                })
+
+        # Count faults from alarms
+        total_fault = len(all_faults)
+
+        # Sort devices by energy desc
+        devices_detail.sort(key=lambda d: d["energy_kwh"], reverse=True)
+
+        # -- Aggregate trends -----------------------------------------------
+        energy_trend_agg = _aggregate_trend(energy_trends, "energy_wh")
+        # Convert Wh -> kWh for chart
+        for p in energy_trend_agg:
+            p["value"] = round(p["value"] / 1000, 2)
+
+        co2_trend_agg = _aggregate_trend(co2_trends, "co2_grams")
+        # Convert grams -> kg for chart
+        for p in co2_trend_agg:
+            p["value"] = round(p["value"] / 1000, 2)
+
+        dim_trend_agg = _aggregate_trend(dim_trends, "dim_level") if dim_trends else None
+        # Average dim values (they were summed)
+        if dim_trend_agg and dim_trends:
+            num_devices_with_dim = len(dim_trends)
+            for p in dim_trend_agg:
+                p["value"] = round(p["value"] / num_devices_with_dim, 1)
+
+        # -- Compute summary stats ------------------------------------------
+        device_count = total_online + total_offline
+        energy_kwh = round(total_energy_wh / 1000, 2)
+        co2_kg = round(total_co2_grams / 1000, 2)
+
+        # Daily average and peak from trend
+        daily_avg_kwh = 0.0
+        peak_kwh = 0.0
+        if energy_trend_agg:
+            values = [p["value"] for p in energy_trend_agg]
+            daily_avg_kwh = round(sum(values) / len(values), 2)
+            peak_kwh = round(max(values), 2)
+
+        daily_avg_co2 = 0.0
+        peak_co2 = 0.0
+        if co2_trend_agg:
+            values = [p["value"] for p in co2_trend_agg]
+            daily_avg_co2 = round(sum(values) / len(values), 2)
+            peak_co2 = round(max(values), 2)
+
+        # -- Build report_data dict -----------------------------------------
         report_data = {
             "entity_name": hierarchy.name,
             "entity_type": request.entityType,
             "period": period_label,
-            "generated_date": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
-            "sites": sites_data,
+            "generated_date": datetime.utcnow().strftime("%d %b %Y %H:%M UTC"),
+
+            # KPI fields
+            "site_count": len(hierarchy.sites),
+            "device_count": device_count,
+            "online_count": total_online,
+            "offline_count": total_offline,
+            "fault_count": total_fault,
+            "energy_kwh": energy_kwh,
+            "co2_kg": co2_kg,
+
+            # Trend data for charts
+            "energy_trend": energy_trend_agg,
+            "co2_trend": co2_trend_agg,
+            "dim_trend": dim_trend_agg,
+
+            # Summary stats
+            "daily_avg_kwh": daily_avg_kwh,
+            "peak_kwh": peak_kwh,
+            "daily_avg_co2": daily_avg_co2,
+            "peak_co2": peak_co2,
+            "interval_label": interval_label,
+
+            # Per-device detail
+            "devices": devices_detail,
+
+            # Fault log
             "faults": all_faults,
-            "totals": totals,
+
+            # Charts (populated below)
             "charts": {},
         }
 
-        if sites_data:
+        if devices_detail or hierarchy.sites:
             report_data["charts"] = generate_all_charts(report_data, request.sections)
 
         pdf_bytes = pdf_renderer.render(report_data, request.sections)
@@ -244,13 +382,14 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 "password": config.SMTP_PASSWORD,
                 "from_addr": config.SMTP_FROM,
             }
-            subject = f"SignConnect Report: {hierarchy.name} — {period_label}"
+            subject = f"SignConnect Report: {hierarchy.name} \u2014 {period_label}"
             email_result = send_report(request.emails, subject, pdf_path, report_data, smtp_config)
 
         generated_at = datetime.utcnow().isoformat() + "Z"
         download_url = f"/api/report/download/{report_id}"
 
-        logger.info("Report %s complete — %d sites, %d faults", report_id, len(sites_data), len(all_faults))
+        logger.info("Report %s complete \u2014 %d devices, %d faults",
+                     report_id, device_count, total_fault)
 
         # Build result message based on email outcome
         if email_result and email_result["sent"]:

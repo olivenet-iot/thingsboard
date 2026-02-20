@@ -231,7 +231,77 @@ class TBClient:
             asset_type=asset_type, sites=sites,
         )
 
+    # -- device info --------------------------------------------------------
+
+    def get_device_info(self, device_id: str) -> dict:
+        """Return device metadata (name, label, type, lastActivityTime, etc.)."""
+        return self._request("GET", f"/api/device/{device_id}").json()
+
     # -- telemetry ----------------------------------------------------------
+
+    def get_telemetry_trend(
+        self,
+        device_id: str,
+        keys: str,
+        start_ts: int,
+        end_ts: int,
+        interval_ms: int,
+    ) -> dict[str, list[dict]]:
+        """Multi-bucket SUM aggregation for trend charts.
+
+        Returns ``{key: [{ts: int, value: float}, ...]}`` sorted by ts.
+        """
+        params = {
+            "keys": keys,
+            "startTs": start_ts,
+            "endTs": end_ts,
+            "agg": "SUM",
+            "interval": interval_ms,
+            "limit": 10000,
+        }
+        resp = self._request(
+            "GET",
+            f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries",
+            params=params,
+        )
+        raw = resp.json()
+        result: dict[str, list[dict]] = {}
+        for key in keys.split(","):
+            key = key.strip()
+            buckets = raw.get(key, [])
+            parsed: list[dict] = []
+            for b in buckets:
+                try:
+                    parsed.append({"ts": b["ts"], "value": float(b["value"])})
+                except (ValueError, KeyError, TypeError):
+                    continue
+            parsed.sort(key=lambda x: x["ts"])
+            result[key] = parsed
+        return result
+
+    def get_telemetry_latest(self, device_id: str, keys: str) -> dict[str, float | str]:
+        """Return the most recent value for each telemetry key (no aggregation).
+
+        Returns ``{key: value}`` with values parsed to float where possible.
+        """
+        params = {"keys": keys}
+        resp = self._request(
+            "GET",
+            f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries",
+            params=params,
+        )
+        raw = resp.json()
+        result: dict[str, float | str] = {}
+        for key in keys.split(","):
+            key = key.strip()
+            values = raw.get(key, [])
+            if values:
+                v = values[0].get("value", "")
+                try:
+                    result[key] = float(v)
+                except (ValueError, TypeError):
+                    result[key] = v
+        return result
 
     def get_telemetry_sum(
         self,

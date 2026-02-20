@@ -41,9 +41,27 @@ self.onInit = function () {
         options = options || {};
         options.headers = options.headers || {};
         options.headers['Content-Type'] = options.headers['Content-Type'] || 'application/json';
+
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function () { controller.abort(); }, 60000);
+        options.signal = controller.signal;
+
         return fetch(url, options).then(function (resp) {
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            clearTimeout(timeoutId);
+            if (!resp.ok) {
+                return resp.text().then(function (body) {
+                    var detail = '';
+                    try { detail = JSON.parse(body).detail || body; } catch (e) { detail = body; }
+                    throw new Error('HTTP ' + resp.status + ': ' + detail);
+                });
+            }
             return resp.json();
+        }).catch(function (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                throw new Error('Request timed out after 60 seconds. The report may still be generating — check history shortly.');
+            }
+            throw err;
         });
     }
 
@@ -294,6 +312,19 @@ self.onInit = function () {
             emails: emails
         };
 
+        // Build display context for the result message
+        var scopeName = '';
+        if (selectedLevel === 'site' && siteSelect) {
+            scopeName = siteSelect.options[siteSelect.selectedIndex]
+                ? siteSelect.options[siteSelect.selectedIndex].text : '';
+        } else if (selectedLevel === 'region' && regionSelect) {
+            scopeName = regionSelect.options[regionSelect.selectedIndex]
+                ? regionSelect.options[regionSelect.selectedIndex].text : '';
+        } else if (estateSelect) {
+            scopeName = estateSelect.options[estateSelect.selectedIndex]
+                ? estateSelect.options[estateSelect.selectedIndex].text : '';
+        }
+
         fetchApi(reportsApiUrl + '/api/report/generate', {
             method: 'POST',
             body: JSON.stringify(body)
@@ -302,10 +333,15 @@ self.onInit = function () {
             if (url && url.indexOf('http') !== 0) {
                 url = reportsApiUrl + url;
             }
-            var msg = sendEmail
-                ? 'Report generated and emailed successfully.'
-                : 'Report generated successfully.';
+            var msg = resp.message || (sendEmail
+                ? 'Report generated and emailed.'
+                : 'Report generated.');
+            if (scopeName && msg.indexOf(scopeName) === -1) {
+                msg = scopeName + ' — ' + msg;
+            }
             showResult('success', msg, url);
+            // Refresh history to show new report
+            refreshScopeData();
         }).catch(function (err) {
             console.error('[REPORT] Generate failed:', err);
             showResult('error', 'Report generation failed: ' + err.message, null);

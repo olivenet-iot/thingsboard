@@ -533,3 +533,63 @@
     text-decoration: underline;
     color: #d97706;
 }
+
+/* ── Responsive: narrow widgets / mobile ──────────────────── */
+
+@media (max-width: 520px) {
+    .rpt-root {
+        padding: 8px 10px;
+    }
+
+    .rpt-section {
+        padding: 12px 12px;
+    }
+
+    .rpt-radio-row,
+    .rpt-checkbox-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .rpt-form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+    .rpt-form-label {
+        width: auto;
+    }
+
+    .rpt-select,
+    .rpt-date-input {
+        max-width: none;
+    }
+
+    .rpt-sched-row {
+        flex-direction: column;
+    }
+
+    .rpt-btn-row {
+        flex-wrap: wrap;
+    }
+
+    .rpt-btn {
+        flex: 1;
+        min-width: 100px;
+        text-align: center;
+    }
+
+    .rpt-textarea {
+        max-width: none;
+    }
+
+    .rpt-table {
+        font-size: 12px;
+    }
+
+    .rpt-table th,
+    .rpt-table td {
+        padding: 8px 8px;
+    }
+}

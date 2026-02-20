@@ -1,171 +1,279 @@
 """Chart generation for SignConnect reports.
 
-Produces matplotlib charts as PNG bytes for embedding in PDF reports.
+Produces matplotlib charts as base64 data-URI strings for embedding
+directly in the Jinja2 HTML template.
 """
 
 import io
 import base64
+from datetime import datetime
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.dates as mdates  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
 # Style constants
 # ---------------------------------------------------------------------------
 _SLATE_900 = "#0f172a"
+_SLATE_600 = "#475569"
 _GRID_COLOR = "#e2e8f0"
 _AMBER = "#f59e0b"
+_AMBER_LIGHT = "#fef3c7"
+_AMBER_EDGE = "#d97706"
 _EMERALD = "#059669"
+_EMERALD_LIGHT = "#d1fae5"
+_EMERALD_EDGE = "#047857"
+_INDIGO = "#6366f1"
+_INDIGO_LIGHT = "#e0e7ff"
+_INDIGO_EDGE = "#4f46e5"
 _SLATE_400 = "#94a3b8"
 _RED = "#ef4444"
+
+_FONT_FAMILY = "sans-serif"
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _truncate(name: str, max_len: int = 20) -> str:
-    if len(name) > max_len:
-        return name[: max_len - 1] + "\u2026"
-    return name
-
-
 def _apply_clean_style(ax: plt.Axes) -> None:
     """Remove top/right spines, add light y-grid, set text colour."""
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.yaxis.grid(True, color=_GRID_COLOR, alpha=0.5)
+    ax.spines["left"].set_color(_GRID_COLOR)
+    ax.spines["bottom"].set_color(_GRID_COLOR)
+    ax.yaxis.grid(True, color=_GRID_COLOR, alpha=0.6, linewidth=0.5)
     ax.xaxis.grid(False)
     ax.set_axisbelow(True)
-    ax.tick_params(colors=_SLATE_900)
-    ax.xaxis.label.set_color(_SLATE_900)
-    ax.yaxis.label.set_color(_SLATE_900)
+    ax.tick_params(colors=_SLATE_600, labelsize=7)
+    ax.xaxis.label.set_color(_SLATE_600)
+    ax.yaxis.label.set_color(_SLATE_600)
     ax.title.set_color(_SLATE_900)
 
 
 def _render_to_png(fig: plt.Figure) -> bytes:
     """Save *fig* to a PNG byte-string at 150 dpi and close it."""
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
     buf.seek(0)
     data = buf.read()
     plt.close(fig)
     return data
 
 
-# ---------------------------------------------------------------------------
-# Chart functions
-# ---------------------------------------------------------------------------
-
-def energy_bar_chart(report_data: dict) -> bytes:
-    """Horizontal bar chart of energy consumption (kWh) per site."""
-    sites = report_data["sites"]
-    names = [_truncate(s["name"]) for s in sites]
-    values = [s["energy_wh"] / 1000 for s in sites]
-
-    fig, ax = plt.subplots(figsize=(8, max(3, len(sites) * 0.6)))
-    bars = ax.barh(names, values, color=_AMBER)
-    _apply_clean_style(ax)
-    ax.set_title("Energy Consumption by Site", fontsize=14, fontweight="bold", pad=12)
-    ax.set_xlabel("kWh")
-
-    for bar, val in zip(bars, values):
-        ax.text(
-            bar.get_width() + max(values) * 0.01,
-            bar.get_y() + bar.get_height() / 2,
-            f"{val:.1f} kWh",
-            va="center",
-            fontsize=9,
-            color=_SLATE_900,
-        )
-    ax.set_xlim(right=max(values) * 1.18)
-
-    return _render_to_png(fig)
-
-
-def co2_bar_chart(report_data: dict) -> bytes:
-    """Horizontal bar chart of CO2 emissions (kg) per site."""
-    sites = report_data["sites"]
-    names = [_truncate(s["name"]) for s in sites]
-    values = [s["co2_grams"] / 1000 for s in sites]
-
-    fig, ax = plt.subplots(figsize=(8, max(3, len(sites) * 0.6)))
-    bars = ax.barh(names, values, color=_EMERALD)
-    _apply_clean_style(ax)
-    ax.set_title("CO\u2082 Emissions by Site", fontsize=14, fontweight="bold", pad=12)
-    ax.set_xlabel("kg")
-
-    for bar, val in zip(bars, values):
-        ax.text(
-            bar.get_width() + max(values) * 0.01,
-            bar.get_y() + bar.get_height() / 2,
-            f"{val:.1f} kg",
-            va="center",
-            fontsize=9,
-            color=_SLATE_900,
-        )
-    ax.set_xlim(right=max(values) * 1.18)
-
-    return _render_to_png(fig)
-
-
-def status_donut_chart(report_data: dict) -> bytes:
-    """Donut chart showing online / offline / fault device counts."""
-    sites = report_data["sites"]
-    online = sum(s["online_count"] for s in sites)
-    offline = sum(s["offline_count"] for s in sites)
-    fault = sum(s["fault_count"] for s in sites)
-    total = online + offline + fault
-
-    sizes = [online, offline, fault]
-    colors = [_EMERALD, _SLATE_400, _RED]
-    labels = [f"Online ({online})", f"Offline ({offline})", f"Fault ({fault})"]
-
-    fig, ax = plt.subplots(figsize=(5, 5))
-    wedges, _ = ax.pie(
-        sizes,
-        colors=colors,
-        startangle=90,
-        wedgeprops={"width": 0.4, "edgecolor": "white", "linewidth": 2},
-    )
-    ax.text(0, 0, str(total), ha="center", va="center",
-            fontsize=28, fontweight="bold", color=_SLATE_900)
-    ax.text(0, -0.12, "devices", ha="center", va="top",
-            fontsize=11, color=_SLATE_400)
-    ax.set_title("Device Status", fontsize=14, fontweight="bold", pad=16,
-                 color=_SLATE_900)
-    ax.legend(wedges, labels, loc="lower center",
-              bbox_to_anchor=(0.5, -0.08), ncol=3, frameon=False,
-              fontsize=10)
-
-    return _render_to_png(fig)
-
-
-# ---------------------------------------------------------------------------
-# Conversion / dispatch helpers
-# ---------------------------------------------------------------------------
-
 def to_base64_img(png_bytes: bytes) -> str:
-    """Return a ``data:image/png;base64,…`` URI for HTML embedding."""
+    """Return a ``data:image/png;base64,...`` URI for HTML embedding."""
     b64 = base64.b64encode(png_bytes).decode("ascii")
     return f"data:image/png;base64,{b64}"
 
 
-def generate_all_charts(report_data: dict, sections: list[str]) -> dict[str, bytes]:
+def _ts_to_dates(trend_data: list[dict]) -> tuple[list[datetime], list[float]]:
+    """Extract (dates, values) from trend bucket list [{ts, value}, ...]."""
+    dates = [datetime.utcfromtimestamp(p["ts"] / 1000) for p in trend_data]
+    values = [p["value"] for p in trend_data]
+    return dates, values
+
+
+def _auto_date_format(ax: plt.Axes, num_points: int) -> None:
+    """Pick x-axis date formatting based on number of data points."""
+    if num_points <= 7:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+    elif num_points <= 31:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, num_points // 8)))
+    else:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+
+    for label in ax.get_xticklabels():
+        label.set_rotation(0)
+        label.set_ha("center")
+
+
+# ---------------------------------------------------------------------------
+# Trend area chart builder (shared)
+# ---------------------------------------------------------------------------
+
+def _make_trend_area_chart(
+    trend_data: list[dict],
+    title: str,
+    ylabel: str,
+    fill_color: str,
+    line_color: str,
+    edge_color: str,
+) -> bytes:
+    """Shared area-chart builder. Returns PNG bytes.
+
+    *trend_data* is ``[{ts: int, value: float}, ...]`` sorted by ts.
+    """
+    if not trend_data:
+        return _empty_chart_placeholder(title)
+
+    dates, values = _ts_to_dates(trend_data)
+
+    # Fallback to bar chart for 1 data point
+    if len(dates) == 1:
+        fig, ax = plt.subplots(figsize=(7, 2.5))
+        ax.bar(dates, values, width=0.6, color=fill_color, edgecolor=edge_color, linewidth=0.8)
+        ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left")
+        ax.set_ylabel(ylabel, fontsize=8)
+        _apply_clean_style(ax)
+        _auto_date_format(ax, 1)
+        fig.tight_layout(pad=1.0)
+        return _render_to_png(fig)
+
+    fig, ax = plt.subplots(figsize=(7, 2.5))
+
+    ax.fill_between(dates, values, alpha=0.25, color=fill_color, linewidth=0)
+    ax.plot(dates, values, color=line_color, linewidth=1.5, solid_capstyle="round")
+
+    # Subtle dots at each data point
+    if len(dates) <= 31:
+        ax.scatter(dates, values, color=edge_color, s=12, zorder=5, linewidths=0)
+
+    ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left")
+    ax.set_ylabel(ylabel, fontsize=8)
+    ax.set_ylim(bottom=0)
+    _apply_clean_style(ax)
+    _auto_date_format(ax, len(dates))
+
+    fig.tight_layout(pad=1.0)
+    return _render_to_png(fig)
+
+
+def _empty_chart_placeholder(title: str) -> bytes:
+    """Generate a small 'no data' placeholder chart."""
+    fig, ax = plt.subplots(figsize=(7, 2))
+    ax.text(0.5, 0.5, "No data available", transform=ax.transAxes,
+            ha="center", va="center", fontsize=10, color=_SLATE_400)
+    ax.set_title(title, fontsize=10, fontweight="bold", pad=8, loc="left",
+                 color=_SLATE_900)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    fig.tight_layout(pad=1.0)
+    return _render_to_png(fig)
+
+
+# ---------------------------------------------------------------------------
+# Individual chart functions
+# ---------------------------------------------------------------------------
+
+def energy_trend_chart(trend_data: list[dict]) -> bytes:
+    """Amber area chart for energy consumption trend. Y-axis in kWh."""
+    return _make_trend_area_chart(
+        trend_data,
+        title="Energy Consumption",
+        ylabel="kWh",
+        fill_color=_AMBER_LIGHT,
+        line_color=_AMBER,
+        edge_color=_AMBER_EDGE,
+    )
+
+
+def co2_trend_chart(trend_data: list[dict]) -> bytes:
+    """Emerald area chart for CO2 emissions trend. Y-axis in kg."""
+    return _make_trend_area_chart(
+        trend_data,
+        title="CO\u2082 Emissions",
+        ylabel="kg",
+        fill_color=_EMERALD_LIGHT,
+        line_color=_EMERALD,
+        edge_color=_EMERALD_EDGE,
+    )
+
+
+def dim_trend_chart(trend_data: list[dict]) -> bytes:
+    """Indigo step chart for dim level trend. Y-axis 0-100%."""
+    if not trend_data:
+        return _empty_chart_placeholder("Dim Level")
+
+    dates, values = _ts_to_dates(trend_data)
+
+    fig, ax = plt.subplots(figsize=(7, 2))
+
+    ax.fill_between(dates, values, alpha=0.15, color=_INDIGO_LIGHT,
+                    step="post", linewidth=0)
+    ax.step(dates, values, where="post", color=_INDIGO, linewidth=1.5)
+
+    ax.set_title("Dim Level", fontsize=10, fontweight="bold", pad=8, loc="left")
+    ax.set_ylabel("%", fontsize=8)
+    ax.set_ylim(0, 105)
+    _apply_clean_style(ax)
+    _auto_date_format(ax, len(dates))
+
+    fig.tight_layout(pad=1.0)
+    return _render_to_png(fig)
+
+
+def device_status_chart(online: int, offline: int, fault: int, total: int) -> bytes:
+    """Compact 2.5x2.5 donut chart for device status breakdown."""
+    sizes = [online, offline, fault]
+    colors = [_EMERALD, _SLATE_400, _RED]
+    labels = [f"Online ({online})", f"Offline ({offline})", f"Fault ({fault})"]
+
+    # Filter out zero-count slices
+    filtered = [(s, c, l) for s, c, l in zip(sizes, colors, labels) if s > 0]
+    if not filtered:
+        filtered = [(1, _SLATE_400, "No devices")]
+
+    f_sizes, f_colors, f_labels = zip(*filtered)
+
+    fig, ax = plt.subplots(figsize=(2.5, 2.5))
+    wedges, _ = ax.pie(
+        f_sizes,
+        colors=f_colors,
+        startangle=90,
+        wedgeprops={"width": 0.35, "edgecolor": "white", "linewidth": 1.5},
+    )
+    ax.text(0, 0.02, str(total), ha="center", va="center",
+            fontsize=20, fontweight="bold", color=_SLATE_900)
+    ax.text(0, -0.18, "devices", ha="center", va="top",
+            fontsize=8, color=_SLATE_400)
+    ax.legend(wedges, f_labels, loc="lower center",
+              bbox_to_anchor=(0.5, -0.12), ncol=min(3, len(f_labels)),
+              frameon=False, fontsize=7, handlelength=1.0)
+
+    fig.tight_layout(pad=0.3)
+    return _render_to_png(fig)
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
+
+def generate_all_charts(report_data: dict, sections: list[str]) -> dict[str, str]:
     """Generate charts required by the given report *sections*.
 
-    Returns a dict mapping chart name → PNG bytes.
+    Returns a dict mapping chart name -> base64 data URI string.
     """
-    charts: dict[str, bytes] = {}
+    charts: dict[str, str] = {}
 
     if "energy" in sections:
-        charts["energy_bar"] = energy_bar_chart(report_data)
-    if "co2" in sections:
-        charts["co2_bar"] = co2_bar_chart(report_data)
+        trend = report_data.get("energy_trend", [])
+        charts["energy_trend"] = to_base64_img(energy_trend_chart(trend))
 
-    # Status donut is always useful
-    charts["status_donut"] = status_donut_chart(report_data)
+    if "co2" in sections:
+        trend = report_data.get("co2_trend", [])
+        charts["co2_trend"] = to_base64_img(co2_trend_chart(trend))
+
+    # Dim level chart (only if data is present)
+    dim_trend = report_data.get("dim_trend")
+    if dim_trend:
+        charts["dim_trend"] = to_base64_img(dim_trend_chart(dim_trend))
+
+    # Device status donut (always included)
+    online = report_data.get("online_count", 0)
+    offline = report_data.get("offline_count", 0)
+    fault = report_data.get("fault_count", 0)
+    total = report_data.get("device_count", online + offline + fault)
+    charts["status_donut"] = to_base64_img(
+        device_status_chart(online, offline, fault, total)
+    )
 
     return charts
