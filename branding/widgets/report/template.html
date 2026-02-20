@@ -53,6 +53,69 @@
                     <span class="rpt-scope-loading rpt-hidden" id="rpt-site-loading"></span>
                 </div>
             </div>
+
+            <div class="rpt-period-group">
+                <div class="rpt-sub-header">Period</div>
+                <div class="rpt-radio-row">
+                    <label class="rpt-radio-label">
+                        <input type="radio" name="rpt-period" value="last_month" checked> Last Month
+                    </label>
+                    <label class="rpt-radio-label">
+                        <input type="radio" name="rpt-period" value="last_quarter"> Last Quarter
+                    </label>
+                    <label class="rpt-radio-label">
+                        <input type="radio" name="rpt-period" value="last_year"> Last Year
+                    </label>
+                    <label class="rpt-radio-label">
+                        <input type="radio" name="rpt-period" value="custom"> Custom
+                    </label>
+                </div>
+                <div class="rpt-custom-dates rpt-hidden" id="rpt-custom-dates">
+                    <div class="rpt-date-row">
+                        <label class="rpt-form-label" for="rpt-date-start">From</label>
+                        <input type="date" id="rpt-date-start" class="rpt-date-input">
+                    </div>
+                    <div class="rpt-date-row">
+                        <label class="rpt-form-label" for="rpt-date-end">To</label>
+                        <input type="date" id="rpt-date-end" class="rpt-date-input">
+                    </div>
+                </div>
+            </div>
+
+            <div class="rpt-content-group">
+                <div class="rpt-sub-header">Report Content</div>
+                <div class="rpt-checkbox-row">
+                    <label class="rpt-checkbox-label">
+                        <input type="checkbox" name="rpt-section" value="energy" checked> Energy Usage
+                    </label>
+                    <label class="rpt-checkbox-label">
+                        <input type="checkbox" name="rpt-section" value="co2" checked> CO₂ Emissions
+                    </label>
+                    <label class="rpt-checkbox-label">
+                        <input type="checkbox" name="rpt-section" value="faults" checked> Fault Log
+                    </label>
+                    <label class="rpt-checkbox-label">
+                        <input type="checkbox" name="rpt-section" value="summary" checked> Site Summary
+                    </label>
+                </div>
+            </div>
+
+            <div class="rpt-recipients-group">
+                <div class="rpt-sub-header">Recipients</div>
+                <textarea id="rpt-emails" class="rpt-textarea" rows="3"
+                    placeholder="Enter email addresses, one per line"></textarea>
+            </div>
+
+            <div class="rpt-btn-row">
+                <button type="button" id="rpt-gen-only" class="rpt-btn rpt-btn-secondary">Generate Only</button>
+                <button type="button" id="rpt-gen-email" class="rpt-btn rpt-btn-primary">Generate &amp; Email</button>
+                <span class="rpt-gen-spinner rpt-hidden" id="rpt-gen-spinner"></span>
+            </div>
+
+            <div class="rpt-result rpt-hidden" id="rpt-result">
+                <span class="rpt-result-message" id="rpt-result-message"></span>
+                <a class="rpt-result-download rpt-hidden" id="rpt-result-download" href="#" target="_blank">Download PDF</a>
+            </div>
         </div>
 
         <!-- Scheduled Reports Section -->
