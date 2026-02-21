@@ -2,7 +2,7 @@
    STATUS BANNER WIDGET — controller.js
    ThingsBoard CE Custom Widget (static type)
    
-   Polls: dim_value, status_lamp_on, device_type, fault_*/status_* flags, tilt
+   Polls: dim_value, status_lamp_on, device_type, fault_* / status_* flags, tilt
    Calculates: connection status from last telemetry timestamp
    ========================================================= */
 
