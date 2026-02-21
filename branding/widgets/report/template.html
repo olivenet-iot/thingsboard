@@ -13,9 +13,9 @@
             </button>
         </div>
 
-        <!-- Generate Report Section -->
+        <!-- Report Configuration (shared) -->
         <div class="rpt-section">
-            <div class="rpt-section-header">Generate Report</div>
+            <div class="rpt-section-header">Report Configuration</div>
 
             <div class="rpt-scope-group">
                 <div class="rpt-sub-header">Report Scope</div>
@@ -55,7 +55,39 @@
                 </div>
             </div>
 
-            <div class="rpt-period-content-row">
+            <div class="rpt-content-recipients-row">
+                <div class="rpt-content-group">
+                    <div class="rpt-sub-header">Report Content</div>
+                    <div class="rpt-checkbox-row">
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="energy" checked> Energy Usage
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="co2" checked> CO&#x2082; Emissions
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="faults" checked> Fault Log
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="summary" checked> Site Summary
+                        </label>
+                    </div>
+                </div>
+
+                <div class="rpt-recipients-group">
+                    <div class="rpt-sub-header">Recipients</div>
+                    <textarea id="rpt-emails" class="rpt-textarea" rows="2"
+                        placeholder="Enter email addresses, one per line"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side-by-side action panels -->
+        <div class="rpt-actions-row">
+            <!-- Generate Now Panel -->
+            <div class="rpt-section rpt-action-panel">
+                <div class="rpt-section-header">Generate Now</div>
+
                 <div class="rpt-period-group">
                     <div class="rpt-sub-header">Period</div>
                     <div class="rpt-radio-row">
@@ -84,104 +116,56 @@
                     </div>
                 </div>
 
-                <div class="rpt-content-group">
-                    <div class="rpt-sub-header">Report Content</div>
-                    <div class="rpt-checkbox-row">
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-section" value="energy" checked> Energy Usage
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-section" value="co2" checked> CO₂ Emissions
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-section" value="faults" checked> Fault Log
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-section" value="summary" checked> Site Summary
-                        </label>
-                    </div>
+                <div class="rpt-btn-row">
+                    <button type="button" id="rpt-gen-only" class="rpt-btn rpt-btn-secondary">Generate Only</button>
+                    <button type="button" id="rpt-gen-email" class="rpt-btn rpt-btn-primary">Generate &amp; Email</button>
+                    <span class="rpt-gen-spinner rpt-hidden" id="rpt-gen-spinner"></span>
+                </div>
+
+                <div class="rpt-result rpt-hidden" id="rpt-result">
+                    <span class="rpt-result-message" id="rpt-result-message"></span>
+                    <a class="rpt-result-download rpt-hidden" id="rpt-result-download" href="#" target="_blank">Download PDF</a>
                 </div>
             </div>
 
-            <div class="rpt-recipients-group">
-                <div class="rpt-sub-header">Recipients</div>
-                <textarea id="rpt-emails" class="rpt-textarea" rows="2"
-                    placeholder="Enter email addresses, one per line"></textarea>
-            </div>
+            <!-- Schedule Panel -->
+            <div class="rpt-section rpt-action-panel" id="rpt-schedule-section">
+                <div class="rpt-section-header">Schedule</div>
 
-            <div class="rpt-btn-row">
-                <button type="button" id="rpt-gen-only" class="rpt-btn rpt-btn-secondary">Generate Only</button>
-                <button type="button" id="rpt-gen-email" class="rpt-btn rpt-btn-primary">Generate &amp; Email</button>
-                <span class="rpt-gen-spinner rpt-hidden" id="rpt-gen-spinner"></span>
-            </div>
-
-            <div class="rpt-result rpt-hidden" id="rpt-result">
-                <span class="rpt-result-message" id="rpt-result-message"></span>
-                <a class="rpt-result-download rpt-hidden" id="rpt-result-download" href="#" target="_blank">Download PDF</a>
-            </div>
-        </div>
-
-        <!-- Scheduled Reports Section -->
-        <div class="rpt-section" id="rpt-schedule-section">
-            <div class="rpt-section-header">Scheduled Reports</div>
-
-            <div class="rpt-schedule-form">
-                <div class="rpt-sub-header">Schedule Configuration</div>
-                <div class="rpt-sched-row">
-                    <div class="rpt-sched-field">
-                        <label class="rpt-field-label" for="rpt-sched-freq">Frequency</label>
-                        <select id="rpt-sched-freq" class="rpt-select">
-                            <option value="monthly">Monthly</option>
-                            <option value="quarterly">Quarterly</option>
-                            <option value="yearly">Yearly</option>
-                        </select>
-                    </div>
-                    <div class="rpt-sched-field">
-                        <label class="rpt-field-label" for="rpt-sched-day">Day</label>
-                        <select id="rpt-sched-day" class="rpt-select">
-                            <!-- Options 1-28, populated by JS -->
-                        </select>
-                    </div>
-                    <div class="rpt-sched-field">
-                        <label class="rpt-field-label" for="rpt-sched-time">Time UTC</label>
-                        <input type="time" id="rpt-sched-time" class="rpt-date-input" value="06:00">
+                <div class="rpt-schedule-form">
+                    <div class="rpt-sub-header">Schedule Configuration</div>
+                    <div class="rpt-sched-row">
+                        <div class="rpt-sched-field">
+                            <label class="rpt-field-label" for="rpt-sched-freq">Frequency</label>
+                            <select id="rpt-sched-freq" class="rpt-select">
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                        <div class="rpt-sched-field">
+                            <label class="rpt-field-label" for="rpt-sched-day">Day</label>
+                            <select id="rpt-sched-day" class="rpt-select">
+                                <!-- Options 1-28, populated by JS -->
+                            </select>
+                        </div>
+                        <div class="rpt-sched-field">
+                            <label class="rpt-field-label" for="rpt-sched-time">Time UTC</label>
+                            <input type="time" id="rpt-sched-time" class="rpt-date-input" value="06:00">
+                        </div>
                     </div>
                 </div>
 
-                <div class="rpt-content-group">
-                    <div class="rpt-sub-header">Content</div>
-                    <div class="rpt-checkbox-row">
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-sched-section" value="energy" checked> Energy Usage
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-sched-section" value="co2" checked> CO₂ Emissions
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-sched-section" value="faults" checked> Fault Log
-                        </label>
-                        <label class="rpt-checkbox-label">
-                            <input type="checkbox" name="rpt-sched-section" value="summary" checked> Site Summary
-                        </label>
-                    </div>
+                <div class="rpt-sched-status" id="rpt-sched-status">
+                    <span id="rpt-sched-status-text">No schedule configured</span>
                 </div>
 
-                <div class="rpt-recipients-group">
-                    <div class="rpt-sub-header">Recipients</div>
-                    <textarea id="rpt-sched-emails" class="rpt-textarea" rows="2"
-                        placeholder="Enter email addresses, one per line"></textarea>
+                <div class="rpt-btn-row" id="rpt-sched-btn-row">
+                    <button type="button" id="rpt-sched-save" class="rpt-btn rpt-btn-primary">Save Schedule</button>
+                    <button type="button" id="rpt-sched-disable" class="rpt-btn rpt-btn-secondary rpt-hidden">Disable</button>
+                    <button type="button" id="rpt-sched-delete" class="rpt-btn rpt-btn-danger rpt-hidden">Delete</button>
+                    <span class="rpt-gen-spinner rpt-hidden" id="rpt-sched-spinner"></span>
                 </div>
-            </div>
-
-            <div class="rpt-sched-status" id="rpt-sched-status">
-                <span id="rpt-sched-status-text">No schedule configured</span>
-            </div>
-
-            <div class="rpt-btn-row" id="rpt-sched-btn-row">
-                <button type="button" id="rpt-sched-save" class="rpt-btn rpt-btn-primary">Save Schedule</button>
-                <button type="button" id="rpt-sched-disable" class="rpt-btn rpt-btn-secondary rpt-hidden">Disable</button>
-                <button type="button" id="rpt-sched-delete" class="rpt-btn rpt-btn-danger rpt-hidden">Delete</button>
-                <span class="rpt-gen-spinner rpt-hidden" id="rpt-sched-spinner"></span>
             </div>
         </div>
 

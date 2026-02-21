@@ -222,6 +222,7 @@
     vertical-align: middle;
   }
   .status-dot.online { background: #059669; }
+  .status-dot.fault { background: #ef4444; }
   .status-dot.offline { background: #94a3b8; }
 
   /* ── Severity badges ────────────────────────────────── */
@@ -372,7 +373,7 @@
           <td>{{ dev.name }}</td>
           {% if entity_type != "site" %}<td>{{ dev.site }}</td>{% endif %}
           <td>
-            <span class="status-dot {{ 'online' if dev.status == 'Online' else 'offline' }}"></span>
+            <span class="status-dot {{ 'online' if dev.status == 'Online' else ('fault' if dev.status == 'Fault' else 'offline') }}"></span>
             {{ dev.status }}
           </td>
           <td>{{ dev.last_active }}</td>
@@ -395,6 +396,11 @@
 {% if "faults" in sections %}
 <div class="keep-together">
   <div class="section-title">Fault Log</div>
+  {% if alarm_count is defined and alarm_count > 0 %}
+  <div class="stats-line" style="margin-bottom: 8px;">
+    {{ alarm_count }} alarm event{{ 's' if alarm_count != 1 else '' }} during this period
+  </div>
+  {% endif %}
   {% if faults %}
   <table>
     <thead>

@@ -233,10 +233,29 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 if last_ts:
                     last_active_str = datetime.utcfromtimestamp(last_ts / 1000).strftime("%d %b %H:%M")
 
-                if active:
+                # Per-device alarm fetch (for fault detection + fault log)
+                dev_alarms = []
+                has_active_fault = False
+                need_alarms = "faults" in request.sections or "summary" in request.sections
+                if need_alarms:
+                    dev_alarms = tb.get_alarm_history(device.id, "DEVICE", start_ts, end_ts)
+                    has_active_fault = any(
+                        "ACTIVE" in a.get("status", "") for a in dev_alarms
+                    )
+                    if "faults" in request.sections:
+                        dev_faults = _transform_alarms(dev_alarms, site.name)
+                        all_faults.extend(dev_faults)
+
+                # 3-way device status (fault takes priority)
+                if has_active_fault:
+                    total_fault += 1
+                    dev_status = "Fault"
+                elif active:
                     total_online += 1
+                    dev_status = "Online"
                 else:
                     total_offline += 1
+                    dev_status = "Offline"
 
                 # Trend data for charts
                 if "energy" in request.sections or "co2" in request.sections:
@@ -260,23 +279,14 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 devices_detail.append({
                     "name": device.name,
                     "site": site.name,
-                    "status": "Online" if active else "Offline",
+                    "status": dev_status,
                     "last_active": last_active_str,
                     "energy_kwh": round(dev_energy / 1000, 2),
                     "co2_kg": round(dev_co2 / 1000, 2),
                 })
 
-                # Per-device alarm fetch
-                if "faults" in request.sections:
-                    dev_alarms = tb.get_alarm_history(device.id, "DEVICE", start_ts, end_ts)
-                    dev_faults = _transform_alarms(dev_alarms, site.name)
-                    all_faults.extend(dev_faults)
-
         # Sort faults by date descending
         all_faults.sort(key=lambda f: f["date"], reverse=True)
-
-        # Count faults from alarms
-        total_fault = len(all_faults)
 
         # Sort devices by energy desc
         devices_detail.sort(key=lambda d: d["energy_kwh"], reverse=True)
@@ -300,7 +310,7 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 p["value"] = round(p["value"] / num_devices_with_dim, 1)
 
         # -- Compute summary stats ------------------------------------------
-        device_count = total_online + total_offline
+        device_count = total_online + total_offline + total_fault
         energy_kwh = round(total_energy_wh / 1000, 2)
         co2_kg = round(total_co2_grams / 1000, 2)
 
@@ -352,6 +362,7 @@ def generate_report(request: ReportRequest) -> ReportResult:
 
             # Fault log
             "faults": all_faults,
+            "alarm_count": len(all_faults),
 
             # Charts (populated below)
             "charts": {},
@@ -399,8 +410,8 @@ def generate_report(request: ReportRequest) -> ReportResult:
         generated_at = datetime.utcnow().isoformat() + "Z"
         download_url = f"/api/report/download/{report_id}"
 
-        logger.info("Report %s complete \u2014 %d devices, %d faults",
-                     report_id, device_count, total_fault)
+        logger.info("Report %s complete \u2014 %d devices, %d faulty, %d alarm events",
+                     report_id, device_count, total_fault, len(all_faults))
 
         # Build result message based on email outcome
         if email_result and email_result["sent"]:

@@ -195,22 +195,38 @@
     bottom: 10px;
 }
 
-/* ── Period + Content Side-by-Side ───────────────────────────── */
+/* ── Content + Recipients Side-by-Side ──────────────────────── */
 
-.rpt-period-content-row {
+.rpt-content-recipients-row {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid #f1f5f9;
 }
 
-.rpt-period-content-row > .rpt-period-group,
-.rpt-period-content-row > .rpt-content-group {
+.rpt-content-recipients-row > * {
     flex: 1;
     margin-top: 0;
     padding-top: 0;
     border-top: none;
+}
+
+/* ── Action Panels Side-by-Side ────────────────────────────── */
+
+.rpt-actions-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rpt-action-panel {
+    flex: 1;
+    min-width: 0;
+}
+
+.rpt-actions-row > .rpt-action-panel {
+    margin-bottom: 0;
 }
 
 /* ── Period Selection ───────────────────────────────────────── */
@@ -592,21 +608,12 @@
         grid-template-columns: 1fr;
     }
 
-    .rpt-period-content-row {
+    .rpt-content-recipients-row {
         flex-direction: column;
-        gap: 0;
     }
 
-    .rpt-period-content-row > .rpt-period-group {
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-    }
-
-    .rpt-period-content-row > .rpt-content-group {
-        margin-top: 16px;
-        padding-top: 14px;
-        border-top: 1px solid #f1f5f9;
+    .rpt-actions-row {
+        flex-direction: column;
     }
 
     .rpt-radio-row {

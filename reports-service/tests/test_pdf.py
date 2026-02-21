@@ -31,7 +31,7 @@ def _make_trend(num_points: int = 14, base_value: float = 10.0) -> list[dict]:
 def _build_report_data(include_charts: bool = True) -> dict:
     """Build a complete report_data dict with devices, faults, trends, and KPIs."""
     devices = [
-        {"name": "Sign-AMS-01", "site": "McDonald's Amsterdam", "status": "Online",
+        {"name": "Sign-AMS-01", "site": "McDonald's Amsterdam", "status": "Fault",
          "last_active": "20 Feb 14:30", "energy_kwh": 12.5, "co2_kg": 5.4},
         {"name": "Sign-AMS-02", "site": "McDonald's Amsterdam", "status": "Online",
          "last_active": "20 Feb 14:28", "energy_kwh": 9.8, "co2_kg": 4.2},
@@ -76,9 +76,10 @@ def _build_report_data(include_charts: bool = True) -> dict:
         # KPIs
         "site_count": 4,
         "device_count": 6,
-        "online_count": 5,
+        "online_count": 4,
         "offline_count": 1,
-        "fault_count": 3,
+        "fault_count": 1,
+        "alarm_count": 3,
         "energy_kwh": round(total_energy, 2),
         "co2_kg": round(total_co2, 2),
 
@@ -134,6 +135,7 @@ class TestPdfRenderer:
         data = _build_report_data()
         data["faults"] = []
         data["fault_count"] = 0
+        data["alarm_count"] = 0
         pdf = render(data, sections=["summary", "energy", "faults"])
         assert isinstance(pdf, bytes)
         assert pdf[:5] == b"%PDF-"
@@ -196,6 +198,7 @@ if __name__ == "__main__":
     data_nf = _build_report_data(include_charts=True)
     data_nf["faults"] = []
     data_nf["fault_count"] = 0
+    data_nf["alarm_count"] = 0
     pdf_nf = render(data_nf, sections=["summary", "energy", "co2", "faults"])
     nf_path = data_dir / "test_report_no_faults.pdf"
     nf_path.write_bytes(pdf_nf)

@@ -109,8 +109,6 @@ self.onInit = function () {
     var schedFreqSelect = container.querySelector('#rpt-sched-freq');
     var schedDaySelect = container.querySelector('#rpt-sched-day');
     var schedTimeInput = container.querySelector('#rpt-sched-time');
-    var schedSectionCheckboxes = container.querySelectorAll('input[name="rpt-sched-section"]');
-    var schedEmailsTextarea = container.querySelector('#rpt-sched-emails');
     var schedSaveBtn = container.querySelector('#rpt-sched-save');
     var schedDisableBtn = container.querySelector('#rpt-sched-disable');
     var schedDeleteBtn = container.querySelector('#rpt-sched-delete');
@@ -380,9 +378,23 @@ self.onInit = function () {
         }).then(function (data) {
             if (!data) return;
             currentSchedule = data;
-            // Pre-fill frequency from response
+            // Pre-fill schedule fields from response
             if (schedFreqSelect && data.frequency) {
                 schedFreqSelect.value = data.frequency;
+            }
+            if (data.sections && Array.isArray(data.sections)) {
+                sectionCheckboxes.forEach(function (cb) {
+                    cb.checked = data.sections.indexOf(cb.value) !== -1;
+                });
+            }
+            if (data.emails && Array.isArray(data.emails) && emailsTextarea) {
+                emailsTextarea.value = data.emails.join('\n');
+            }
+            if (schedDaySelect && data.dayOfMonth) {
+                schedDaySelect.value = String(data.dayOfMonth);
+            }
+            if (schedTimeInput && data.timeUtc) {
+                schedTimeInput.value = data.timeUtc;
             }
             updateScheduleStatus();
         }).catch(function (err) {
@@ -506,21 +518,13 @@ self.onInit = function () {
             return;
         }
 
-        var schedSections = [];
-        schedSectionCheckboxes.forEach(function (cb) {
-            if (cb.checked) schedSections.push(cb.value);
-        });
+        var schedSections = getSelectedSections();
         if (schedSections.length === 0) {
             alert('Please select at least one content section.');
             return;
         }
 
-        var emails = [];
-        if (schedEmailsTextarea) {
-            emails = schedEmailsTextarea.value.split('\n').map(function (s) {
-                return s.trim();
-            }).filter(function (s) { return s.length > 0; });
-        }
+        var emails = getRecipientEmails();
 
         var body = {
             entityId: scope.entityId,
@@ -610,10 +614,10 @@ self.onInit = function () {
         if (schedFreqSelect) schedFreqSelect.value = 'monthly';
         if (schedDaySelect) schedDaySelect.value = '1';
         if (schedTimeInput) schedTimeInput.value = '06:00';
-        schedSectionCheckboxes.forEach(function (cb) {
+        sectionCheckboxes.forEach(function (cb) {
             cb.checked = defaults.indexOf(cb.value) !== -1;
         });
-        if (schedEmailsTextarea) schedEmailsTextarea.value = '';
+        if (emailsTextarea) emailsTextarea.value = '';
     }
 
     function updateScheduleStatus() {
@@ -893,11 +897,6 @@ self.onInit = function () {
             schedDaySelect.appendChild(dayOpt);
         }
     }
-
-    // Apply default sections to schedule checkboxes
-    schedSectionCheckboxes.forEach(function (cb) {
-        cb.checked = defaults.indexOf(cb.value) !== -1;
-    });
 
     updateVisibility();
     loadEstates().then(function () {
