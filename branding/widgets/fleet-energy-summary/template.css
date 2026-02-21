@@ -62,65 +62,78 @@
   flex-shrink: 0 !important;
 }
 
-/* List container */
-.energy-list {
+/* Cards container */
+.energy-cards {
   display: flex !important;
   flex-direction: column !important;
+  gap: 8px !important;
   flex: 1 !important;
   overflow-y: auto !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
-  background: #ffffff !important;
+  align-content: flex-start !important;
 }
 
-/* Individual entity row */
-.energy-row {
-  display: flex !important;
-  align-items: center !important;
-  padding: 10px 14px !important;
-  gap: 16px !important;
-  cursor: pointer !important;
-  border-bottom: 1px solid #f1f5f9 !important;
+/* Individual entity card */
+.energy-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   border-left: 3px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
 
-.energy-row:last-child {
-  border-bottom: none !important;
-}
-
-.energy-row:hover {
-  background: #fafbfc !important;
+.energy-card:hover {
   border-left-color: #f59e0b !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  transform: translateX(2px) !important;
 }
 
-.energy-row:active {
+.energy-card:active {
   background: #fefce8 !important;
 }
 
 /* Status border colors */
-.energy-row.status-healthy {
+.energy-card.status-healthy {
   border-left-color: #059669 !important;
 }
 
-.energy-row.status-warning {
+.energy-card.status-warning {
   border-left-color: #f59e0b !important;
 }
 
-.energy-row.status-fault {
+.energy-card.status-fault {
   border-left-color: #ef4444 !important;
 }
 
-.energy-row.status-offline {
+.energy-card.status-offline {
   border-left-color: #94a3b8 !important;
 }
 
-/* Row: entity name */
-.row-name {
-  flex: 0 0 auto !important;
-  min-width: 140px !important;
-  max-width: 200px !important;
-  font-size: 13px !important;
+/* Card main content area */
+.card-main {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Top row: entity name + device count */
+.card-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.card-entity-name {
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: #0f172a !important;
   white-space: nowrap !important;
@@ -128,8 +141,7 @@
   text-overflow: ellipsis !important;
 }
 
-/* Row: device count */
-.row-devices {
+.card-device-count {
   font-size: 11px !important;
   font-weight: 500 !important;
   color: #94a3b8 !important;
@@ -137,20 +149,20 @@
   flex-shrink: 0 !important;
 }
 
-/* Row: pills container */
-.row-pills {
+/* Status pills row */
+.card-pills {
   display: flex !important;
-  gap: 6px !important;
-  flex-shrink: 0 !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
 }
 
 .pill {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 3px !important;
-  padding: 1px 6px !important;
-  border-radius: 8px !important;
-  font-size: 10px !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
   line-height: 1.4 !important;
 }
@@ -196,24 +208,36 @@
   50% { opacity: 0.4; }
 }
 
-/* Row: metrics container */
-.row-metrics {
+/* Metrics row */
+.card-metrics {
   display: flex !important;
+  flex-direction: row !important;
   gap: 16px !important;
-  margin-left: auto !important;
-  flex-shrink: 0 !important;
-  align-items: center !important;
+}
+
+.metric-block {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
 }
 
 .metric-value {
-  font-size: 13px !important;
+  font-size: 18px !important;
   font-weight: 700 !important;
-  line-height: 1.2 !important;
+  line-height: 1.1 !important;
 }
 
 .metric-unit {
-  font-size: 11px !important;
+  font-size: 13px !important;
   font-weight: 400 !important;
+}
+
+.metric-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  color: #94a3b8 !important;
 }
 
 /* Energy color (emerald) */
@@ -227,22 +251,40 @@
 }
 
 /* Loading state */
-.energy-row.loading .metric-value {
+.energy-card.loading .metric-value {
   color: #cbd5e1 !important;
 }
 
-/* Row: chevron */
-.row-chevron {
+/* Chevron */
+.card-chevron {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.chevron-icon {
   font-size: 18px !important;
   color: #cbd5e1 !important;
   line-height: 1 !important;
-  flex-shrink: 0 !important;
   transition: all 0.15s ease !important;
 }
 
-.energy-row:hover .row-chevron {
+.energy-card:hover .chevron-icon {
   color: #f59e0b !important;
   transform: translateX(2px) !important;
+}
+
+.chevron-label {
+  font-size: 8px !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+}
+
+.energy-card:hover .chevron-label {
+  color: #f59e0b !important;
 }
 
 /* Loading placeholder */
