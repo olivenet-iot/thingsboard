@@ -120,6 +120,34 @@ class TestCharts:
         charts = generate_all_charts(data, ["energy", "co2"])
         assert "dim_trend" not in charts
 
+    def test_bar_chart_for_short_period(self):
+        """≤14 data points should produce a bar chart (still valid PNG)."""
+        short = _make_trend(7, 5.0)
+        png = energy_trend_chart(short)
+        assert png[:4] == PNG_MAGIC
+        assert len(png) > 1000
+
+    def test_bar_chart_at_threshold(self):
+        """Exactly 14 points should still use bar chart."""
+        trend = _make_trend(14, 5.0)
+        png = co2_trend_chart(trend)
+        assert png[:4] == PNG_MAGIC
+        assert len(png) > 1000
+
+    def test_area_chart_above_threshold(self):
+        """15+ data points should use area chart."""
+        long = _make_trend(15, 5.0)
+        png = energy_trend_chart(long)
+        assert png[:4] == PNG_MAGIC
+        assert len(png) > 1000
+
+    def test_area_chart_long_period(self):
+        """30 data points — area chart with dots."""
+        long = _make_trend(30, 5.0)
+        png = co2_trend_chart(long)
+        assert png[:4] == PNG_MAGIC
+        assert len(png) > 1000
+
     def test_to_base64_img(self):
         png = energy_trend_chart(MOCK_ENERGY_TREND)
         uri = to_base64_img(png)

@@ -109,11 +109,8 @@ def _calculate_interval_ms(start_ts: int, end_ts: int) -> tuple[int, str]:
     """
     duration_ms = end_ts - start_ts
     one_day = 86_400_000
-    one_hour = 3_600_000
 
-    if duration_ms <= 3 * one_day:
-        return one_hour, "hourly"
-    elif duration_ms <= 62 * one_day:
+    if duration_ms <= 90 * one_day:
         return one_day, "daily"
     else:
         return 7 * one_day, "weekly"
@@ -221,12 +218,6 @@ def generate_report(request: ReportRequest) -> ReportResult:
         total_co2_grams = 0.0
 
         for site in hierarchy.sites:
-            site_faults: list[dict] = []
-            if "faults" in request.sections:
-                raw_alarms = tb.get_alarm_history(site.id, "ASSET", start_ts, end_ts)
-                site_faults = _transform_alarms(raw_alarms, site.name)
-                all_faults.extend(site_faults)
-
             for device in site.devices:
                 # Energy + CO2 totals
                 dev_energy = tb.get_telemetry_sum(device.id, "energy_wh", start_ts, end_ts)
@@ -274,6 +265,15 @@ def generate_report(request: ReportRequest) -> ReportResult:
                     "energy_kwh": round(dev_energy / 1000, 2),
                     "co2_kg": round(dev_co2 / 1000, 2),
                 })
+
+                # Per-device alarm fetch
+                if "faults" in request.sections:
+                    dev_alarms = tb.get_alarm_history(device.id, "DEVICE", start_ts, end_ts)
+                    dev_faults = _transform_alarms(dev_alarms, site.name)
+                    all_faults.extend(dev_faults)
+
+        # Sort faults by date descending
+        all_faults.sort(key=lambda f: f["date"], reverse=True)
 
         # Count faults from alarms
         total_fault = len(all_faults)

@@ -114,16 +114,24 @@ def _make_trend_area_chart(
 
     dates, values = _ts_to_dates(trend_data)
 
-    # Fallback to bar chart for 1 data point
-    if len(dates) == 1:
+    # Bar chart for sparse data (≤14 points) — clearer than area for short periods
+    if len(dates) <= 14:
         fig, ax = plt.subplots(figsize=(7, 2.5))
-        ax.bar(dates, values, width=0.6, color=fill_color, edgecolor=edge_color, linewidth=0.8)
+        date_labels = [d.strftime("%d %b") for d in dates]
+        ax.bar(range(len(values)), values, color=line_color,
+               edgecolor=edge_color, linewidth=0.8)
+        ax.set_xticks(range(len(values)))
+        ax.set_xticklabels(date_labels,
+                           rotation=45 if len(dates) > 10 else 0,
+                           ha="right" if len(dates) > 10 else "center",
+                           fontsize=7)
         ax.set_ylabel(ylabel, fontsize=8)
+        ax.set_ylim(bottom=0)
         _apply_clean_style(ax)
-        _auto_date_format(ax, 1)
         fig.tight_layout(pad=1.0)
         return _render_to_png(fig)
 
+    # Area chart for denser data (>14 points)
     fig, ax = plt.subplots(figsize=(7, 2.5))
 
     ax.fill_between(dates, values, alpha=0.25, color=fill_color, linewidth=0)
