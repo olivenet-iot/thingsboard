@@ -19,90 +19,93 @@
 
             <div class="rpt-scope-group">
                 <div class="rpt-sub-header">Report Scope</div>
-
-                <div class="rpt-form-row">
-                    <label class="rpt-form-label" for="rpt-level">Level</label>
-                    <select id="rpt-level" class="rpt-select">
-                        <option value="estate">Estate</option>
-                        <option value="region">Region</option>
-                        <option value="site">Site</option>
-                    </select>
-                </div>
-
-                <div class="rpt-form-row" id="rpt-estate-row">
-                    <label class="rpt-form-label" for="rpt-estate">Estate</label>
-                    <select id="rpt-estate" class="rpt-select">
-                        <option value="">— Select estate —</option>
-                    </select>
-                    <span class="rpt-scope-loading rpt-hidden" id="rpt-estate-loading"></span>
-                </div>
-
-                <div class="rpt-form-row rpt-hidden" id="rpt-region-row">
-                    <label class="rpt-form-label" for="rpt-region">Region</label>
-                    <select id="rpt-region" class="rpt-select">
-                        <option value="">— Select region —</option>
-                    </select>
-                    <span class="rpt-scope-loading rpt-hidden" id="rpt-region-loading"></span>
-                </div>
-
-                <div class="rpt-form-row rpt-hidden" id="rpt-site-row">
-                    <label class="rpt-form-label" for="rpt-site">Site</label>
-                    <select id="rpt-site" class="rpt-select">
-                        <option value="">— Select site —</option>
-                    </select>
-                    <span class="rpt-scope-loading rpt-hidden" id="rpt-site-loading"></span>
-                </div>
-            </div>
-
-            <div class="rpt-period-group">
-                <div class="rpt-sub-header">Period</div>
-                <div class="rpt-radio-row">
-                    <label class="rpt-radio-label">
-                        <input type="radio" name="rpt-period" value="last_month" checked> Last Month
-                    </label>
-                    <label class="rpt-radio-label">
-                        <input type="radio" name="rpt-period" value="last_quarter"> Last Quarter
-                    </label>
-                    <label class="rpt-radio-label">
-                        <input type="radio" name="rpt-period" value="last_year"> Last Year
-                    </label>
-                    <label class="rpt-radio-label">
-                        <input type="radio" name="rpt-period" value="custom"> Custom
-                    </label>
-                </div>
-                <div class="rpt-custom-dates rpt-hidden" id="rpt-custom-dates">
-                    <div class="rpt-date-row">
-                        <label class="rpt-form-label" for="rpt-date-start">From</label>
-                        <input type="date" id="rpt-date-start" class="rpt-date-input">
+                <div class="rpt-scope-grid">
+                    <div class="rpt-field">
+                        <label class="rpt-field-label" for="rpt-level">Level</label>
+                        <select id="rpt-level" class="rpt-select">
+                            <option value="estate">Estate</option>
+                            <option value="region">Region</option>
+                            <option value="site">Site</option>
+                        </select>
                     </div>
-                    <div class="rpt-date-row">
-                        <label class="rpt-form-label" for="rpt-date-end">To</label>
-                        <input type="date" id="rpt-date-end" class="rpt-date-input">
+
+                    <div class="rpt-field" id="rpt-estate-row">
+                        <label class="rpt-field-label" for="rpt-estate">Estate</label>
+                        <select id="rpt-estate" class="rpt-select">
+                            <option value="">— Select estate —</option>
+                        </select>
+                        <span class="rpt-scope-loading rpt-hidden" id="rpt-estate-loading"></span>
+                    </div>
+
+                    <div class="rpt-field rpt-hidden" id="rpt-region-row">
+                        <label class="rpt-field-label" for="rpt-region">Region</label>
+                        <select id="rpt-region" class="rpt-select">
+                            <option value="">— Select region —</option>
+                        </select>
+                        <span class="rpt-scope-loading rpt-hidden" id="rpt-region-loading"></span>
+                    </div>
+
+                    <div class="rpt-field rpt-hidden" id="rpt-site-row">
+                        <label class="rpt-field-label" for="rpt-site">Site</label>
+                        <select id="rpt-site" class="rpt-select">
+                            <option value="">— Select site —</option>
+                        </select>
+                        <span class="rpt-scope-loading rpt-hidden" id="rpt-site-loading"></span>
                     </div>
                 </div>
             </div>
 
-            <div class="rpt-content-group">
-                <div class="rpt-sub-header">Report Content</div>
-                <div class="rpt-checkbox-row">
-                    <label class="rpt-checkbox-label">
-                        <input type="checkbox" name="rpt-section" value="energy" checked> Energy Usage
-                    </label>
-                    <label class="rpt-checkbox-label">
-                        <input type="checkbox" name="rpt-section" value="co2" checked> CO₂ Emissions
-                    </label>
-                    <label class="rpt-checkbox-label">
-                        <input type="checkbox" name="rpt-section" value="faults" checked> Fault Log
-                    </label>
-                    <label class="rpt-checkbox-label">
-                        <input type="checkbox" name="rpt-section" value="summary" checked> Site Summary
-                    </label>
+            <div class="rpt-period-content-row">
+                <div class="rpt-period-group">
+                    <div class="rpt-sub-header">Period</div>
+                    <div class="rpt-radio-row">
+                        <label class="rpt-radio-label">
+                            <input type="radio" name="rpt-period" value="last_month" checked> Last Month
+                        </label>
+                        <label class="rpt-radio-label">
+                            <input type="radio" name="rpt-period" value="last_quarter"> Last Quarter
+                        </label>
+                        <label class="rpt-radio-label">
+                            <input type="radio" name="rpt-period" value="last_year"> Last Year
+                        </label>
+                        <label class="rpt-radio-label">
+                            <input type="radio" name="rpt-period" value="custom"> Custom
+                        </label>
+                    </div>
+                    <div class="rpt-custom-dates rpt-hidden" id="rpt-custom-dates">
+                        <div class="rpt-date-row">
+                            <label class="rpt-field-label" for="rpt-date-start">From</label>
+                            <input type="date" id="rpt-date-start" class="rpt-date-input">
+                        </div>
+                        <div class="rpt-date-row">
+                            <label class="rpt-field-label" for="rpt-date-end">To</label>
+                            <input type="date" id="rpt-date-end" class="rpt-date-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rpt-content-group">
+                    <div class="rpt-sub-header">Report Content</div>
+                    <div class="rpt-checkbox-row">
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="energy" checked> Energy Usage
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="co2" checked> CO₂ Emissions
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="faults" checked> Fault Log
+                        </label>
+                        <label class="rpt-checkbox-label">
+                            <input type="checkbox" name="rpt-section" value="summary" checked> Site Summary
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <div class="rpt-recipients-group">
                 <div class="rpt-sub-header">Recipients</div>
-                <textarea id="rpt-emails" class="rpt-textarea" rows="3"
+                <textarea id="rpt-emails" class="rpt-textarea" rows="2"
                     placeholder="Enter email addresses, one per line"></textarea>
             </div>
 
@@ -126,7 +129,7 @@
                 <div class="rpt-sub-header">Schedule Configuration</div>
                 <div class="rpt-sched-row">
                     <div class="rpt-sched-field">
-                        <label class="rpt-form-label" for="rpt-sched-freq">Frequency</label>
+                        <label class="rpt-field-label" for="rpt-sched-freq">Frequency</label>
                         <select id="rpt-sched-freq" class="rpt-select">
                             <option value="monthly">Monthly</option>
                             <option value="quarterly">Quarterly</option>
@@ -134,13 +137,13 @@
                         </select>
                     </div>
                     <div class="rpt-sched-field">
-                        <label class="rpt-form-label" for="rpt-sched-day">Day</label>
+                        <label class="rpt-field-label" for="rpt-sched-day">Day</label>
                         <select id="rpt-sched-day" class="rpt-select">
                             <!-- Options 1-28, populated by JS -->
                         </select>
                     </div>
                     <div class="rpt-sched-field">
-                        <label class="rpt-form-label" for="rpt-sched-time">Time UTC</label>
+                        <label class="rpt-field-label" for="rpt-sched-time">Time UTC</label>
                         <input type="time" id="rpt-sched-time" class="rpt-date-input" value="06:00">
                     </div>
                 </div>

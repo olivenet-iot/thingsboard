@@ -1,17 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════
    SignConnect — Report Manager Widget (template.css)
-   Design system: amber accent (#f59e0b), slate tones, Inter/Segoe
+   Design system: amber accent (#F59E0B), slate tones, Inter/Segoe
    ═══════════════════════════════════════════════════════════════ */
 
 .rpt-root {
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    color: #1e293b;
-    padding: 12px 16px;
-    min-height: 100%;
+    color: #1E293B;
+    padding: 16px;
+    height: 100%;
     box-sizing: border-box;
     width: 100%;
     overflow-y: auto;
     overflow-anchor: none;
+    background: #F8FAFC;
 }
 
 .rpt-root *, .rpt-root *::before, .rpt-root *::after {
@@ -33,7 +34,7 @@
     width: 32px;
     height: 32px;
     border: 3px solid #f1f5f9;
-    border-top-color: #f59e0b;
+    border-top-color: #F59E0B;
     border-radius: 50%;
     animation: rpt-spin 0.7s linear infinite;
 }
@@ -50,7 +51,7 @@
 /* ── Back Button Header ──────────────────────────────────────── */
 
 .rpt-back-header {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .rpt-back-btn {
@@ -58,19 +59,19 @@
     align-items: center;
     gap: 6px;
     padding: 7px 14px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
     background: #ffffff;
     font-size: 13px;
     font-weight: 600;
-    color: #64748b;
+    color: #64748B;
     cursor: pointer;
     transition: all 0.15s;
     font-family: inherit;
 }
 
 .rpt-back-btn:hover {
-    background: #f8fafc;
+    background: #F8FAFC;
     color: #0f172a;
     border-color: #cbd5e1;
 }
@@ -83,21 +84,21 @@
 
 .rpt-section {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 16px 18px;
-    margin-bottom: 16px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
 }
 
 .rpt-section-header {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     color: #0f172a;
     padding-bottom: 10px;
     margin-bottom: 14px;
-    border-bottom: 2px solid #f59e0b;
+    border-bottom: 2px solid #F59E0B;
 }
 
 /* ── Placeholder ─────────────────────────────────────────────── */
@@ -106,56 +107,66 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 32px 20px;
     font-size: 13px;
     color: #94a3b8;
     font-style: italic;
 }
 
-/* ── Scope Selection ─────────────────────────────────────────── */
+/* ── Sub-headers ────────────────────────────────────────────── */
 
 .rpt-sub-header {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #64748b;
+    color: #64748B;
     margin-bottom: 10px;
 }
+
+/* ── Scope Grid (2-column) ──────────────────────────────────── */
 
 .rpt-scope-group {
     display: flex;
     flex-direction: column;
-    gap: 0;
 }
 
-.rpt-form-row {
+.rpt-scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.rpt-field {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 0;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
 }
 
-.rpt-form-label {
-    font-size: 12px;
+.rpt-field-label {
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #64748b;
-    width: 60px;
-    flex-shrink: 0;
+    letter-spacing: 0.04em;
+    color: #64748B;
 }
 
+.rpt-hidden {
+    display: none !important;
+}
+
+/* ── Selects & Inputs ────────────────────────────────────────── */
+
 .rpt-select {
-    flex: 1;
-    max-width: 280px;
-    padding: 7px 10px;
-    border: 1px solid #e2e8f0;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #E2E8F0;
     border-radius: 6px;
     background: #ffffff;
     font-size: 13px;
     font-family: inherit;
-    color: #1e293b;
+    color: #1E293B;
     cursor: pointer;
     transition: border-color 0.15s;
     appearance: auto;
@@ -167,7 +178,7 @@
 
 .rpt-select:focus {
     outline: none;
-    border-color: #f59e0b;
+    border-color: #F59E0B;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
 }
 
@@ -176,14 +187,30 @@
     width: 12px;
     height: 12px;
     border: 2px solid #f1f5f9;
-    border-top-color: #f59e0b;
+    border-top-color: #F59E0B;
     border-radius: 50%;
     animation: rpt-spin 0.7s linear infinite;
-    flex-shrink: 0;
+    position: absolute;
+    right: 8px;
+    bottom: 10px;
 }
 
-.rpt-hidden {
-    display: none !important;
+/* ── Period + Content Side-by-Side ───────────────────────────── */
+
+.rpt-period-content-row {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.rpt-period-content-row > .rpt-period-group,
+.rpt-period-content-row > .rpt-content-group {
+    flex: 1;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* ── Period Selection ───────────────────────────────────────── */
@@ -199,7 +226,7 @@
 .rpt-radio-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 12px;
 }
 
 .rpt-radio-label {
@@ -212,7 +239,7 @@
 }
 
 .rpt-radio-label input[type="radio"] {
-    accent-color: #f59e0b;
+    accent-color: #F59E0B;
     margin: 0;
     cursor: pointer;
 }
@@ -228,22 +255,27 @@
     padding: 4px 0;
 }
 
+.rpt-date-row .rpt-field-label {
+    width: 40px;
+    flex-shrink: 0;
+}
+
 .rpt-date-input {
     flex: 1;
     max-width: 200px;
-    padding: 7px 10px;
-    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    border: 1px solid #E2E8F0;
     border-radius: 6px;
     background: #ffffff;
     font-size: 13px;
     font-family: inherit;
-    color: #1e293b;
+    color: #1E293B;
     transition: border-color 0.15s;
 }
 
 .rpt-date-input:focus {
     outline: none;
-    border-color: #f59e0b;
+    border-color: #F59E0B;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
 }
 
@@ -251,8 +283,8 @@
 
 .rpt-checkbox-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .rpt-checkbox-label {
@@ -265,7 +297,7 @@
 }
 
 .rpt-checkbox-label input[type="checkbox"] {
-    accent-color: #f59e0b;
+    accent-color: #F59E0B;
     margin: 0;
     cursor: pointer;
 }
@@ -275,21 +307,20 @@
 .rpt-textarea {
     display: block;
     width: 100%;
-    max-width: 400px;
-    padding: 8px 10px;
-    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    border: 1px solid #E2E8F0;
     border-radius: 6px;
     background: #ffffff;
     font-size: 13px;
     font-family: inherit;
-    color: #1e293b;
+    color: #1E293B;
     resize: vertical;
     transition: border-color 0.15s;
 }
 
 .rpt-textarea:focus {
     outline: none;
-    border-color: #f59e0b;
+    border-color: #F59E0B;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
 }
 
@@ -297,7 +328,7 @@
     color: #94a3b8;
 }
 
-/* ── Generate Buttons ───────────────────────────────────────── */
+/* ── Buttons ─────────────────────────────────────────────────── */
 
 .rpt-btn-row {
     display: flex;
@@ -309,7 +340,8 @@
 }
 
 .rpt-btn {
-    padding: 8px 18px;
+    flex: 1;
+    padding: 10px 20px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
@@ -317,6 +349,7 @@
     cursor: pointer;
     border: 1px solid transparent;
     transition: all 0.15s;
+    text-align: center;
 }
 
 .rpt-btn:disabled {
@@ -325,24 +358,24 @@
 }
 
 .rpt-btn-primary {
-    background: #f59e0b;
+    background: #F59E0B;
     color: #ffffff;
-    border-color: #f59e0b;
+    border-color: #F59E0B;
 }
 
 .rpt-btn-primary:hover:not(:disabled) {
-    background: #d97706;
-    border-color: #d97706;
+    background: #D97706;
+    border-color: #D97706;
 }
 
 .rpt-btn-secondary {
     background: #ffffff;
     color: #334155;
-    border-color: #e2e8f0;
+    border-color: #E2E8F0;
 }
 
 .rpt-btn-secondary:hover:not(:disabled) {
-    background: #f8fafc;
+    background: #F8FAFC;
     border-color: #cbd5e1;
 }
 
@@ -351,7 +384,7 @@
     width: 16px;
     height: 16px;
     border: 2px solid #f1f5f9;
-    border-top-color: #f59e0b;
+    border-top-color: #F59E0B;
     border-radius: 50%;
     animation: rpt-spin 0.7s linear infinite;
     flex-shrink: 0;
@@ -406,13 +439,10 @@
 
 .rpt-sched-field {
     flex: 1;
-    min-width: 120px;
-}
-
-.rpt-sched-field .rpt-form-label {
-    display: block;
-    margin-bottom: 4px;
-    width: auto;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .rpt-sched-field .rpt-select,
@@ -428,7 +458,7 @@
     padding: 10px 12px;
     border-top: 1px solid #f1f5f9;
     font-size: 13px;
-    color: #64748b;
+    color: #64748B;
 }
 
 .rpt-sched-status-dot {
@@ -456,14 +486,14 @@
 
 .rpt-btn-danger {
     background: #ffffff;
-    color: #ef4444;
+    color: #EF4444;
     border-color: #fca5a5;
 }
 
 .rpt-btn-danger:hover:not(:disabled) {
-    background: #ef4444;
+    background: #EF4444;
     color: #ffffff;
-    border-color: #ef4444;
+    border-color: #EF4444;
 }
 
 /* ── History Table ─────────────────────────────────────────── */
@@ -474,20 +504,26 @@
     font-size: 13px;
 }
 
+.rpt-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
 .rpt-table th {
-    background: #f8fafc;
+    background: #F8FAFC;
     font-weight: 600;
     text-align: left;
-    padding: 10px 12px;
-    color: #64748b;
+    padding: 8px 12px;
+    color: #64748B;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
 .rpt-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    border-bottom: 1px solid #E2E8F0;
     color: #334155;
 }
 
@@ -512,58 +548,74 @@
 
 .rpt-badge-error {
     background: #fef2f2;
-    color: #ef4444;
+    color: #EF4444;
 }
 
 .rpt-badge-pending {
     background: #fffbeb;
-    color: #d97706;
+    color: #D97706;
 }
 
-/* ── Download Link ─────────────────────────────────────────── */
+/* ── Download Link (pill style) ──────────────────────────────── */
 
 .rpt-download-link {
-    color: #f59e0b;
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: #fffbeb;
+    color: #D97706;
+    font-size: 12px;
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
+    transition: all 0.15s;
 }
 
 .rpt-download-link:hover {
-    text-decoration: underline;
-    color: #d97706;
+    background: #F59E0B;
+    color: #ffffff;
+    text-decoration: none;
 }
 
 /* ── Responsive: narrow widgets / mobile ──────────────────── */
 
-@media (max-width: 520px) {
+@media (max-width: 600px) {
     .rpt-root {
-        padding: 8px 10px;
+        padding: 10px 12px;
     }
 
     .rpt-section {
-        padding: 12px 12px;
+        padding: 12px 14px;
     }
 
-    .rpt-radio-row,
-    .rpt-checkbox-row {
+    .rpt-scope-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rpt-period-content-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .rpt-period-content-row > .rpt-period-group {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .rpt-period-content-row > .rpt-content-group {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .rpt-radio-row {
         flex-direction: column;
         gap: 8px;
     }
 
-    .rpt-form-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-    }
-
-    .rpt-form-label {
-        width: auto;
-    }
-
-    .rpt-select,
-    .rpt-date-input {
-        max-width: none;
+    .rpt-checkbox-row {
+        gap: 6px;
     }
 
     .rpt-sched-row {
@@ -575,12 +627,10 @@
     }
 
     .rpt-btn {
-        flex: 1;
         min-width: 100px;
-        text-align: center;
     }
 
-    .rpt-textarea {
+    .rpt-date-input {
         max-width: none;
     }
 
@@ -590,6 +640,6 @@
 
     .rpt-table th,
     .rpt-table td {
-        padding: 8px 8px;
+        padding: 6px 8px;
     }
 }
