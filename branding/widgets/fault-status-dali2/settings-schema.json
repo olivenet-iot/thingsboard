@@ -1,0 +1,23 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fault Status DALI2 Settings",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "title": "Device ID (fallback)",
+        "description": "Used if no datasource entity is available"
+      },
+      "tiltThreshold": {
+        "type": "number",
+        "title": "Tilt Threshold (degrees)",
+        "description": "Tilt angle above this value triggers a fault",
+        "default": 10
+      }
+    }
+  },
+  "form": [
+    "deviceId",
+    "tiltThreshold"
+  ]
+}

@@ -1,0 +1,77 @@
+<div id="fault-status-root">
+  <div class="fs-header">
+    <span class="fs-title">Fault Status — DALI2</span>
+    <span class="fs-badge" id="fsBadge">Loading...</span>
+  </div>
+
+  <div class="fs-body">
+    <!-- Left Column -->
+    <div class="fs-column">
+      <div class="fs-section">
+        <div class="fs-section-label">FAULTS</div>
+        <div class="fs-row" id="row-status_control_gear_failure">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Control Gear Failure</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+        <div class="fs-row" id="row-status_lamp_failure">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Lamp Failure</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+      </div>
+      <div class="fs-section">
+        <div class="fs-section-label">WARNINGS</div>
+        <div class="fs-row" id="row-status_limit_error">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Limit Error</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+        <div class="fs-row" id="row-status_reset_state">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Reset State</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+        <div class="fs-row" id="row-status_missing_short_addr">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Missing Short Addr</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+      </div>
+      <div class="fs-section">
+        <div class="fs-section-label">PHYSICAL</div>
+        <div class="fs-row" id="row-tilt">
+          <span class="fs-dot is-ok"></span>
+          <span class="fs-label">Tilt / Tamper</span>
+          <span class="fs-status is-ok">OK</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="fs-column">
+      <div class="fs-section">
+        <div class="fs-section-label">DEVICE STATUS</div>
+        <div class="fs-row" id="row-status_lamp_on">
+          <span class="fs-dot is-info-inactive"></span>
+          <span class="fs-label">Lamp On</span>
+          <span class="fs-status is-info-inactive">OFF</span>
+        </div>
+        <div class="fs-row" id="row-status_power_cycle_seen">
+          <span class="fs-dot is-info-inactive"></span>
+          <span class="fs-label">Power Cycle Seen</span>
+          <span class="fs-status is-info-inactive">NO</span>
+        </div>
+        <div class="fs-row" id="row-status_fade_running">
+          <span class="fs-dot is-info-inactive"></span>
+          <span class="fs-label">Fade Running</span>
+          <span class="fs-status is-info-inactive">IDLE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fs-footer" id="fsFooter">
+    <span class="fs-timestamp">Last update: —</span>
+  </div>
+</div>
