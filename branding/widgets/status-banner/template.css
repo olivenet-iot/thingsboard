@@ -77,7 +77,7 @@
 }
 
 .sb-device-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
   white-space: nowrap;
@@ -94,7 +94,7 @@
 }
 
 .sb-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 3px;
@@ -108,7 +108,7 @@
 }
 
 .sb-dim-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
   font-weight: 500;
 }
@@ -131,7 +131,7 @@
 }
 
 .sb-fault-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -141,7 +141,7 @@
 .sb-fault-title.is-warn { color: #dc2626; }
 
 .sb-fault-detail {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
   margin-top: 1px;
   white-space: nowrap;
@@ -177,7 +177,7 @@
 }
 
 .sb-conn-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -188,7 +188,7 @@
 .sb-conn-label.is-stale { color: #d97706; }
 
 .sb-conn-time {
-  font-size: 10px;
+  font-size: 11px;
   color: #94a3b8;
   margin-top: 1px;
   white-space: nowrap;
