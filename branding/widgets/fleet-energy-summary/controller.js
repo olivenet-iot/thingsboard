@@ -5,7 +5,7 @@
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
-    self.cardsEl = self.$container.find('#energy-cards');
+    self.cardsEl = self.$container.find('#energy-list');
     self.periodEl = self.$container.find('#energy-period');
     self.titleEl = self.$container.find('.header-title');
 
@@ -367,50 +367,34 @@ self.renderCards = function(entityList, loading) {
         var energyDisplay = isLoading ? '\u2014' : self.formatEnergy(energy.energyWh);
         var co2Display = isLoading ? '\u2014' : self.formatCO2(energy.co2Grams);
 
-        // Build pills
+        // Build pills (compact labels)
         var pillsHtml = '';
         if (online > 0) {
-            pillsHtml += '<span class="pill pill-online"><span class="pill-dot"></span>' + online + ' online</span>';
+            pillsHtml += '<span class="pill pill-online"><span class="pill-dot"></span>' + online + ' on</span>';
         }
         if (offline > 0) {
-            pillsHtml += '<span class="pill pill-offline"><span class="pill-dot"></span>' + offline + ' offline</span>';
+            pillsHtml += '<span class="pill pill-offline"><span class="pill-dot"></span>' + offline + ' off</span>';
         }
         if (faults > 0) {
-            pillsHtml += '<span class="pill pill-fault"><span class="pill-dot"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
+            pillsHtml += '<span class="pill pill-fault"><span class="pill-dot"></span>' + faults + ' flt</span>';
         }
 
-        // Chevron
-        var chevronLabel = isSiteList ? '<span class="chevron-label">SignConnect</span>' : '';
-
-        html += '<div class="energy-card ' + statusClass + loadingClass + '" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
-            '<div class="card-main">' +
-                '<div class="card-top-row">' +
-                    '<span class="card-entity-name">' + self.escapeHtml(entity.name) + '</span>' +
-                    '<span class="card-device-count">' + deviceText + '</span>' +
-                '</div>' +
-                '<div class="card-pills">' + pillsHtml + '</div>' +
-                '<div class="card-metrics">' +
-                    '<div class="metric-block metric-energy">' +
-                        '<span class="metric-value">' + energyDisplay + '</span>' +
-                        '<span class="metric-label">energy used</span>' +
-                    '</div>' +
-                    '<div class="metric-block metric-co2">' +
-                        '<span class="metric-value">' + co2Display + '</span>' +
-                        '<span class="metric-label">CO\u2082 produced</span>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-            '<div class="card-chevron">' +
-                '<span class="chevron-icon">\u203A</span>' +
-                chevronLabel +
-            '</div>' +
+        html += '<div class="energy-row ' + statusClass + loadingClass + '" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
+            '<span class="row-name">' + self.escapeHtml(entity.name) + '</span>' +
+            '<span class="row-devices">' + deviceText + '</span>' +
+            '<span class="row-pills">' + pillsHtml + '</span>' +
+            '<span class="row-metrics">' +
+                '<span class="metric-energy"><span class="metric-value">' + energyDisplay + '</span></span>' +
+                '<span class="metric-co2"><span class="metric-value">' + co2Display + '</span></span>' +
+            '</span>' +
+            '<span class="row-chevron">\u203A</span>' +
         '</div>';
     });
 
     self.cardsEl.html(html);
 
     // Bind click handlers for navigation
-    self.cardsEl.find('.energy-card').on('click', function() {
+    self.cardsEl.find('.energy-row').on('click', function() {
         var entityId = $(this).data('entity-id');
         var entityName = $(this).data('entity-name');
 
@@ -515,6 +499,6 @@ self.onDestroy = function() {
         self.twSubscription.unsubscribe();
         self.twSubscription = null;
     }
-    self.cardsEl.find('.energy-card').off('click');
+    self.cardsEl.find('.energy-row').off('click');
     self.$container.find('#reports-nav-btn').off('click');
 };
