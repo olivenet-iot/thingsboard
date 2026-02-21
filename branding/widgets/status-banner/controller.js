@@ -2,7 +2,7 @@
    STATUS BANNER WIDGET — controller.js
    ThingsBoard CE Custom Widget (static type)
    
-   Polls: dim_value, status_lamp_on, device_type, all fault_* flags
+   Polls: dim_value, status_lamp_on, device_type, fault_*/status_* flags, tilt
    Calculates: connection status from last telemetry timestamp
    ========================================================= */
 
@@ -54,36 +54,30 @@ self.onInit = function () {
 
     var pollTimer = null;
 
-    // ── Fault Definitions ─────────────────────────────────────────
-    var FAULT_MAP = {
-        controller: [
-            { key: 'fault_overall_failure', label: 'Overall Failure' },
-            { key: 'fault_under_voltage', label: 'Under Voltage' },
-            { key: 'fault_over_voltage', label: 'Over Voltage' },
-            { key: 'fault_power_limit', label: 'Power Limit' }
-        ],
-        driver: [
-            { key: 'fault_thermal_derating', label: 'Thermal Derating' },
-            { key: 'fault_thermal_shutdown', label: 'Thermal Shutdown' }
-        ],
-        lightSrc: [
-            { key: 'fault_light_src_failure', label: 'Light Source Failure' },
-            { key: 'fault_light_src_short_circuit', label: 'Short Circuit' },
-            { key: 'fault_light_src_thermal_derate', label: 'Thermal Derating' },
-            { key: 'fault_light_src_thermal_shutdn', label: 'Thermal Shutdown' }
-        ]
-    };
+    // ── Fault / Warning Definitions ────────────────────────────────
+    // Keys that indicate a FAULT when true (critical)
+    var FAULT_KEYS = [
+        // D4i fault summary (Ch4) — only present on D4i devices
+        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
+        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
+        'fault_light_src_failure', 'fault_light_src_short_circuit',
+        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
+        // DALI status (Ch3) — present on BOTH D4i and DALI2
+        'status_control_gear_failure', 'status_lamp_failure'
+    ];
 
-    var ALL_FAULT_KEYS = [];
-    Object.keys(FAULT_MAP).forEach(function (cat) {
-        FAULT_MAP[cat].forEach(function (f) {
-            ALL_FAULT_KEYS.push(f.key);
-        });
-    });
+    // Keys that indicate a WARNING when true (attention needed)
+    var WARNING_KEYS = [
+        'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
+    ];
+
+    // Tilt — fault if above threshold
+    var TILT_KEY = 'tilt';
+    var TILT_THRESHOLD = 10;
 
     // ── Telemetry keys ────────────────────────────────────────────
     var TELEMETRY_KEYS = ['dim_value', 'status_lamp_on', 'device_type']
-        .concat(ALL_FAULT_KEYS).join(',');
+        .concat(FAULT_KEYS).concat(WARNING_KEYS).concat([TILT_KEY]).join(',');
 
     // ── DOM Refs ──────────────────────────────────────────────────
     var elDeviceName   = document.getElementById('sb-device-name');
@@ -133,20 +127,40 @@ self.onInit = function () {
     }
 
     function updateFaults(telemetryData) {
-        var activeFaults = { controller: [], driver: [], lightSrc: [] };
-        var totalFaults = 0;
+        var faultCount = 0;
+        var warnCount = 0;
+        var labels = [];
 
-        Object.keys(FAULT_MAP).forEach(function (cat) {
-            FAULT_MAP[cat].forEach(function (f) {
-                var val = getLatestValue(telemetryData, f.key);
-                if (val === 'true' || val === true || val === '1') {
-                    activeFaults[cat].push(f.label);
-                    totalFaults++;
-                }
-            });
+        // Check fault keys
+        FAULT_KEYS.forEach(function (key) {
+            var val = getLatestValue(telemetryData, key);
+            if (val === 'true' || val === true || val === '1') {
+                faultCount++;
+                labels.push(formatKeyLabel(key));
+            }
         });
 
-        if (totalFaults === 0) {
+        // Check warning keys
+        WARNING_KEYS.forEach(function (key) {
+            var val = getLatestValue(telemetryData, key);
+            if (val === 'true' || val === true || val === '1') {
+                warnCount++;
+                labels.push(formatKeyLabel(key));
+            }
+        });
+
+        // Check tilt
+        var tiltThreshold = (self.ctx.settings && self.ctx.settings.tiltThreshold)
+            ? self.ctx.settings.tiltThreshold : TILT_THRESHOLD;
+        var tiltVal = getLatestValue(telemetryData, TILT_KEY);
+        if (tiltVal !== null && parseFloat(tiltVal) > tiltThreshold) {
+            faultCount++;
+            labels.push('Tilt (' + parseFloat(tiltVal).toFixed(1) + '\u00B0)');
+        }
+
+        var totalIssues = faultCount + warnCount;
+
+        if (totalIssues === 0) {
             // All OK
             elFaultIcon.className = 'sb-fault-icon is-ok';
             elIconOk.style.display = 'block';
@@ -156,19 +170,25 @@ self.onInit = function () {
             elFaultDetail.textContent = 'No active faults';
             elFaultZone.style.cursor = 'default';
         } else {
-            // Faults detected
+            // Issues detected
             elFaultIcon.className = 'sb-fault-icon is-warn';
             elIconOk.style.display = 'none';
             elIconWarn.style.display = 'block';
-            elFaultTitle.textContent = totalFaults + ' Fault' + (totalFaults > 1 ? 's' : '') + ' Detected';
+
+            // Title: "X Fault(s), Y Warning(s)" or just faults/warnings
+            var titleParts = [];
+            if (faultCount > 0) titleParts.push(faultCount + ' Fault' + (faultCount > 1 ? 's' : ''));
+            if (warnCount > 0) titleParts.push(warnCount + ' Warning' + (warnCount > 1 ? 's' : ''));
+            elFaultTitle.textContent = titleParts.join(', ');
             elFaultTitle.className = 'sb-fault-title is-warn';
 
-            // Build detail summary
-            var parts = [];
-            if (activeFaults.controller.length > 0) parts.push('Controller: ' + activeFaults.controller.length);
-            if (activeFaults.driver.length > 0) parts.push('Driver: ' + activeFaults.driver.length);
-            if (activeFaults.lightSrc.length > 0) parts.push('Light Src: ' + activeFaults.lightSrc.length);
-            elFaultDetail.textContent = parts.join(' · ');
+            // Detail: first 3 labels + overflow
+            var maxShow = 3;
+            var shown = labels.slice(0, maxShow).join(' · ');
+            if (labels.length > maxShow) {
+                shown += ' +' + (labels.length - maxShow) + ' more';
+            }
+            elFaultDetail.textContent = shown;
         }
     }
 
@@ -220,6 +240,14 @@ self.onInit = function () {
             return data[key][0].value;
         }
         return null;
+    }
+
+    function formatKeyLabel(key) {
+        // 'fault_under_voltage' → 'Under Voltage', 'status_control_gear_failure' → 'Control Gear Failure'
+        var stripped = key.replace(/^(fault_|status_)/, '');
+        return stripped.replace(/_/g, ' ').replace(/\b\w/g, function (c) {
+            return c.toUpperCase();
+        });
     }
 
     function formatAge(ms) {
