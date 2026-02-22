@@ -14,7 +14,9 @@ self.onInit = function() {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
         targetState: self.ctx.settings.targetState || 'estate',
         navigationType: self.ctx.settings.navigationType || 'state',
-        targetDashboardId: self.ctx.settings.targetDashboardId || ''
+        standardDashboardId: self.ctx.settings.standardDashboardId || '',
+        plusDashboardId: self.ctx.settings.plusDashboardId || '',
+        defaultTier: self.ctx.settings.defaultTier || 'standard'
     };
 
     self.titleEl.text(self.settings.headerTitle);
@@ -22,6 +24,7 @@ self.onInit = function() {
     self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault}], fetchedAt }
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, fetchedAt }
     self.energyCache = {};    // entityId → { energyWh, co2Grams, fetchedAt }
+    self.tierCache = {};      // assetId → { tier, fetchedAt }
     self.fetchInProgress = {};
     self.lastTimewindowKey = '';
 
@@ -331,6 +334,38 @@ self.enrichDevices = function(devices) {
     return Promise.all(promises);
 };
 
+// ── Tier Lookup ────────────────────────────────────────────────
+
+self.getEntityTier = function(entityId) {
+    var cached = self.tierCache[entityId];
+    if (cached && (Date.now() - cached.fetchedAt) < 60000) {
+        return Promise.resolve(cached.tier);
+    }
+
+    var key = 'tier_' + entityId;
+    if (self.fetchInProgress[key]) {
+        return self.fetchInProgress[key];
+    }
+
+    var url = '/api/plugins/telemetry/ASSET/' + entityId +
+        '/values/attributes/SERVER_SCOPE?keys=dashboard_tier';
+    var promise = self.ctx.http.get(url).toPromise().then(function(attrs) {
+        var tier = self.settings.defaultTier;
+        if (attrs && attrs.length > 0 && attrs[0].value) {
+            tier = String(attrs[0].value).toLowerCase();
+        }
+        self.tierCache[entityId] = { tier: tier, fetchedAt: Date.now() };
+        delete self.fetchInProgress[key];
+        return tier;
+    }).catch(function() {
+        delete self.fetchInProgress[key];
+        return self.settings.defaultTier;
+    });
+
+    self.fetchInProgress[key] = promise;
+    return promise;
+};
+
 // ── Rendering ──────────────────────────────────────────────────
 
 self.renderCards = function(entityList, loading) {
@@ -339,6 +374,26 @@ self.renderCards = function(entityList, loading) {
         return;
     }
 
+    var isSiteList = self.settings.navigationType === 'dashboard';
+
+    if (isSiteList && !loading) {
+        // Fetch tiers for all site entities, then render
+        var tierPromises = entityList.map(function(entity) {
+            return self.getEntityTier(entity.id).then(function(tier) {
+                return { id: entity.id, tier: tier };
+            });
+        });
+        Promise.all(tierPromises).then(function(tiers) {
+            var tierMap = {};
+            tiers.forEach(function(t) { tierMap[t.id] = t.tier; });
+            self.renderCardsHTML(entityList, loading, tierMap);
+        });
+    } else {
+        self.renderCardsHTML(entityList, loading, {});
+    }
+};
+
+self.renderCardsHTML = function(entityList, loading, tierMap) {
     var isSiteList = self.settings.navigationType === 'dashboard';
     var html = '';
 
@@ -363,6 +418,8 @@ self.renderCards = function(entityList, loading) {
             statusClass = 'status-warning';
         }
 
+        var tier = tierMap[entity.id] || self.settings.defaultTier;
+
         var deviceText = total > 0 ? (total + ' device' + (total !== 1 ? 's' : '')) : '...';
         var energyDisplay = isLoading ? '\u2014' : self.formatEnergy(energy.energyWh);
         var co2Display = isLoading ? '\u2014' : self.formatCO2(energy.co2Grams);
@@ -379,10 +436,15 @@ self.renderCards = function(entityList, loading) {
             pillsHtml += '<span class="pill pill-fault"><span class="pill-dot"></span>' + faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
         }
 
-        // Chevron
-        var chevronLabel = isSiteList ? '<span class="chevron-label">SignConnect</span>' : '';
+        // Chevron — tier-aware badge for site-level cards
+        var chevronLabel = '';
+        if (isSiteList) {
+            var tierClass = tier === 'plus' ? 'tier-plus' : 'tier-standard';
+            var tierText = tier === 'plus' ? 'Plus' : 'Standard';
+            chevronLabel = '<span class="chevron-label ' + tierClass + '">' + tierText + '</span>';
+        }
 
-        html += '<div class="energy-card ' + statusClass + loadingClass + '" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '">' +
+        html += '<div class="energy-card ' + statusClass + loadingClass + '" data-entity-id="' + entity.id + '" data-entity-name="' + self.escapeHtml(entity.name) + '" data-tier="' + self.escapeHtml(tier) + '">' +
             '<div class="card-main">' +
                 '<div class="card-top-row">' +
                     '<span class="card-entity-name">' + self.escapeHtml(entity.name) + '</span>' +
@@ -414,7 +476,7 @@ self.renderCards = function(entityList, loading) {
         var entityId = $(this).data('entity-id');
         var entityName = $(this).data('entity-name');
 
-        if (self.settings.navigationType === 'dashboard' && self.settings.targetDashboardId) {
+        if (self.settings.navigationType === 'dashboard') {
             self.navigateToDashboard(entityId, entityName);
         } else {
             self.navigateToState(entityId, entityName);
@@ -454,19 +516,28 @@ self.objToBase64 = function(obj) {
 };
 
 self.navigateToDashboard = function(entityId, entityName) {
-    var dashboardId = self.settings.targetDashboardId;
+    self.getEntityTier(entityId).then(function(tier) {
+        var dashboardId = tier === 'plus'
+            ? self.settings.plusDashboardId
+            : self.settings.standardDashboardId;
 
-    var stateArray = [{
-        id: 'site',
-        params: {
-            entityId: { id: entityId, entityType: 'ASSET' },
-            entityName: entityName
+        if (!dashboardId) {
+            console.error('[FLEET] No dashboard configured for tier "' + tier + '"');
+            return;
         }
-    }];
-    var stateParam = encodeURIComponent(self.objToBase64(stateArray));
-    var url = '/dashboards/' + dashboardId + '?state=' + stateParam;
 
-    window.open(url, '_blank');
+        var stateArray = [{
+            id: 'site',
+            params: {
+                entityId: { id: entityId, entityType: 'ASSET' },
+                entityName: entityName
+            }
+        }];
+        var stateParam = encodeURIComponent(self.objToBase64(stateArray));
+        var url = '/dashboards/' + dashboardId + '?state=' + stateParam;
+
+        window.open(url, '_blank');
+    });
 };
 
 // ── Formatting ─────────────────────────────────────────────────

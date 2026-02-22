@@ -279,12 +279,25 @@
 
 .chevron-label {
   font-size: 8px !important;
-  color: #94a3b8 !important;
   white-space: nowrap !important;
 }
 
-.energy-card:hover .chevron-label {
+.chevron-label.tier-standard {
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.chevron-label.tier-plus {
   color: #f59e0b !important;
+  font-weight: 700 !important;
+}
+
+.energy-card:hover .chevron-label.tier-standard {
+  color: #f59e0b !important;
+}
+
+.energy-card:hover .chevron-label.tier-plus {
+  color: #64748b !important;
 }
 
 /* Loading placeholder */

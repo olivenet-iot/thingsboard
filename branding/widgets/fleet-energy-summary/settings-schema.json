@@ -23,10 +23,20 @@
         "type": "string",
         "default": "state"
       },
-      "targetDashboardId": {
-        "title": "Target dashboard ID (when navigationType=dashboard)",
+      "standardDashboardId": {
+        "title": "Standard (DALI2) dashboard ID",
         "type": "string",
         "default": ""
+      },
+      "plusDashboardId": {
+        "title": "Plus (D4i) dashboard ID",
+        "type": "string",
+        "default": ""
+      },
+      "defaultTier": {
+        "title": "Default tier when attribute is missing",
+        "type": "string",
+        "default": "standard"
       }
     }
   },
@@ -35,6 +45,8 @@
     {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
     {"key": "targetState", "type": "text", "placeholder": "estate"},
     {"key": "navigationType", "type": "text", "placeholder": "state"},
-    {"key": "targetDashboardId", "type": "text", "placeholder": "dashboard-uuid"}
+    {"key": "standardDashboardId", "type": "text", "placeholder": "standard-dashboard-uuid"},
+    {"key": "plusDashboardId", "type": "text", "placeholder": "plus-dashboard-uuid"},
+    {"key": "defaultTier", "type": "text", "placeholder": "standard"}
   ]
 }

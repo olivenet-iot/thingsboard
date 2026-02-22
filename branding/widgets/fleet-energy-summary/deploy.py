@@ -67,7 +67,9 @@ def build_descriptor():
             "onlineThresholdMinutes": 10,
             "targetState": "estate",
             "navigationType": "state",
-            "targetDashboardId": ""
+            "standardDashboardId": "",
+            "plusDashboardId": "",
+            "defaultTier": "standard"
         },
         "title": WIDGET_NAME,
         "dropShadow": False,
