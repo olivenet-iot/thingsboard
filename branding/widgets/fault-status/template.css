@@ -45,6 +45,11 @@
   color: #dc2626;
 }
 
+.fs-badge.is-warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+
 .fs-badge.is-loading {
   background: #f1f5f9;
   color: #94a3b8;
@@ -86,6 +91,10 @@
   padding: 6px 0 4px 0;
 }
 
+.fs-section-label.is-fault-label   { color: #dc2626; }
+.fs-section-label.is-warning-label { color: #d97706; }
+.fs-section-label.is-info-label    { color: #2563eb; }
+
 /* ── Row ── */
 .fs-row {
   display: flex !important;
@@ -100,6 +109,11 @@
   background: #fef2f2;
 }
 
+.fs-row.is-warning {
+  background: #fffbeb;
+}
+
+/* ── Dot ── */
 .fs-dot {
   width: 8px;
   height: 8px;
@@ -119,11 +133,33 @@
   animation: faultPulse 2s ease-in-out infinite;
 }
 
+.fs-dot.is-warning {
+  background: #d97706;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15);
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+.fs-dot.is-info-active {
+  background: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.fs-dot.is-info-inactive {
+  background: #cbd5e1;
+  box-shadow: 0 0 0 2px rgba(203, 213, 225, 0.15);
+}
+
 @keyframes faultPulse {
   0%, 100% { box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15); }
   50% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.25); }
 }
 
+@keyframes warningPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15); }
+  50% { box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.25); }
+}
+
+/* ── Label ── */
 .fs-label {
   flex: 1 !important;
   font-size: 12px;
@@ -136,6 +172,12 @@
   font-weight: 600;
 }
 
+.fs-row.is-warning .fs-label {
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* ── Status Text ── */
 .fs-status {
   font-size: 11px;
   font-weight: 600;
@@ -149,6 +191,18 @@
 
 .fs-status.is-fault {
   color: #dc2626;
+}
+
+.fs-status.is-warning {
+  color: #d97706;
+}
+
+.fs-status.is-info-active {
+  color: #2563eb;
+}
+
+.fs-status.is-info-inactive {
+  color: #94a3b8;
 }
 
 /* ── Footer ── */

@@ -21,8 +21,8 @@ TB_USER = os.getenv("TB_USER", "support@lumosoft.io")
 TB_PASS = os.getenv("TB_PASS", "tenant")
 BUNDLE_NAME = "SignConnect"
 WIDGET_FQN = "fault_status"
-WIDGET_NAME = "Fault Status"
-WIDGET_DESC = "Displays 10 D4i fault flags + tilt status with real-time polling"
+WIDGET_NAME = "Fault Status D4i"
+WIDGET_DESC = "Displays D4i fault flags, DALI2 warnings, device status and tilt with real-time polling"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
