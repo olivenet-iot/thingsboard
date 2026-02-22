@@ -2,7 +2,7 @@
 // Widget type: latest
 // Datasource: entity alias returning site assets (All Sites, Estate Sites, Region Sites)
 // Datasource keys: latitude, longitude, address (all server attributes)
-// Settings: onlineThresholdMinutes, targetDashboardId
+// Settings: onlineThresholdMinutes, standardDashboardId, plusDashboardId, defaultTier
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -10,7 +10,9 @@ self.onInit = function() {
 
     self.settings = {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
-        targetDashboardId: self.ctx.settings.targetDashboardId || ''
+        standardDashboardId: self.ctx.settings.standardDashboardId || '',
+        plusDashboardId: self.ctx.settings.plusDashboardId || '',
+        defaultTier: self.ctx.settings.defaultTier || 'standard'
     };
 
     self.map = null;
@@ -18,6 +20,7 @@ self.onInit = function() {
     self.markerGroup = null;
     self.statsCache = {};
     self.sitesData = {};
+    self.tierCache = {};
     self.initAttempted = false;
 
     // Wait for container to have dimensions
@@ -114,12 +117,17 @@ self.updateMarkers = function() {
 
     if (siteList.length === 0) return;
 
-    // Fetch stats for all sites, then render markers
-    var promises = siteList.map(function(site) {
+    // Fetch stats and tiers for all sites in parallel, then render markers
+    var statsPromises = siteList.map(function(site) {
         return self.getSiteStats(site.id);
     });
+    var tierPromises = siteList.map(function(site) {
+        return self.getEntityTier(site.id).then(function(tier) {
+            site.tier = tier;
+        });
+    });
 
-    Promise.all(promises).then(function() {
+    Promise.all(statsPromises.concat(tierPromises)).then(function() {
         self.renderMarkers(siteList);
     });
 };
@@ -198,6 +206,26 @@ self.enrichDevices = function(devices) {
     });
 
     return Promise.all(promises);
+};
+
+self.getEntityTier = function(entityId) {
+    var cached = self.tierCache[entityId];
+    if (cached && (Date.now() - cached.fetchedAt) < 60000) {
+        return Promise.resolve(cached.tier);
+    }
+
+    var url = '/api/plugins/telemetry/ASSET/' + entityId +
+              '/values/attributes/SERVER_SCOPE?keys=dashboard_tier';
+    return self.ctx.http.get(url).toPromise().then(function(attrs) {
+        var tier = self.settings.defaultTier;
+        if (attrs && attrs.length > 0 && attrs[0].value) {
+            tier = attrs[0].value;
+        }
+        self.tierCache[entityId] = { tier: tier, fetchedAt: Date.now() };
+        return tier;
+    }).catch(function() {
+        return self.settings.defaultTier;
+    });
 };
 
 self.renderMarkers = function(siteList) {
@@ -283,8 +311,15 @@ self.buildPopup = function(site, stats, status) {
     var offline = stats.offline || 0;
     var faults = stats.faults || 0;
 
+    var tier = site.tier || self.settings.defaultTier;
+    var tierLabel = tier === 'plus' ? 'Plus' : 'Standard';
+    var tierClass = tier === 'plus' ? 'tier-plus' : 'tier-standard';
+
     var html = '<div class="map-popup">';
+    html += '<div class="popup-name-row">';
     html += '<div class="popup-name">' + self.escapeHtml(site.name) + '</div>';
+    html += '<span class="popup-tier-badge ' + tierClass + '">' + tierLabel + '</span>';
+    html += '</div>';
 
     if (site.address) {
         html += '<div class="popup-address">' + self.escapeHtml(site.address) + '</div>';
@@ -303,8 +338,9 @@ self.buildPopup = function(site, stats, status) {
     }
     html += '</div>';
 
-    if (self.settings.targetDashboardId) {
-        html += '<button class="popup-btn" data-site-id="' + site.id + '">Open SignConnect →</button>';
+    if (self.settings.standardDashboardId || self.settings.plusDashboardId) {
+        var btnLabel = tier === 'plus' ? 'Open SignConnect Plus →' : 'Open SignConnect →';
+        html += '<button class="popup-btn" data-site-id="' + site.id + '">' + btnLabel + '</button>';
     }
 
     html += '</div>';
@@ -324,19 +360,28 @@ self.objToBase64 = function(obj) {
 };
 
 self.navigateToSite = function(siteId, siteName) {
-    if (!self.settings.targetDashboardId) return;
+    self.getEntityTier(siteId).then(function(tier) {
+        var dashboardId = tier === 'plus'
+            ? self.settings.plusDashboardId
+            : self.settings.standardDashboardId;
 
-    var stateArray = [{
-        id: 'site',
-        params: {
-            entityId: { id: siteId, entityType: 'ASSET' },
-            entityName: siteName
+        if (!dashboardId) {
+            console.error('Fleet Map: no dashboard configured for tier "' + tier + '"');
+            return;
         }
-    }];
-    var stateParam = encodeURIComponent(self.objToBase64(stateArray));
-    var url = '/dashboards/' + self.settings.targetDashboardId + '?state=' + stateParam;
 
-    window.open(url, '_blank');
+        var stateArray = [{
+            id: 'site',
+            params: {
+                entityId: { id: siteId, entityType: 'ASSET' },
+                entityName: siteName
+            }
+        }];
+        var stateParam = encodeURIComponent(self.objToBase64(stateArray));
+        var url = '/dashboards/' + dashboardId + '?state=' + stateParam;
+
+        window.open(url, '_blank');
+    });
 };
 
 self.escapeHtml = function(text) {

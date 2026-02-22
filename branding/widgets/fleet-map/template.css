@@ -31,11 +31,36 @@
   padding: 14px 16px !important;
 }
 
+.map-popup .popup-name-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 4px !important;
+}
+
 .map-popup .popup-name {
   font-size: 14px !important;
   font-weight: 700 !important;
   color: #0f172a !important;
-  margin-bottom: 4px !important;
+}
+
+.map-popup .popup-tier-badge {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 1px 7px !important;
+  border-radius: 9999px !important;
+  white-space: nowrap !important;
+  line-height: 1.6 !important;
+}
+
+.map-popup .popup-tier-badge.tier-standard {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.map-popup .popup-tier-badge.tier-plus {
+  background: #fffbeb !important;
+  color: #d97706 !important;
 }
 
 .map-popup .popup-address {

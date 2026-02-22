@@ -68,7 +68,9 @@ def build_descriptor():
         "padding": "0",
         "settings": {
             "onlineThresholdMinutes": 10,
-            "targetDashboardId": ""
+            "standardDashboardId": "",
+            "plusDashboardId": "",
+            "defaultTier": "standard"
         },
         "title": WIDGET_NAME,
         "dropShadow": False,
