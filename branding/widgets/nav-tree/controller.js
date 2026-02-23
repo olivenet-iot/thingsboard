@@ -356,9 +356,10 @@ self.buildTreeNode = function(node) {
     var isExpanded = !!self.expandedNodes[node.id];
     var chevronClass = isExpanded ? 'nt-chevron-expanded' : '';
     var childrenStyle = isExpanded ? '' : 'display:none;';
-    var indent = node.level * 16;
+    var indent = node.level * 20;
     var icon = self.getNodeIcon(node.type);
     var activeClass = self.isActiveNode(node.id) ? ' nt-node-active' : '';
+    var levelClass = ' nt-level-' + node.level;
 
     var childCountBadge = '';
     if (node.children && node.children.length > 0) {
@@ -374,7 +375,7 @@ self.buildTreeNode = function(node) {
     }
 
     var html = '<div class="nt-node" data-id="' + node.id + '" data-type="' + node.type + '" data-level="' + node.level + '">';
-    html += '<div class="nt-node-row' + activeClass + '" data-id="' + node.id + '" style="padding-left:' + (12 + indent) + 'px;">';
+    html += '<div class="nt-node-row' + levelClass + activeClass + '" data-id="' + node.id + '" style="padding-left:' + (12 + indent) + 'px;">';
 
     // Chevron for expandable nodes
     if (node.type !== 'device') {
@@ -391,6 +392,11 @@ self.buildTreeNode = function(node) {
     // Device-level status dot
     if (node.type === 'device') {
         html += self.buildDeviceStatusDot(node);
+    }
+
+    // Nav arrow for navigable (non-device) nodes
+    if (node.type !== 'device') {
+        html += '<span class="nt-nav-arrow">&#8250;</span>';
     }
 
     html += '</div>';
@@ -415,12 +421,13 @@ self.buildTreeNode = function(node) {
 };
 
 self.buildDeviceNode = function(device, level) {
-    var indent = level * 16;
+    var indent = level * 20;
     var statusDot = self.buildDeviceStatusDot(device);
     var activeClass = self.isActiveNode(device.id) ? ' nt-node-active' : '';
+    var levelClass = ' nt-level-' + level;
 
     var html = '<div class="nt-node nt-node-device" data-id="' + device.id + '" data-type="device" data-level="' + level + '">';
-    html += '<div class="nt-node-row' + activeClass + '" data-id="' + device.id + '" style="padding-left:' + (12 + indent) + 'px;">';
+    html += '<div class="nt-node-row' + levelClass + activeClass + '" data-id="' + device.id + '" style="padding-left:' + (12 + indent) + 'px;">';
     html += '<span class="nt-chevron-spacer"></span>';
     html += '<span class="nt-icon nt-icon-device">&#9671;</span>';
     html += '<span class="nt-label">' + self.escapeHtml(device.name) + '</span>';
@@ -472,30 +479,27 @@ self.getNodeIcon = function(type) {
 // ── Tree Events ────────────────────────────────────────────────
 
 self.bindTreeEvents = function() {
+    // Chevron click → expand/collapse only
+    self.treeEl.find('.nt-chevron').off('click').on('click', function(e) {
+        e.stopPropagation();
+        var nodeEl = $(this).closest('.nt-node');
+        self.toggleNode(nodeEl.data('id'), nodeEl.data('type'), nodeEl);
+    });
+
+    // Row click → navigate to entity
     self.treeEl.find('.nt-node-row').off('click').on('click', function(e) {
         e.stopPropagation();
-        var nodeId = $(this).data('id');
         var nodeEl = $(this).closest('.nt-node');
         var nodeType = nodeEl.data('type');
+        var nodeId = $(this).data('id');
+        var nodeName = nodeEl.find('> .nt-node-row .nt-label').first().text();
 
         if (nodeType === 'device') {
             self.navigateToEntity(nodeId, '', 'DEVICE', 'device');
-            return;
+        } else {
+            self.navigateToEntity(nodeId, nodeName,
+                'ASSET', nodeType);
         }
-
-        self.toggleNode(nodeId, nodeType, nodeEl);
-    });
-
-    // Double-click on asset nodes to navigate
-    self.treeEl.find('.nt-node-row').off('dblclick').on('dblclick', function(e) {
-        e.stopPropagation();
-        var nodeId = $(this).data('id');
-        var nodeEl = $(this).closest('.nt-node');
-        var nodeType = nodeEl.data('type');
-        var nodeName = nodeEl.find('> .nt-node-row .nt-label').first().text();
-
-        if (nodeType === 'device') return; // already handled by click
-        self.navigateToEntity(nodeId, nodeName, 'ASSET', nodeType);
     });
 };
 
@@ -890,7 +894,8 @@ self.onDestroy = function() {
         clearTimeout(self.searchTimer);
         self.searchTimer = null;
     }
-    self.treeEl.find('.nt-node-row').off('click dblclick');
+    self.treeEl.find('.nt-chevron').off('click');
+    self.treeEl.find('.nt-node-row').off('click');
     self.searchInput.off('input');
     self.$container.find('.nt-collapse-all').off('click');
 };

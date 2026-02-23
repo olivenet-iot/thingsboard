@@ -41,7 +41,7 @@
       "showDevices": {
         "type": "boolean",
         "title": "Show Devices Under Sites",
-        "default": true
+        "default": false
       },
       "showStatusIndicators": {
         "type": "boolean",
