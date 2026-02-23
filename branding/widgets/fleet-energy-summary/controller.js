@@ -534,9 +534,9 @@ self.navigateToDashboard = function(entityId, entityName) {
             }
         }];
         var stateParam = encodeURIComponent(self.objToBase64(stateArray));
-        var url = '/dashboards/' + dashboardId + '?state=' + stateParam;
+        var url = '/dashboard/' + dashboardId + '?state=' + stateParam;
 
-        window.open(url, '_blank');
+        window.location.href = url;
     });
 };
 
