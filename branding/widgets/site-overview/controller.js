@@ -418,8 +418,13 @@ self.onInit = function () {
         html += metaCard('LED & Driver', 'bulb', [
             metaField('led_type', 'LED Type', siteAttrs.led_type || ''),
             metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
+        ]);
+
+        // Energy & Cost
+        html += metaCard('Energy & Cost', 'bolt', [
+            metaField('co2_per_kwh', 'CO₂ Factor (kg/kWh)', siteAttrs.co2_per_kwh || '0.207'),
+            metaField('energy_rate', 'Energy Rate (per kWh)', siteAttrs.energy_rate || ''),
             metaField('total_connected_wattage', 'Total Connected Wattage (W)', siteAttrs.total_connected_wattage || ''),
-            metaField('co2_per_kwh', 'CO₂ per kWh (g)', siteAttrs.co2_per_kwh || '207'),
         ]);
 
         // Location
@@ -428,7 +433,6 @@ self.onInit = function () {
             metaField('latitude', 'Latitude', siteAttrs.latitude || ''),
             metaField('longitude', 'Longitude', siteAttrs.longitude || ''),
             metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
-            metaField('contract_ref', 'Contract Reference', siteAttrs.contract_ref || ''),
         ]);
 
         // Contact
@@ -1508,6 +1512,20 @@ self.onInit = function () {
                                     { co2_per_kwh: co2Val }
                                 ).catch(function (err) {
                                     console.warn('[SITE] co2_per_kwh propagate failed for ' + dev.id, err);
+                                });
+                            });
+                        }
+                    }
+                    // Propagate energy_rate to all child devices (rule chain reads this)
+                    if (attrs.energy_rate !== undefined && attrs.energy_rate !== '') {
+                        var rateVal = parseFloat(attrs.energy_rate);
+                        if (!isNaN(rateVal)) {
+                            devices.forEach(function (dev) {
+                                apiPost(
+                                    '/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SERVER_SCOPE',
+                                    { energy_rate: rateVal }
+                                ).catch(function (err) {
+                                    console.warn('[SITE] energy_rate propagate failed for ' + dev.id, err);
                                 });
                             });
                         }
