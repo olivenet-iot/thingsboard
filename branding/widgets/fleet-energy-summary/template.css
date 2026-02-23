@@ -84,18 +84,12 @@
   display: flex !important;
   align-items: stretch !important;
   gap: 10px !important;
-  cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
 
 .energy-card:hover {
   border-left-color: #f59e0b !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  transform: translateX(2px) !important;
-}
-
-.energy-card:active {
-  background: #fefce8 !important;
 }
 
 /* Status border colors */
@@ -253,51 +247,6 @@
 /* Loading state */
 .energy-card.loading .metric-value {
   color: #cbd5e1 !important;
-}
-
-/* Chevron */
-.card-chevron {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-left: 4px !important;
-  flex-shrink: 0 !important;
-}
-
-.chevron-icon {
-  font-size: 18px !important;
-  color: #cbd5e1 !important;
-  line-height: 1 !important;
-  transition: all 0.15s ease !important;
-}
-
-.energy-card:hover .chevron-icon {
-  color: #f59e0b !important;
-  transform: translateX(2px) !important;
-}
-
-.chevron-label {
-  font-size: 8px !important;
-  white-space: nowrap !important;
-}
-
-.chevron-label.tier-standard {
-  color: #64748b !important;
-  font-weight: 600 !important;
-}
-
-.chevron-label.tier-plus {
-  color: #f59e0b !important;
-  font-weight: 700 !important;
-}
-
-.energy-card:hover .chevron-label.tier-standard {
-  color: #f59e0b !important;
-}
-
-.energy-card:hover .chevron-label.tier-plus {
-  color: #64748b !important;
 }
 
 /* Loading placeholder */

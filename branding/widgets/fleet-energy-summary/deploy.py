@@ -64,12 +64,7 @@ def build_descriptor():
         "padding": "0",
         "settings": {
             "headerTitle": "Energy Overview",
-            "onlineThresholdMinutes": 10,
-            "targetState": "estate",
-            "navigationType": "state",
-            "standardDashboardId": "",
-            "plusDashboardId": "",
-            "defaultTier": "standard"
+            "onlineThresholdMinutes": 10
         },
         "title": WIDGET_NAME,
         "dropShadow": False,
@@ -174,7 +169,7 @@ def main():
     print(f"  Size: 24 x 6")
     print(f"  Fetches: status (dim_value, fault_overall_failure) + energy (energy_wh, co2_grams)")
     print(f"  Timewindow: uses dashboard timewindow")
-    print(f"  Navigation: state or dashboard (configurable)")
+    print(f"  Navigation: data-only (no card navigation)")
     print("=" * 50)
 
 

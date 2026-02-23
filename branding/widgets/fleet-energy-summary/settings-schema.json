@@ -12,41 +12,11 @@
         "title": "Online threshold (minutes)",
         "type": "number",
         "default": 10
-      },
-      "targetState": {
-        "title": "Target dashboard state on click",
-        "type": "string",
-        "default": "estate"
-      },
-      "navigationType": {
-        "title": "Navigation type (state or dashboard)",
-        "type": "string",
-        "default": "state"
-      },
-      "standardDashboardId": {
-        "title": "Standard (DALI2) dashboard ID",
-        "type": "string",
-        "default": ""
-      },
-      "plusDashboardId": {
-        "title": "Plus (D4i) dashboard ID",
-        "type": "string",
-        "default": ""
-      },
-      "defaultTier": {
-        "title": "Default tier when attribute is missing",
-        "type": "string",
-        "default": "standard"
       }
     }
   },
   "form": [
     {"key": "headerTitle", "type": "text", "placeholder": "Energy Overview"},
-    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"},
-    {"key": "targetState", "type": "text", "placeholder": "estate"},
-    {"key": "navigationType", "type": "text", "placeholder": "state"},
-    {"key": "standardDashboardId", "type": "text", "placeholder": "standard-dashboard-uuid"},
-    {"key": "plusDashboardId", "type": "text", "placeholder": "plus-dashboard-uuid"},
-    {"key": "defaultTier", "type": "text", "placeholder": "standard"}
+    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"}
   ]
 }
