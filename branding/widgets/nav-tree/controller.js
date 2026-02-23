@@ -15,9 +15,9 @@ self.onInit = function() {
 
     self.settings = {
         brandName: self.ctx.settings.brandName || 'SIGNCONNECT',
-        fleetDashboardId: self.ctx.settings.fleetDashboardId || '',
-        standardDashboardId: self.ctx.settings.standardDashboardId || '',
-        plusDashboardId: self.ctx.settings.plusDashboardId || '',
+        fleetDashboardId: self.ctx.settings.fleetDashboardId || 'b6d83390-0c08-11f1-9f20-c3880cf3b963',
+        standardDashboardId: self.ctx.settings.standardDashboardId || '57108320-0764-11f1-9f20-c3880cf3b963',
+        plusDashboardId: self.ctx.settings.plusDashboardId || '549a40a0-0f33-11f1-9f20-c3880cf3b963',
         defaultTier: self.ctx.settings.defaultTier || 'standard',
         showSearch: self.ctx.settings.showSearch !== false,
         showDevices: self.ctx.settings.showDevices !== false,
