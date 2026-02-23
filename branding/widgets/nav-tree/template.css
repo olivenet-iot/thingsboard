@@ -118,10 +118,16 @@
 .nt-node-row {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
-    cursor: pointer;
+    padding: 0;
     transition: background 0.12s, color 0.12s;
     border-left: 3px solid transparent;
+    min-height: 40px;
+}
+
+/* Device rows keep pointer cursor and padding (whole row navigates) */
+.nt-node-device .nt-node-row {
+    cursor: pointer;
+    padding: 8px 12px;
     min-height: 36px;
 }
 
@@ -129,7 +135,8 @@
     background: #f8fafc;
 }
 
-.nt-node-row:hover .nt-label {
+/* Device rows: label turns amber on row hover */
+.nt-node-device .nt-node-row:hover .nt-label {
     color: #f59e0b;
 }
 
@@ -168,12 +175,6 @@
     color: #64748b;
 }
 
-/* Active/hover override for all levels */
-.nt-node-row:hover .nt-label,
-.nt-node-row.nt-node-active .nt-label {
-    color: #f59e0b;
-}
-
 /* ── Chevron ───────────────────────────────────────────── */
 
 .nt-chevron {
@@ -186,13 +187,7 @@
     color: #94a3b8;
     flex-shrink: 0;
     transition: transform 0.2s ease, color 0.15s, background 0.15s;
-    cursor: pointer;
     border-radius: 4px;
-}
-
-.nt-chevron:hover {
-    color: #64748b;
-    background: #f1f5f9;
 }
 
 .nt-chevron-expanded {
@@ -203,6 +198,64 @@
     display: inline-block;
     width: 20px;
     flex-shrink: 0;
+}
+
+/* ── Click Zones (non-device nodes) ───────────────────── */
+
+.nt-chevron-zone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    min-height: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.nt-chevron-zone:hover .nt-chevron {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+.nt-label-zone {
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 8px 0 0;
+    cursor: pointer;
+    gap: 6px;
+}
+
+.nt-label-zone:hover .nt-label {
+    color: #334155;
+}
+
+.nt-label-zone .nt-icon {
+    margin-right: 0;  /* gap on zone handles spacing */
+}
+
+.nt-nav-zone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    min-height: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border-left: 1px solid #e2e8f0;
+    margin-left: auto;
+    transition: background 0.15s;
+}
+
+.nt-nav-zone:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.nt-nav-zone:hover .nt-nav-arrow {
+    color: #f59e0b;
+    transform: translateX(2px);
 }
 
 /* ── Node Icon ─────────────────────────────────────────── */
@@ -243,16 +296,10 @@
 /* ── Nav Arrow (visual cue for navigable rows) ─────────── */
 
 .nt-nav-arrow {
-    margin-left: auto;
-    font-size: 16px;
+    font-size: 18px;
     color: #cbd5e1;
     flex-shrink: 0;
     transition: color 0.15s, transform 0.15s;
-}
-
-.nt-node-row:hover .nt-nav-arrow {
-    color: #f59e0b;
-    transform: translateX(2px);
 }
 
 /* ── Badge (child count) ───────────────────────────────── */

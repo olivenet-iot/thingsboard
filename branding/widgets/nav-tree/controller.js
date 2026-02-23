@@ -377,26 +377,33 @@ self.buildTreeNode = function(node) {
     var html = '<div class="nt-node" data-id="' + node.id + '" data-type="' + node.type + '" data-level="' + node.level + '">';
     html += '<div class="nt-node-row' + levelClass + activeClass + '" data-id="' + node.id + '" style="padding-left:' + (12 + indent) + 'px;">';
 
-    // Chevron for expandable nodes
+    // Non-device nodes: wrap elements in click zones
     if (node.type !== 'device') {
+        // Chevron zone — click to expand/collapse
+        html += '<span class="nt-chevron-zone">';
         html += '<span class="nt-chevron ' + chevronClass + '">&#9654;</span>';
-    } else {
-        html += '<span class="nt-chevron-spacer"></span>';
-    }
+        html += '</span>';
 
-    html += '<span class="nt-icon">' + icon + '</span>';
-    html += '<span class="nt-label">' + self.escapeHtml(node.name) + '</span>';
-    html += childCountBadge;
-    html += statusHtml;
+        // Label zone — click to expand/collapse
+        html += '<span class="nt-label-zone">';
+        html += '<span class="nt-icon">' + icon + '</span>';
+        html += '<span class="nt-label">' + self.escapeHtml(node.name) + '</span>';
+        html += childCountBadge;
+        html += statusHtml;
+        html += '</span>';
 
-    // Device-level status dot
-    if (node.type === 'device') {
-        html += self.buildDeviceStatusDot(node);
-    }
-
-    // Nav arrow for navigable (non-device) nodes
-    if (node.type !== 'device') {
+        // Nav zone — click to navigate
+        html += '<span class="nt-nav-zone" title="Open ' + self.escapeHtml(node.name) + '">';
         html += '<span class="nt-nav-arrow">&#8250;</span>';
+        html += '</span>';
+    } else {
+        // Device rows: flat structure, whole row navigates
+        html += '<span class="nt-chevron-spacer"></span>';
+        html += '<span class="nt-icon">' + icon + '</span>';
+        html += '<span class="nt-label">' + self.escapeHtml(node.name) + '</span>';
+        html += childCountBadge;
+        html += statusHtml;
+        html += self.buildDeviceStatusDot(node);
     }
 
     html += '</div>';
@@ -479,27 +486,36 @@ self.getNodeIcon = function(type) {
 // ── Tree Events ────────────────────────────────────────────────
 
 self.bindTreeEvents = function() {
-    // Chevron click → expand/collapse only
-    self.treeEl.find('.nt-chevron').off('click').on('click', function(e) {
+    // Chevron zone click → expand/collapse
+    self.treeEl.find('.nt-chevron-zone').off('click').on('click', function(e) {
         e.stopPropagation();
         var nodeEl = $(this).closest('.nt-node');
         self.toggleNode(nodeEl.data('id'), nodeEl.data('type'), nodeEl);
     });
 
-    // Row click → navigate to entity
-    self.treeEl.find('.nt-node-row').off('click').on('click', function(e) {
+    // Label zone click → expand/collapse (prevents accidental navigation)
+    self.treeEl.find('.nt-label-zone').off('click').on('click', function(e) {
         e.stopPropagation();
         var nodeEl = $(this).closest('.nt-node');
-        var nodeType = nodeEl.data('type');
-        var nodeId = $(this).data('id');
-        var nodeName = nodeEl.find('> .nt-node-row .nt-label').first().text();
+        self.toggleNode(nodeEl.data('id'), nodeEl.data('type'), nodeEl);
+    });
 
-        if (nodeType === 'device') {
-            self.navigateToEntity(nodeId, '', 'DEVICE', 'device');
-        } else {
-            self.navigateToEntity(nodeId, nodeName,
-                'ASSET', nodeType);
-        }
+    // Nav zone click → navigate to entity
+    self.treeEl.find('.nt-nav-zone').off('click').on('click', function(e) {
+        e.stopPropagation();
+        var nodeEl = $(this).closest('.nt-node');
+        var nodeId = nodeEl.data('id');
+        var nodeType = nodeEl.data('type');
+        var nodeName = nodeEl.find('.nt-label').first().text();
+        self.navigateToEntity(nodeId, nodeName, 'ASSET', nodeType);
+    });
+
+    // Device row click → navigate (whole row, same as before)
+    self.treeEl.find('.nt-node-device .nt-node-row').off('click').on('click', function(e) {
+        e.stopPropagation();
+        var nodeEl = $(this).closest('.nt-node');
+        var nodeId = nodeEl.data('id');
+        self.navigateToEntity(nodeId, '', 'DEVICE', 'device');
     });
 };
 
@@ -941,8 +957,10 @@ self.onDestroy = function() {
         clearTimeout(self.searchTimer);
         self.searchTimer = null;
     }
-    self.treeEl.find('.nt-chevron').off('click');
-    self.treeEl.find('.nt-node-row').off('click');
+    self.treeEl.find('.nt-chevron-zone').off('click');
+    self.treeEl.find('.nt-label-zone').off('click');
+    self.treeEl.find('.nt-nav-zone').off('click');
+    self.treeEl.find('.nt-node-device .nt-node-row').off('click');
     self.searchInput.off('input');
     self.$container.find('.nt-collapse-all').off('click');
 };
