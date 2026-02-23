@@ -1,0 +1,100 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Navigation Tree Settings",
+    "properties": {
+      "brandName": {
+        "type": "string",
+        "title": "Brand Name",
+        "default": "SIGNCONNECT"
+      },
+      "customerId": {
+        "type": "string",
+        "title": "Customer ID (fallback, auto-detected for customer users)",
+        "default": ""
+      },
+      "fleetDashboardId": {
+        "type": "string",
+        "title": "Fleet Dashboard ID",
+        "default": ""
+      },
+      "standardDashboardId": {
+        "type": "string",
+        "title": "Standard Dashboard ID",
+        "default": ""
+      },
+      "plusDashboardId": {
+        "type": "string",
+        "title": "Plus Dashboard ID",
+        "default": ""
+      },
+      "defaultTier": {
+        "type": "string",
+        "title": "Default Tier",
+        "default": "standard"
+      },
+      "showSearch": {
+        "type": "boolean",
+        "title": "Show Search Bar",
+        "default": true
+      },
+      "showDevices": {
+        "type": "boolean",
+        "title": "Show Devices Under Sites",
+        "default": true
+      },
+      "showStatusIndicators": {
+        "type": "boolean",
+        "title": "Show Status Indicators",
+        "default": true
+      },
+      "showFooterSummary": {
+        "type": "boolean",
+        "title": "Show Footer Summary",
+        "default": true
+      },
+      "onlineThresholdMinutes": {
+        "type": "number",
+        "title": "Online Threshold (minutes)",
+        "default": 10
+      },
+      "pollIntervalSeconds": {
+        "type": "number",
+        "title": "Device Status Poll Interval (seconds)",
+        "default": 60
+      }
+    }
+  },
+  "form": [
+    "brandName",
+    "customerId",
+    {
+      "key": "fleetDashboardId",
+      "type": "string"
+    },
+    {
+      "key": "standardDashboardId",
+      "type": "string"
+    },
+    {
+      "key": "plusDashboardId",
+      "type": "string"
+    },
+    {
+      "key": "defaultTier",
+      "type": "string"
+    },
+    "showSearch",
+    "showDevices",
+    "showStatusIndicators",
+    "showFooterSummary",
+    {
+      "key": "onlineThresholdMinutes",
+      "type": "number"
+    },
+    {
+      "key": "pollIntervalSeconds",
+      "type": "number"
+    }
+  ]
+}
