@@ -620,15 +620,46 @@ self.navigateToEntity = function(entityId, entityName, entityType, level) {
         entityName = cached ? cached.name : '';
     }
 
-    if (level === 'estate' || level === 'region') {
-        // Same-dashboard state navigation
-        var sc = self.ctx.stateController;
-        if (sc && sc.openState) {
-            sc.openState(level, {
-                entityId: { entityType: entityType, id: entityId },
-                entityName: entityName
-            });
+    if (level === 'estate') {
+        var fleetId = self.settings.fleetDashboardId;
+        if (!fleetId) {
+            console.error('[NAV-TREE] No fleet dashboard configured');
+            return;
         }
+        var estateState = [
+            { id: 'default', params: {} },
+            { id: 'estate', params: {
+                entityId: { id: entityId, entityType: 'ASSET' },
+                entityName: entityName
+            }}
+        ];
+        var estateParam = encodeURIComponent(self.objToBase64(estateState));
+        window.location.href = '/dashboard/' + fleetId + '?state=' + estateParam;
+        return;
+    }
+
+    if (level === 'region') {
+        var fleetId = self.settings.fleetDashboardId;
+        if (!fleetId) {
+            console.error('[NAV-TREE] No fleet dashboard configured');
+            return;
+        }
+        var parentEstate = self.findParentEstate(entityId);
+        var regionState = [
+            { id: 'default', params: {} }
+        ];
+        if (parentEstate) {
+            regionState.push({ id: 'estate', params: {
+                entityId: { id: parentEstate.id, entityType: 'ASSET' },
+                entityName: parentEstate.name
+            }});
+        }
+        regionState.push({ id: 'region', params: {
+            entityId: { id: entityId, entityType: 'ASSET' },
+            entityName: entityName
+        }});
+        var regionParam = encodeURIComponent(self.objToBase64(regionState));
+        window.location.href = '/dashboard/' + fleetId + '?state=' + regionParam;
         return;
     }
 
@@ -705,6 +736,22 @@ self.findParentSiteInList = function(nodes, deviceId) {
         if (node.children && node.children !== false) {
             var found = self.findParentSiteInList(node.children, deviceId);
             if (found) return found;
+        }
+    }
+    return null;
+};
+
+self.findParentEstate = function(regionId) {
+    // Walk treeData (array of estate nodes) to find which estate contains
+    // the given region as a direct child.
+    for (var i = 0; i < self.treeData.length; i++) {
+        var estate = self.treeData[i];
+        if (estate.children && estate.children !== false) {
+            for (var j = 0; j < estate.children.length; j++) {
+                if (estate.children[j].id === regionId) {
+                    return { id: estate.id, name: estate.name };
+                }
+            }
         }
     }
     return null;
