@@ -885,7 +885,12 @@ self.fetchAlarmCount = function() {
 
 self.navigateToAlarms = function() {
     var fleetId = self.settings.fleetDashboardId;
-    window.location.href = '/dashboard/' + fleetId;
+    var stateArray = [
+        { id: 'default', params: {} },
+        { id: 'alarm', params: {} }
+    ];
+    var stateParam = encodeURIComponent(self.objToBase64(stateArray));
+    window.location.href = '/dashboard/' + fleetId + '?state=' + stateParam;
 };
 
 self.navigateToReports = function() {
