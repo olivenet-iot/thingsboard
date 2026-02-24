@@ -870,7 +870,7 @@ self.updateFooterStats = function() {
 };
 
 self.fetchAlarmCount = function() {
-    var url = '/api/alarms?statusList=ACTIVE_UNACK,ACTIVE_ACK&pageSize=1&page=0';
+    var url = '/api/alarms?searchStatus=ACTIVE&pageSize=1&page=0';
     self.ctx.http.get(url).toPromise().then(function(resp) {
         var count = (resp && resp.totalElements) ? resp.totalElements : 0;
         if (count > 0) {
