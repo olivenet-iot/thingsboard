@@ -28,6 +28,10 @@ self.onInit = function() {
     };
 
     self.brandEl.text(self.settings.brandName);
+    self.brandEl.on('click', function() {
+        var fleetId = self.settings.fleetDashboardId;
+        window.location.href = '/dashboard/' + fleetId;
+    });
 
     if (!self.settings.showSearch) {
         self.$container.find('.nt-search').hide();
@@ -44,6 +48,17 @@ self.onInit = function() {
         self.reportsLinkEl.find('.nt-reports-row').on('click', function() {
             self.navigateToReports();
         });
+    }
+
+    // Show Alarms link only on Fleet dashboard (same guard as Reports)
+    self.alarmsLinkEl = self.$container.find('.nt-alarms-link');
+    self.alarmBadgeEl = self.$container.find('.nt-alarm-badge');
+    if (isFleetDashboard) {
+        self.alarmsLinkEl.show();
+        self.alarmsLinkEl.find('.nt-alarms-row').on('click', function() {
+            self.navigateToAlarms();
+        });
+        self.fetchAlarmCount();
     }
 
     // Caches
@@ -110,6 +125,13 @@ self.onInit = function() {
     if (self.settings.showStatusIndicators && self.settings.pollIntervalSeconds > 0) {
         self.pollTimer = setInterval(function() {
             self.refreshDeviceStatuses();
+        }, self.settings.pollIntervalSeconds * 1000);
+    }
+
+    // Start alarm count polling (Fleet dashboard only)
+    if (isFleetDashboard && self.settings.pollIntervalSeconds > 0) {
+        self.alarmPollTimer = setInterval(function() {
+            self.fetchAlarmCount();
         }, self.settings.pollIntervalSeconds * 1000);
     }
 };
@@ -847,6 +869,25 @@ self.updateFooterStats = function() {
     self.footerStats.html(html);
 };
 
+self.fetchAlarmCount = function() {
+    var url = '/api/alarms?statusList=ACTIVE_UNACK,ACTIVE_ACK&pageSize=1&page=0';
+    self.ctx.http.get(url).toPromise().then(function(resp) {
+        var count = (resp && resp.totalElements) ? resp.totalElements : 0;
+        if (count > 0) {
+            self.alarmBadgeEl.text(count > 99 ? '99+' : count).removeClass('hidden');
+        } else {
+            self.alarmBadgeEl.addClass('hidden');
+        }
+    }).catch(function() {
+        self.alarmBadgeEl.addClass('hidden');
+    });
+};
+
+self.navigateToAlarms = function() {
+    var fleetId = self.settings.fleetDashboardId;
+    window.location.href = '/dashboard/' + fleetId;
+};
+
 self.navigateToReports = function() {
     var fleetId = self.settings.fleetDashboardId;
     var stateArray = [
@@ -973,6 +1014,10 @@ self.onDestroy = function() {
         clearInterval(self.pollTimer);
         self.pollTimer = null;
     }
+    if (self.alarmPollTimer) {
+        clearInterval(self.alarmPollTimer);
+        self.alarmPollTimer = null;
+    }
     if (self.searchTimer) {
         clearTimeout(self.searchTimer);
         self.searchTimer = null;
@@ -984,4 +1029,6 @@ self.onDestroy = function() {
     self.searchInput.off('input');
     self.$container.find('.nt-collapse-all').off('click');
     self.reportsLinkEl.find('.nt-reports-row').off('click');
+    self.alarmsLinkEl.find('.nt-alarms-row').off('click');
+    self.brandEl.off('click');
 };

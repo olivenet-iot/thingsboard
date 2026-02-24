@@ -30,6 +30,12 @@
     font-weight: 700;
     letter-spacing: 1.5px;
     color: #f59e0b;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.nt-brand:hover {
+    opacity: 0.7;
 }
 
 .nt-actions {
@@ -482,6 +488,62 @@
     color: #cbd5e1;
     flex-shrink: 0;
     transition: color 0.15s, transform 0.15s;
+}
+
+/* ── Alarms Link ──────────────────────────────────────── */
+
+.nt-alarms-link {
+    flex-shrink: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.nt-alarms-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 8px;
+}
+
+.nt-alarms-row:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.nt-alarms-row:hover .nt-alarms-label {
+    color: #d97706;
+}
+
+.nt-alarms-icon {
+    flex-shrink: 0;
+    color: #f59e0b;
+}
+
+.nt-alarms-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    flex: 1;
+    transition: color 0.15s;
+}
+
+.nt-alarm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: auto;
+}
+
+.nt-alarm-badge.hidden {
+    display: none;
 }
 
 /* ── Footer ────────────────────────────────────────────── */
