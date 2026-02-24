@@ -70,11 +70,8 @@ self.onInit = function () {
     var backBtn = container.querySelector('[data-action="back"]');
     if (backBtn) {
         backBtn.addEventListener('click', function () {
-            try {
-                self.ctx.stateController.openState('default', {});
-            } catch (e) {
-                console.error('[REPORT] Failed to navigate back:', e);
-            }
+            var fleetId = 'b6d83390-0c08-11f1-9f20-c3880cf3b963';
+            window.location.href = '/dashboard/' + fleetId;
         });
     }
 

@@ -36,6 +36,16 @@ self.onInit = function() {
         self.$container.find('.nt-footer').hide();
     }
 
+    // Show Reports link only on Fleet dashboard
+    var isFleetDashboard = window.location.pathname.indexOf(self.settings.fleetDashboardId) !== -1;
+    self.reportsLinkEl = self.$container.find('.nt-reports-link');
+    if (isFleetDashboard) {
+        self.reportsLinkEl.show();
+        self.reportsLinkEl.find('.nt-reports-row').on('click', function() {
+            self.navigateToReports();
+        });
+    }
+
     // Caches
     self.childrenCache = {};   // parentId -> { children: [...], fetchedAt }
     self.deviceCache = {};     // siteId -> { devices: [...], fetchedAt }
@@ -837,6 +847,16 @@ self.updateFooterStats = function() {
     self.footerStats.html(html);
 };
 
+self.navigateToReports = function() {
+    var fleetId = self.settings.fleetDashboardId;
+    var stateArray = [
+        { id: 'default', params: {} },
+        { id: 'report', params: {} }
+    ];
+    var stateParam = encodeURIComponent(self.objToBase64(stateArray));
+    window.location.href = '/dashboard/' + fleetId + '?state=' + stateParam;
+};
+
 self.aggregateStats = function(nodes, stats) {
     nodes.forEach(function(node) {
         if (node.deviceStats) {
@@ -963,4 +983,5 @@ self.onDestroy = function() {
     self.treeEl.find('.nt-node-device .nt-node-row').off('click');
     self.searchInput.off('input');
     self.$container.find('.nt-collapse-all').off('click');
+    self.reportsLinkEl.find('.nt-reports-row').off('click');
 };

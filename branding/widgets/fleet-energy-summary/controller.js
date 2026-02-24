@@ -22,19 +22,6 @@ self.onInit = function() {
     self.fetchInProgress = {};
     self.lastTimewindowKey = '';
 
-    // Reports navigation button
-    var reportsBtn = self.$container.find('#reports-nav-btn');
-    if (reportsBtn.length) {
-        reportsBtn.on('click', function(e) {
-            e.stopPropagation();
-            try {
-                self.ctx.stateController.openState('report', {});
-            } catch (err) {
-                console.error('[FLEET] Failed to navigate to reports:', err);
-            }
-        });
-    }
-
     // Subscribe to dashboard timewindow changes
     var twSub = self.ctx.dashboard.dashboardTimewindowChanged.subscribe(function() {
         self.onDataUpdated();
@@ -452,5 +439,4 @@ self.onDestroy = function() {
         self.twSubscription.unsubscribe();
         self.twSubscription = null;
     }
-    self.$container.find('#reports-nav-btn').off('click');
 };
