@@ -223,6 +223,14 @@ self.onInit = function () {
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function objToBase64(obj) {
+        var json = JSON.stringify(obj);
+        return btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+            function(match, p1) {
+                return String.fromCharCode(parseInt(p1, 16));
+            }));
+    }
+
     // ── SVG Icons ────────────────────────────────────────────
 
     var ICONS = {
@@ -255,7 +263,7 @@ self.onInit = function () {
                     entityName: siteName
                 }}];
                 window.location.href = '/dashboard/' + dashId + '?state='
-                    + encodeURIComponent(JSON.stringify(stateArr));
+                    + encodeURIComponent(objToBase64(stateArr));
             });
         });
     }
