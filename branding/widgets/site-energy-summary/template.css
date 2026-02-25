@@ -117,6 +117,35 @@
   color: #475569 !important;
 }
 
+/* ── Header Right / Details Button ────────────────────────── */
+
+.ses-header-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.ses-details-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 8px 16px !important;
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.ses-details-btn:hover {
+  background-color: #d97706 !important;
+}
+
 /* ── Cards Grid ───────────────────────────────────────────── */
 
 .ses-cards {

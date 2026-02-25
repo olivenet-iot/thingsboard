@@ -239,6 +239,25 @@ self.onInit = function () {
         html += renderHeader();
         html += renderCards();
         container.innerHTML = html;
+        bindEvents();
+    }
+
+    function bindEvents() {
+        container.querySelectorAll('[data-action="open-site-details"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var tier = (siteAttrs.dashboard_tier || '').toLowerCase();
+                var dashId = tier === 'plus'
+                    ? '549a40a0-0f33-11f1-9f20-c3880cf3b963'
+                    : '57108320-0764-11f1-9f20-c3880cf3b963';
+                var siteName = entityName || siteAttrs.installation_name || 'Site';
+                var stateArr = [{ id: 'site', params: {
+                    entityId: { id: siteId, entityType: 'ASSET' },
+                    entityName: siteName
+                }}];
+                window.location.href = '/dashboard/' + dashId + '?state='
+                    + encodeURIComponent(JSON.stringify(stateArr));
+            });
+        });
     }
 
     function renderHeader() {
@@ -265,7 +284,10 @@ self.onInit = function () {
             html += '<span class="ses-status-item"><span class="ses-dot ses-dot-offline"></span>' + offline + ' offline</span>';
         }
         html += '</div></div>';
+        html += '<div class="ses-header-right">';
         html += '<span class="ses-tier-badge ' + tierClass + '">' + esc(tierLabel) + '</span>';
+        html += '<button class="ses-details-btn" data-action="open-site-details">Site Details \u2192</button>';
+        html += '</div>';
         html += '</div>';
         return html;
     }
