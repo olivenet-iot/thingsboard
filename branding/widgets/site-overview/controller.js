@@ -523,10 +523,6 @@ self.onInit = function () {
                 '<textarea class="so-meta-textarea so-recipients-input" data-alarm="alarm_emails" rows="2" placeholder="one@example.com&#10;two@example.com">' + esc(siteAttrs.alarm_emails || '') + '</textarea>' +
                 '<div class="so-meta-hint">One email per line. All recipients receive fault and watchdog notifications.</div>' +
             '</div>' +
-            '<div class="so-meta-row so-meta-row-col">' +
-                '<label class="so-meta-label">SMS Number</label>' +
-                '<input class="so-meta-input" data-alarm="alarm_sms" value="' + esc(siteAttrs.alarm_sms || '') + '" placeholder="+44 7700 000000" />' +
-            '</div>' +
         '</div>';
 
         html += '</div>';
