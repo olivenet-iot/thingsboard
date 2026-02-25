@@ -1,0 +1,23 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "Site Energy Summary Settings",
+        "properties": {
+            "siteAssetId": {
+                "title": "Site Asset ID (fallback)",
+                "type": "string",
+                "description": "Used when dashboard state params are not available"
+            },
+            "pollInterval": {
+                "title": "Telemetry poll interval (ms)",
+                "type": "number",
+                "default": 15000,
+                "description": "How often to refresh device telemetry data"
+            }
+        }
+    },
+    "form": [
+        "siteAssetId",
+        "pollInterval"
+    ]
+}
