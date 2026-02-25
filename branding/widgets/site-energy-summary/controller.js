@@ -25,11 +25,15 @@ self.onInit = function () {
         container = $root.querySelector('.ses-root');
     }
     var http = self.ctx.http;
+    var twSub = self.ctx.dashboard.dashboardTimewindowChanged.subscribe(function () {
+        pollAndRender();
+    });
 
     var siteId = null;
     var entityName = '';
     var devices = [];
     var siteAttrs = {};
+    var timeRangeLabel = 'today';
 
     var TELEMETRY_KEYS = [
         'dim_value', 'power_watts', 'energy_wh', 'co2_grams', 'cost_currency',
@@ -75,6 +79,33 @@ self.onInit = function () {
                 function (err) { reject(err); }
             );
         });
+    }
+
+    // ── Dashboard Time Window ────────────────────────────────
+
+    function getTimewindow() {
+        var tw = self.ctx.dashboard.dashboardTimewindow || self.ctx.dashboardTimewindow;
+        var now = Date.now();
+        var startTs, endTs;
+        if (tw && tw.history) {
+            if (tw.history.fixedTimewindow) {
+                startTs = tw.history.fixedTimewindow.startTimeMs;
+                endTs   = tw.history.fixedTimewindow.endTimeMs;
+            } else if (tw.history.timewindowMs) {
+                endTs   = now;
+                startTs = now - tw.history.timewindowMs;
+            } else {
+                endTs   = now;
+                startTs = now - 86400000;
+            }
+        } else if (tw && tw.realtime) {
+            endTs   = now;
+            startTs = now - (tw.realtime.timewindowMs || 86400000);
+        } else {
+            endTs   = now;
+            startTs = now - 86400000;
+        }
+        return { startTs: startTs, endTs: endTs };
     }
 
     // ── Fetch Devices via Relations ──────────────────────────
@@ -162,16 +193,22 @@ self.onInit = function () {
         return Promise.all(promises);
     }
 
-    // ── Fetch Today's Aggregates (SUM) ───────────────────────
+    // ── Fetch Aggregates (SUM over dashboard time window) ────
 
-    function fetchTodayAggregates() {
+    function fetchAggregates() {
         if (devices.length === 0) return Promise.resolve();
 
-        var startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        var startTs = startOfDay.getTime();
-        var endTs = Date.now();
+        var tw = getTimewindow();
+        var startTs = tw.startTs;
+        var endTs = tw.endTs;
         var interval = endTs - startTs;
+
+        // Compute human-readable time range label
+        var rangeMs = endTs - startTs;
+        if (rangeMs <= 86400000) timeRangeLabel = 'today';
+        else if (rangeMs <= 604800000) timeRangeLabel = 'last 7 days';
+        else if (rangeMs <= 2592000000) timeRangeLabel = 'last 30 days';
+        else timeRangeLabel = 'last ' + Math.round(rangeMs / 86400000) + ' days';
 
         var promises = devices.map(function (dev) {
             return apiGet('/plugins/telemetry/DEVICE/' + dev.id +
@@ -319,21 +356,21 @@ self.onInit = function () {
         html += '<div class="ses-card ses-card-energy">';
         html += '<div class="ses-card-label">' + ICONS.energy + '<span class="ses-label-text">Total Energy</span></div>';
         html += '<div class="ses-card-value">' + energy.value + '<span class="ses-card-unit">' + energy.unit + '</span></div>';
-        html += '<div class="ses-card-sub">today</div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
         html += '</div>';
 
         // Card 2: Estimated Cost
         html += '<div class="ses-card ses-card-cost">';
         html += '<div class="ses-card-label">' + ICONS.cost + '<span class="ses-label-text">Estimated Cost</span></div>';
         html += '<div class="ses-card-value">' + currency + formatValue(totalCost, 2) + '</div>';
-        html += '<div class="ses-card-sub">today</div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
         html += '</div>';
 
         // Card 3: CO2 Emissions
         html += '<div class="ses-card ses-card-co2">';
         html += '<div class="ses-card-label">' + ICONS.co2 + '<span class="ses-label-text">CO\u2082 Emissions</span></div>';
         html += '<div class="ses-card-value">' + co2.value + '<span class="ses-card-unit">' + co2.unit + '</span></div>';
-        html += '<div class="ses-card-sub">today</div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
         html += '</div>';
 
         // Card 4: Total Power
@@ -362,7 +399,7 @@ self.onInit = function () {
     function pollAndRender() {
         Promise.all([
             pollAllDevices(),
-            fetchTodayAggregates()
+            fetchAggregates()
         ]).then(function () {
             render();
         }).catch(function () {
@@ -386,7 +423,7 @@ self.onInit = function () {
     ]).then(function () {
         return Promise.all([
             pollAllDevices(),
-            fetchTodayAggregates()
+            fetchAggregates()
         ]);
     }).then(function () {
         render();
@@ -401,5 +438,9 @@ self.onDestroy = function () {
     if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
+    }
+    if (twSub) {
+        twSub.unsubscribe();
+        twSub = null;
     }
 };
