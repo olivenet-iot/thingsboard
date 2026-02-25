@@ -19,10 +19,6 @@ var INFO_KEYS = [
     { key: 'status_fade_running',       rowId: 'row-status_fade_running',       label: 'Fade Running',       activeText: 'ACTIVE', inactiveText: 'IDLE' }
 ];
 
-var TILT_KEY = 'tilt';
-var TILT_ROW_ID = 'row-tilt';
-var TILT_THRESHOLD = 10; // degrees — above this = fault
-
 var POLL_INTERVAL_MS = 10000; // 10 seconds
 var pollTimer = null;
 var DEVICE_ID = null;
@@ -75,7 +71,6 @@ function poll() {
     var allKeys = FAULT_KEYS.map(function(f) { return f.key; });
     WARNING_KEYS.forEach(function(w) { allKeys.push(w.key); });
     INFO_KEYS.forEach(function(i) { allKeys.push(i.key); });
-    allKeys.push(TILT_KEY);
     var keysParam = allKeys.join(',');
 
     var http = self.ctx.http;
@@ -173,33 +168,6 @@ function updateUI(data) {
         status.className = 'fs-status ' + cls;
         row.className = 'fs-row';
     });
-
-    // Process tilt
-    var tiltRow = document.getElementById(TILT_ROW_ID);
-    if (tiltRow) {
-        var tiltDot = tiltRow.querySelector('.fs-dot');
-        var tiltStatus = tiltRow.querySelector('.fs-status');
-        var tiltVal = 0;
-
-        if (data[TILT_KEY] && data[TILT_KEY].length > 0) {
-            tiltVal = parseFloat(data[TILT_KEY][0].value) || 0;
-            var tiltTs = data[TILT_KEY][0].ts;
-            if (tiltTs > latestTs) latestTs = tiltTs;
-        }
-
-        var tiltThreshold = TILT_THRESHOLD;
-        if (self.ctx.settings && self.ctx.settings.tiltThreshold) {
-            tiltThreshold = parseInt(self.ctx.settings.tiltThreshold) || TILT_THRESHOLD;
-        }
-
-        var tiltFault = tiltVal > tiltThreshold;
-        if (tiltFault) faultCount++;
-
-        tiltDot.className = 'fs-dot ' + (tiltFault ? 'is-fault' : 'is-ok');
-        tiltStatus.textContent = tiltFault ? 'FAULT (' + tiltVal + '°)' : 'OK (' + tiltVal + '°)';
-        tiltStatus.className = 'fs-status ' + (tiltFault ? 'is-fault' : 'is-ok');
-        tiltRow.className = 'fs-row' + (tiltFault ? ' is-fault' : '');
-    }
 
     // Update header badge
     var badge = document.getElementById('fsBadge');

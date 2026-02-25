@@ -22,7 +22,7 @@ TB_PASS = os.getenv("TB_PASS", "tenant")
 BUNDLE_NAME = "SignConnect"
 WIDGET_FQN = "fault_status_dali2"
 WIDGET_NAME = "Fault Status DALI2"
-WIDGET_DESC = "DALI2 status flags (8 indicators) + tilt for SignConnect Standard"
+WIDGET_DESC = "DALI2 status flags (8 indicators) for SignConnect Standard"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
