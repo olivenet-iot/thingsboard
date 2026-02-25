@@ -712,29 +712,34 @@ self.navigateToEntity = function(entityId, entityName, entityType, level) {
     }
 
     if (level === 'site') {
-        // Cross-dashboard navigation based on tier
-        self.getEntityTier(entityId).then(function(tier) {
-            var dashboardId = tier === 'plus'
-                ? self.settings.plusDashboardId
-                : self.settings.standardDashboardId;
-
-            if (!dashboardId) {
-                console.error('[NAV-TREE] No dashboard configured for tier "' + tier + '"');
-                return;
+        var fleetId = self.settings.fleetDashboardId;
+        if (!fleetId) {
+            console.error('[NAV-TREE] No fleet dashboard configured');
+            return;
+        }
+        var parentRegion = self.findParentRegion(entityId);
+        var siteState = [
+            { id: 'default', params: {} }
+        ];
+        if (parentRegion) {
+            var parentEstate = self.findParentEstate(parentRegion.id);
+            if (parentEstate) {
+                siteState.push({ id: 'estate', params: {
+                    entityId: { id: parentEstate.id, entityType: 'ASSET' },
+                    entityName: parentEstate.name
+                }});
             }
-
-            var stateArray = [{
-                id: 'site',
-                params: {
-                    entityId: { id: entityId, entityType: 'ASSET' },
-                    entityName: entityName
-                }
-            }];
-            var stateParam = encodeURIComponent(self.objToBase64(stateArray));
-            var url = '/dashboard/' + dashboardId + '?state=' + stateParam;
-
-            window.location.href = url;
-        });
+            siteState.push({ id: 'region', params: {
+                entityId: { id: parentRegion.id, entityType: 'ASSET' },
+                entityName: parentRegion.name
+            }});
+        }
+        siteState.push({ id: 'site', params: {
+            entityId: { id: entityId, entityType: 'ASSET' },
+            entityName: entityName
+        }});
+        var siteParam = encodeURIComponent(self.objToBase64(siteState));
+        window.location.href = '/dashboard/' + fleetId + '?state=' + siteParam;
         return;
     }
 
@@ -798,6 +803,25 @@ self.findParentEstate = function(regionId) {
             for (var j = 0; j < estate.children.length; j++) {
                 if (estate.children[j].id === regionId) {
                     return { id: estate.id, name: estate.name };
+                }
+            }
+        }
+    }
+    return null;
+};
+
+self.findParentRegion = function(siteId) {
+    for (var i = 0; i < self.treeData.length; i++) {
+        var estate = self.treeData[i];
+        if (estate.children && estate.children !== false) {
+            for (var j = 0; j < estate.children.length; j++) {
+                var region = estate.children[j];
+                if (region.children && region.children !== false) {
+                    for (var k = 0; k < region.children.length; k++) {
+                        if (region.children[k].id === siteId) {
+                            return { id: region.id, name: region.name };
+                        }
+                    }
                 }
             }
         }
