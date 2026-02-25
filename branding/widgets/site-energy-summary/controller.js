@@ -27,6 +27,7 @@ self.onInit = function () {
     var http = self.ctx.http;
 
     var siteId = null;
+    var entityName = '';
     var devices = [];
     var siteAttrs = {};
 
@@ -45,6 +46,7 @@ self.onInit = function () {
         try {
             var stateParams = self.ctx.stateController.getStateParams();
             if (stateParams && stateParams.entityId && stateParams.entityId.id) {
+                entityName = stateParams.entityName || '';
                 return stateParams.entityId.id;
             }
         } catch (e) { /* stateController unavailable */ }
@@ -246,7 +248,7 @@ self.onInit = function () {
             else offline++;
         });
 
-        var siteName = esc(siteAttrs.installation_name || siteAttrs.siteName || 'Site');
+        var siteName = esc(entityName || siteAttrs.installation_name || 'Site');
         var tier = (siteAttrs.dashboard_tier || '').toLowerCase();
         var tierLabel = tier === 'plus' ? 'Plus' : 'Standard';
         var tierClass = tier === 'plus' ? 'ses-tier-plus' : 'ses-tier-standard';
