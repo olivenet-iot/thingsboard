@@ -98,7 +98,7 @@ self.onInit = function() {
         } else {
             self.treeEl.show();
             self.renderTree();
-            self.updateActiveHighlight();
+            self.autoExpandToActive();
         }
     }).catch(function(err) {
         console.error('[NAV-TREE] Init failed:', err);
@@ -542,13 +542,6 @@ self.bindTreeEvents = function() {
         self.navigateToEntity(nodeId, nodeName, 'ASSET', nodeType);
     });
 
-    // Device row click → navigate (whole row, same as before)
-    self.treeEl.find('.nt-node-device .nt-node-row').off('click').on('click', function(e) {
-        e.stopPropagation();
-        var nodeEl = $(this).closest('.nt-node');
-        var nodeId = nodeEl.data('id');
-        self.navigateToEntity(nodeId, '', 'DEVICE', 'device');
-    });
 };
 
 self.toggleNode = function(nodeId, nodeType, nodeEl) {
@@ -865,6 +858,110 @@ self.updateActiveHighlight = function() {
     }
 };
 
+// ── Auto-Expand to Active Node ─────────────────────────────
+
+self.autoExpandToActive = function() {
+    var activeId = self.getActiveEntityId();
+    if (!activeId) return Promise.resolve();
+
+    // If active entity is a root estate, nothing to expand
+    for (var i = 0; i < self.treeData.length; i++) {
+        if (self.treeData[i].id === activeId) {
+            return Promise.resolve();
+        }
+    }
+
+    return self.findAncestorPath(activeId).then(function(path) {
+        if (!path || path.length === 0) return;
+        return self.expandPathSequentially(path);
+    }).then(function() {
+        self.renderTree();
+    }).catch(function(err) {
+        console.error('[NAV-TREE] Auto-expand failed:', err);
+    });
+};
+
+self.findAncestorPath = function(entityId) {
+    // Walk up Contains relations to build ancestor path from root to entity
+    var path = [];
+    var visited = {};
+
+    function walkUp(currentId) {
+        if (visited[currentId]) return Promise.resolve(path);
+        visited[currentId] = true;
+
+        var url = '/api/relations?toId=' + currentId + '&toType=ASSET&relationType=Contains';
+        return self.ctx.http.get(url).toPromise().then(function(rels) {
+            var parentId = null;
+            (Array.isArray(rels) ? rels : []).forEach(function(r) {
+                if (r.from && r.from.entityType === 'ASSET') {
+                    parentId = r.from.id;
+                }
+            });
+
+            if (!parentId) return path;
+
+            path.unshift(parentId);
+
+            // Check if parent is a root estate
+            for (var i = 0; i < self.treeData.length; i++) {
+                if (self.treeData[i].id === parentId) {
+                    return path;
+                }
+            }
+
+            return walkUp(parentId);
+        }).catch(function() {
+            return path;
+        });
+    }
+
+    return walkUp(entityId);
+};
+
+self.expandPathSequentially = function(path) {
+    var chain = Promise.resolve();
+    path.forEach(function(nodeId) {
+        chain = chain.then(function() {
+            return self.expandNodeById(nodeId);
+        });
+    });
+    return chain;
+};
+
+self.expandNodeById = function(nodeId) {
+    self.expandedNodes[nodeId] = true;
+
+    var node = self.findNodeById(nodeId);
+    if (!node) return Promise.resolve();
+
+    // Already loaded children?
+    if (node.children && node.children !== false) return Promise.resolve();
+    if (node.type === 'site' && node.devices) return Promise.resolve();
+    if (node.children === false) return Promise.resolve();
+
+    // Determine child type and load
+    if (node.type === 'site') {
+        return self.loadDevices(nodeId).then(function(devices) {
+            node.devices = devices;
+            node.deviceCount = devices.length;
+            node.deviceStats = self.computeDeviceStats(devices);
+        });
+    }
+
+    var nextType = '';
+    if (node.type === 'estate') nextType = 'region';
+    else if (node.type === 'region') nextType = 'site';
+
+    if (nextType) {
+        return self.loadChildren(nodeId, nextType).then(function(children) {
+            node.children = children.length > 0 ? children : false;
+        });
+    }
+
+    return Promise.resolve();
+};
+
 // ── Footer Stats ───────────────────────────────────────────────
 
 self.updateFooterStats = function() {
@@ -1054,7 +1151,6 @@ self.onDestroy = function() {
     self.treeEl.find('.nt-chevron-zone').off('click');
     self.treeEl.find('.nt-label-zone').off('click');
     self.treeEl.find('.nt-nav-zone').off('click');
-    self.treeEl.find('.nt-node-device .nt-node-row').off('click');
     self.searchInput.off('input');
     self.$container.find('.nt-collapse-all').off('click');
     self.reportsLinkEl.find('.nt-reports-row').off('click');
