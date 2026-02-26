@@ -18,7 +18,7 @@ self.onInit = function() {
 
     self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault}], fetchedAt }
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, fetchedAt }
-    self.energyCache = {};    // entityId → { energyWh, co2Grams, fetchedAt }
+    self.energyCache = {};    // entityId → { energyWh, co2Grams, energySavingWh, co2SavingGrams, fetchedAt }
     self.fetchInProgress = {};
     self.lastTimewindowKey = '';
 
@@ -170,7 +170,7 @@ self.getEntityEnergy = function(entityId, startTs, endTs) {
 
     var promise = self.fetchDescendantDevices(entityId).then(function(devices) {
         if (devices.length === 0) {
-            var empty = { energyWh: 0, co2Grams: 0, fetchedAt: Date.now() };
+            var empty = { energyWh: 0, co2Grams: 0, energySavingWh: 0, co2SavingGrams: 0, fetchedAt: Date.now() };
             self.energyCache[entityId] = empty;
             delete self.fetchInProgress[key];
             return empty;
@@ -179,33 +179,43 @@ self.getEntityEnergy = function(entityId, startTs, endTs) {
         var interval = endTs - startTs;
         var devicePromises = devices.map(function(d) {
             var url = '/api/plugins/telemetry/DEVICE/' + d.id +
-                '/values/timeseries?keys=energy_wh,co2_grams' +
+                '/values/timeseries?keys=energy_wh,co2_grams,energy_saving_wh,co2_saving_grams' +
                 '&startTs=' + startTs + '&endTs=' + endTs +
                 '&agg=SUM&interval=' + interval;
             return self.ctx.http.get(url).toPromise().then(function(data) {
-                var wh = 0, co2 = 0;
+                var wh = 0, co2 = 0, savingWh = 0, savingCo2 = 0;
                 if (data && data.energy_wh && data.energy_wh.length > 0) {
                     wh = parseFloat(data.energy_wh[0].value) || 0;
                 }
                 if (data && data.co2_grams && data.co2_grams.length > 0) {
                     co2 = parseFloat(data.co2_grams[0].value) || 0;
                 }
-                return { energyWh: wh, co2Grams: co2 };
+                if (data && data.energy_saving_wh && data.energy_saving_wh.length > 0) {
+                    savingWh = parseFloat(data.energy_saving_wh[0].value) || 0;
+                }
+                if (data && data.co2_saving_grams && data.co2_saving_grams.length > 0) {
+                    savingCo2 = parseFloat(data.co2_saving_grams[0].value) || 0;
+                }
+                return { energyWh: wh, co2Grams: co2, energySavingWh: savingWh, co2SavingGrams: savingCo2 };
             }).catch(function() {
-                return { energyWh: 0, co2Grams: 0 };
+                return { energyWh: 0, co2Grams: 0, energySavingWh: 0, co2SavingGrams: 0 };
             });
         });
 
         return Promise.all(devicePromises).then(function(results) {
-            var totalWh = 0, totalCO2 = 0;
+            var totalWh = 0, totalCO2 = 0, totalSavingWh = 0, totalSavingCO2 = 0;
             results.forEach(function(r) {
                 totalWh += r.energyWh;
                 totalCO2 += r.co2Grams;
+                totalSavingWh += r.energySavingWh;
+                totalSavingCO2 += r.co2SavingGrams;
             });
 
             var result = {
                 energyWh: totalWh,
                 co2Grams: totalCO2,
+                energySavingWh: totalSavingWh,
+                co2SavingGrams: totalSavingCO2,
                 fetchedAt: Date.now()
             };
             self.energyCache[entityId] = result;
@@ -214,7 +224,7 @@ self.getEntityEnergy = function(entityId, startTs, endTs) {
         });
     }).catch(function() {
         delete self.fetchInProgress[key];
-        return { energyWh: 0, co2Grams: 0, fetchedAt: Date.now() };
+        return { energyWh: 0, co2Grams: 0, energySavingWh: 0, co2SavingGrams: 0, fetchedAt: Date.now() };
     });
 
     self.fetchInProgress[key] = promise;
@@ -351,7 +361,9 @@ self.renderCardsHTML = function(entityList, loading) {
 
         var deviceText = total > 0 ? (total + ' device' + (total !== 1 ? 's' : '')) : '...';
         var energyDisplay = isLoading ? '\u2014' : self.formatEnergy(energy.energyWh);
+        var savingEnergyDisplay = isLoading ? '\u2014' : self.formatEnergy(energy.energySavingWh);
         var co2Display = isLoading ? '\u2014' : self.formatCO2(energy.co2Grams);
+        var savingCo2Display = isLoading ? '\u2014' : self.formatCO2(energy.co2SavingGrams);
 
         // Build pills
         var pillsHtml = '';
@@ -377,9 +389,17 @@ self.renderCardsHTML = function(entityList, loading) {
                         '<span class="metric-value">' + energyDisplay + '</span>' +
                         '<span class="metric-label">energy used</span>' +
                     '</div>' +
+                    '<div class="metric-block metric-energy-saving">' +
+                        '<span class="metric-value">' + savingEnergyDisplay + '</span>' +
+                        '<span class="metric-label">energy savings</span>' +
+                    '</div>' +
                     '<div class="metric-block metric-co2">' +
                         '<span class="metric-value">' + co2Display + '</span>' +
                         '<span class="metric-label">CO\u2082 produced</span>' +
+                    '</div>' +
+                    '<div class="metric-block metric-co2-saving">' +
+                        '<span class="metric-value">' + savingCo2Display + '</span>' +
+                        '<span class="metric-label">CO\u2082 savings</span>' +
                     '</div>' +
                 '</div>' +
             '</div>' +

@@ -216,6 +216,16 @@
   color: #64748b !important;
 }
 
+/* Energy Savings color (emerald-500, lighter than energy-used) */
+.metric-energy-saving .metric-value {
+  color: #10b981 !important;
+}
+
+/* CO2 Savings color (emerald-500) */
+.metric-co2-saving .metric-value {
+  color: #10b981 !important;
+}
+
 /* Loading state */
 .energy-card.loading .metric-value {
   color: #cbd5e1 !important;
