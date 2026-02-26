@@ -29,7 +29,7 @@ def render(report_data: dict, sections: list[str] | None = None) -> bytes:
         The finished PDF document.
     """
     if sections is None:
-        sections = ["summary", "energy", "co2", "faults"]
+        sections = ["summary", "energy", "co2", "savings", "faults"]
 
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATE_DIR)),

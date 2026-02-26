@@ -12,7 +12,7 @@
             "defaultSections": {
                 "title": "Default Report Sections",
                 "type": "string",
-                "default": "energy,co2,faults,summary",
+                "default": "energy,co2,savings,faults,summary",
                 "description": "Comma-separated list of report sections to include by default"
             },
             "maxHistoryItems": {

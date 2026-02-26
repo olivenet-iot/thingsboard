@@ -112,6 +112,7 @@
   .kpi-value.accent-amber { color: #d97706; }
   .kpi-value.accent-emerald { color: #059669; }
   .kpi-value.accent-red { color: #ef4444; }
+  .kpi-value.accent-green { color: #16a34a; }
 
   .kpi-label {
     font-size: 7pt;
@@ -349,6 +350,93 @@
   <div class="section-title">Dim Level</div>
   <img src="{{ charts.dim_trend }}" alt="Dim level trend">
 </div>
+{% endif %}
+
+<!-- ══════════════ ENERGY SAVINGS ══════════════ -->
+{% if "savings" in sections %}
+  {% if savings_configured %}
+  <div class="keep-together">
+    <div class="section-title">Energy Savings Analysis</div>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value accent-green">{{ "%.1f"|format(energy_saving_kwh) }}</div>
+        <div class="kpi-label">Energy Saved (kWh)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value accent-green">&pound;{{ "%.2f"|format(cost_saving_total) }}</div>
+        <div class="kpi-label">Cost Saved</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value accent-green">{{ "%.1f"|format(co2_saving_kg) }}</div>
+        <div class="kpi-label">CO&#x2082; Avoided (kg)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value accent-green">{{ "%.1f"|format(avg_saving_pct) }}%</div>
+        <div class="kpi-label">Avg Saving</div>
+      </div>
+    </div>
+    {% if devices_without_baseline > 0 %}
+    <div class="stats-line" style="margin-bottom: 10px;">
+      Note: {{ devices_without_baseline }} device{{ 's' if devices_without_baseline != 1 else '' }} without baseline configuration (excluded from savings).
+    </div>
+    {% endif %}
+  </div>
+
+  {% if charts.energy_comparison %}
+  <div class="chart-section keep-together">
+    <div class="section-title">Energy: Actual vs Saved</div>
+    <img src="{{ charts.energy_comparison }}" alt="Energy comparison chart">
+    <div class="stats-line">
+      Baseline consumption (100% brightness) vs actual. Green = energy saved by dimming.
+    </div>
+  </div>
+  {% endif %}
+
+  {% if charts.saving_pct_trend %}
+  <div class="chart-section keep-together">
+    <div class="section-title">Saving Percentage Trend</div>
+    <img src="{{ charts.saving_pct_trend }}" alt="Saving percentage trend">
+  </div>
+  {% endif %}
+
+  {% if devices|selectattr("has_baseline")|list %}
+  <div class="keep-together">
+    <div class="section-title">Per-Device Savings</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Device</th>
+          {% if entity_type != "site" %}<th>Site</th>{% endif %}
+          <th class="num">Energy Saved (kWh)</th>
+          <th class="num">Cost Saved (&pound;)</th>
+          <th class="num">CO&#x2082; Avoided (kg)</th>
+          <th class="num">Saving %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dev in devices if dev.has_baseline %}
+        <tr>
+          <td>{{ dev.name }}</td>
+          {% if entity_type != "site" %}<td>{{ dev.site }}</td>{% endif %}
+          <td class="num">{{ "%.1f"|format(dev.energy_saving_kwh) }}</td>
+          <td class="num">{{ "%.2f"|format(dev.cost_saving) }}</td>
+          <td class="num">{{ "%.1f"|format(dev.co2_saving_kg) }}</td>
+          <td class="num">{{ "%.1f"|format(dev.saving_pct) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="keep-together">
+    <div class="section-title">Energy Savings Analysis</div>
+    <div class="no-faults-box">
+      Baseline not configured. Set the <strong>reference_power_watts</strong> server attribute on each device to enable savings tracking.
+    </div>
+  </div>
+  {% endif %}
 {% endif %}
 
 <!-- ══════════════ DEVICE OVERVIEW ══════════════ -->

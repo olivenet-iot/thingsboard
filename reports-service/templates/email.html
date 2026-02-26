@@ -41,9 +41,19 @@
                   <td style="padding: 10px 16px; font-size: 14px; color: #333333; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">{{ totals.co2_kg }} kg</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 16px; font-size: 14px; color: #333333;">Active Faults</td>
-                  <td style="padding: 10px 16px; font-size: 14px; color: #333333; text-align: right; font-weight: bold;">{{ totals.fault_count }}</td>
+                  <td style="padding: 10px 16px; font-size: 14px; color: #333333; border-bottom: 1px solid #e0e0e0;">Active Faults</td>
+                  <td style="padding: 10px 16px; font-size: 14px; color: #333333; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">{{ totals.fault_count }}</td>
                 </tr>
+                {% if totals.energy_saving_kwh is defined and totals.energy_saving_kwh > 0 %}
+                <tr style="background-color: #fafafa;">
+                  <td style="padding: 10px 16px; font-size: 14px; color: #333333; border-bottom: 1px solid #e0e0e0;">Energy Saved</td>
+                  <td style="padding: 10px 16px; font-size: 14px; color: #16a34a; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">{{ totals.energy_saving_kwh }} kWh</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 16px; font-size: 14px; color: #333333;">Cost Saved</td>
+                  <td style="padding: 10px 16px; font-size: 14px; color: #16a34a; text-align: right; font-weight: bold;">&pound;{{ totals.cost_saving_total }}</td>
+                </tr>
+                {% endif %}
               </table>
 
               <p style="margin: 0 0 10px; color: #555555; font-size: 14px; line-height: 1.6;">

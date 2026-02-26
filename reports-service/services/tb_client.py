@@ -246,16 +246,18 @@ class TBClient:
         start_ts: int,
         end_ts: int,
         interval_ms: int,
+        agg: str = "SUM",
     ) -> dict[str, list[dict]]:
-        """Multi-bucket SUM aggregation for trend charts.
+        """Multi-bucket aggregation for trend charts.
 
         Returns ``{key: [{ts: int, value: float}, ...]}`` sorted by ts.
+        *agg* can be ``SUM``, ``AVG``, ``MIN``, ``MAX``, or ``COUNT``.
         """
         params = {
             "keys": keys,
             "startTs": start_ts,
             "endTs": end_ts,
-            "agg": "SUM",
+            "agg": agg,
             "interval": interval_ms,
             "limit": 10000,
         }
@@ -303,20 +305,24 @@ class TBClient:
                     result[key] = v
         return result
 
-    def get_telemetry_sum(
+    def get_telemetry_agg(
         self,
         device_id: str,
         key: str,
         start_ts: int,
         end_ts: int,
+        agg: str = "SUM",
     ) -> float:
-        """Return SUM aggregation of a telemetry key over [start_ts, end_ts]."""
+        """Return a single aggregated value for a telemetry key over [start_ts, end_ts].
+
+        *agg* can be ``SUM``, ``AVG``, ``MIN``, ``MAX``, or ``COUNT``.
+        """
         interval = end_ts - start_ts
         params = {
             "keys": key,
             "startTs": start_ts,
             "endTs": end_ts,
-            "agg": "SUM",
+            "agg": agg,
             "interval": interval,
         }
         resp = self._request(
@@ -325,7 +331,6 @@ class TBClient:
             params=params,
         )
         data = resp.json()
-        # Response: {"energy_wh": [{"ts": ..., "value": "123.45"}]}
         values = data.get(key, [])
         if not values:
             return 0.0
@@ -333,6 +338,16 @@ class TBClient:
             return float(values[0]["value"])
         except (ValueError, KeyError, IndexError):
             return 0.0
+
+    def get_telemetry_sum(
+        self,
+        device_id: str,
+        key: str,
+        start_ts: int,
+        end_ts: int,
+    ) -> float:
+        """Return SUM aggregation of a telemetry key over [start_ts, end_ts]."""
+        return self.get_telemetry_agg(device_id, key, start_ts, end_ts, agg="SUM")
 
     # -- alarms -------------------------------------------------------------
 

@@ -31,6 +31,9 @@ _INDIGO_LIGHT = "#e0e7ff"
 _INDIGO_EDGE = "#4f46e5"
 _SLATE_400 = "#94a3b8"
 _RED = "#ef4444"
+_GREEN = "#22c55e"
+_GREEN_LIGHT = "#dcfce7"
+_GREEN_EDGE = "#16a34a"
 
 _FONT_FAMILY = "sans-serif"
 
@@ -243,6 +246,76 @@ def device_status_chart(online: int, offline: int, fault: int, total: int) -> by
     return _render_to_png(fig)
 
 
+def energy_comparison_chart(baseline_data: list[dict]) -> bytes:
+    """Stacked bar chart: amber actual + green savings = baseline total.
+
+    *baseline_data* is ``[{ts, actual, saving, baseline}, ...]`` with values
+    in kWh.
+    """
+    if not baseline_data:
+        return _empty_chart_placeholder()
+
+    dates = [datetime.utcfromtimestamp(p["ts"] / 1000) for p in baseline_data]
+    actuals = [p["actual"] for p in baseline_data]
+    savings = [p["saving"] for p in baseline_data]
+
+    date_labels = [d.strftime("%d %b") for d in dates]
+    x = range(len(date_labels))
+
+    fig, ax = plt.subplots(figsize=(7, 2.5))
+    ax.bar(x, actuals, color=_AMBER, edgecolor=_AMBER_EDGE, linewidth=0.8,
+           label="Actual (kWh)")
+    ax.bar(x, savings, bottom=actuals, color=_GREEN, edgecolor=_GREEN_EDGE,
+           linewidth=0.8, label="Saved (kWh)")
+
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(date_labels,
+                       rotation=45 if len(dates) > 10 else 0,
+                       ha="right" if len(dates) > 10 else "center",
+                       fontsize=7)
+    ax.set_ylabel("kWh", fontsize=8)
+    ax.set_ylim(bottom=0)
+    ax.legend(fontsize=7, frameon=False, loc="upper right")
+    _apply_clean_style(ax)
+    fig.tight_layout(pad=1.0)
+    return _render_to_png(fig)
+
+
+def saving_pct_trend_chart(trend_data: list[dict]) -> bytes:
+    """Green bar/area chart for saving percentage trend. Y-axis 0-100%.
+
+    *trend_data* is ``[{ts, value}, ...]`` with values in percent.
+    """
+    if not trend_data:
+        return _empty_chart_placeholder()
+
+    dates, values = _ts_to_dates(trend_data)
+
+    if len(dates) <= 14:
+        fig, ax = plt.subplots(figsize=(7, 2))
+        date_labels = [d.strftime("%d %b") for d in dates]
+        ax.bar(range(len(values)), values, color=_GREEN,
+               edgecolor=_GREEN_EDGE, linewidth=0.8)
+        ax.set_xticks(range(len(values)))
+        ax.set_xticklabels(date_labels,
+                           rotation=45 if len(dates) > 10 else 0,
+                           ha="right" if len(dates) > 10 else "center",
+                           fontsize=7)
+    else:
+        fig, ax = plt.subplots(figsize=(7, 2))
+        ax.fill_between(dates, values, alpha=0.25, color=_GREEN_LIGHT, linewidth=0)
+        ax.plot(dates, values, color=_GREEN, linewidth=1.5, solid_capstyle="round")
+        if len(dates) <= 31:
+            ax.scatter(dates, values, color=_GREEN_EDGE, s=12, zorder=5, linewidths=0)
+        _auto_date_format(ax, len(dates))
+
+    ax.set_ylabel("%", fontsize=8)
+    ax.set_ylim(0, 105)
+    _apply_clean_style(ax)
+    fig.tight_layout(pad=1.0)
+    return _render_to_png(fig)
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
@@ -266,6 +339,14 @@ def generate_all_charts(report_data: dict, sections: list[str]) -> dict[str, str
     dim_trend = report_data.get("dim_trend")
     if dim_trend:
         charts["dim_trend"] = to_base64_img(dim_trend_chart(dim_trend))
+
+    if "savings" in sections:
+        baseline_trend = report_data.get("energy_baseline_trend", [])
+        if baseline_trend:
+            charts["energy_comparison"] = to_base64_img(energy_comparison_chart(baseline_trend))
+        pct_trend = report_data.get("saving_pct_trend", [])
+        if pct_trend:
+            charts["saving_pct_trend"] = to_base64_img(saving_pct_trend_chart(pct_trend))
 
     # Device status donut (always included)
     online = report_data.get("online_count", 0)

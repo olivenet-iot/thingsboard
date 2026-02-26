@@ -37,7 +37,7 @@ class ReportRequest(BaseModel):
     entityId: str
     entityType: str               # "site" | "region" | "estate" | "customer"
     period: PeriodSpec
-    sections: list[str] = ["summary", "energy", "co2", "faults"]
+    sections: list[str] = ["summary", "energy", "co2", "savings", "faults"]
     emails: list[str] = []
     sendEmail: bool = False
 
@@ -172,6 +172,28 @@ def _aggregate_trend(
     return [{"ts": ts, "value": val} for ts, val in sorted(bucket_sums.items())]
 
 
+def _aggregate_trend_avg(
+    all_device_trends: list[dict[str, list[dict]]],
+    key: str,
+) -> list[dict]:
+    """Aggregate trend data across devices by averaging (not summing).
+
+    Used for percentage metrics like saving_pct where summing is meaningless.
+    """
+    bucket_sums: dict[int, float] = defaultdict(float)
+    bucket_counts: dict[int, int] = defaultdict(int)
+    for device_trend in all_device_trends:
+        for point in device_trend.get(key, []):
+            bucket_sums[point["ts"]] += point["value"]
+            bucket_counts[point["ts"]] += 1
+
+    return [
+        {"ts": ts, "value": round(bucket_sums[ts] / bucket_counts[ts], 1)}
+        for ts in sorted(bucket_sums)
+        if bucket_counts[ts] > 0
+    ]
+
+
 def save_pdf(report_id: str, pdf_bytes: bytes) -> str:
     """Save PDF bytes to disk and return the file path."""
     storage_dir = config.PDF_STORAGE_PATH
@@ -217,6 +239,16 @@ def generate_report(request: ReportRequest) -> ReportResult:
         total_energy_wh = 0.0
         total_co2_grams = 0.0
 
+        # Savings accumulators
+        total_energy_saving_wh = 0.0
+        total_cost_saving = 0.0
+        total_co2_saving_grams = 0.0
+        saving_pct_values: list[float] = []
+        savings_trends: list[dict[str, list[dict]]] = []
+        saving_pct_trends: list[dict[str, list[dict]]] = []
+        devices_with_baseline = 0
+        devices_without_baseline = 0
+
         for site in hierarchy.sites:
             for device in site.devices:
                 # Energy + CO2 totals
@@ -226,7 +258,10 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 total_co2_grams += dev_co2
 
                 # Device status + last activity time (single API call)
-                attrs = tb.get_attributes(device.id, "DEVICE", "SERVER_SCOPE", ["lastActivityTime"])
+                attr_keys = ["lastActivityTime"]
+                if "savings" in request.sections:
+                    attr_keys.append("reference_power_watts")
+                attrs = tb.get_attributes(device.id, "DEVICE", "SERVER_SCOPE", attr_keys)
                 last_ts = attrs.get("lastActivityTime", 0)
                 active = bool(last_ts and (time.time() * 1000 - last_ts) < 600_000)
                 last_active_str = ""
@@ -275,6 +310,49 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 except Exception:
                     pass
 
+                # Savings data (if section requested)
+                dev_energy_saving_kwh = 0.0
+                dev_cost_saving = 0.0
+                dev_co2_saving_kg = 0.0
+                dev_saving_pct = 0.0
+                dev_has_baseline = False
+
+                if "savings" in request.sections:
+                    ref_watts = attrs.get("reference_power_watts")
+                    dev_has_baseline = ref_watts is not None and float(ref_watts or 0) > 0
+
+                    if dev_has_baseline:
+                        devices_with_baseline += 1
+                        dev_esav = tb.get_telemetry_agg(device.id, "energy_saving_wh", start_ts, end_ts, "SUM")
+                        dev_csav = tb.get_telemetry_agg(device.id, "cost_saving", start_ts, end_ts, "SUM")
+                        dev_co2sav = tb.get_telemetry_agg(device.id, "co2_saving_grams", start_ts, end_ts, "SUM")
+                        dev_spct = tb.get_telemetry_agg(device.id, "saving_pct", start_ts, end_ts, "AVG")
+
+                        total_energy_saving_wh += dev_esav
+                        total_cost_saving += dev_csav
+                        total_co2_saving_grams += dev_co2sav
+                        if dev_spct > 0:
+                            saving_pct_values.append(dev_spct)
+
+                        dev_energy_saving_kwh = round(dev_esav / 1000, 2)
+                        dev_cost_saving = round(dev_csav, 2)
+                        dev_co2_saving_kg = round(dev_co2sav / 1000, 2)
+                        dev_saving_pct = round(dev_spct, 1)
+
+                        # Savings trend (energy_saving_wh alongside energy_wh)
+                        sav_trend = tb.get_telemetry_trend(
+                            device.id, "energy_saving_wh,energy_wh", start_ts, end_ts, interval_ms
+                        )
+                        savings_trends.append(sav_trend)
+
+                        # saving_pct trend (AVG aggregation)
+                        pct_trend = tb.get_telemetry_trend(
+                            device.id, "saving_pct", start_ts, end_ts, interval_ms, agg="AVG"
+                        )
+                        saving_pct_trends.append(pct_trend)
+                    else:
+                        devices_without_baseline += 1
+
                 # Per-device detail record
                 devices_detail.append({
                     "name": device.name,
@@ -283,6 +361,11 @@ def generate_report(request: ReportRequest) -> ReportResult:
                     "last_active": last_active_str,
                     "energy_kwh": round(dev_energy / 1000, 2),
                     "co2_kg": round(dev_co2 / 1000, 2),
+                    "energy_saving_kwh": dev_energy_saving_kwh,
+                    "cost_saving": dev_cost_saving,
+                    "co2_saving_kg": dev_co2_saving_kg,
+                    "saving_pct": dev_saving_pct,
+                    "has_baseline": dev_has_baseline,
                 })
 
         # Sort faults by date descending
@@ -308,6 +391,44 @@ def generate_report(request: ReportRequest) -> ReportResult:
             num_devices_with_dim = len(dim_trends)
             for p in dim_trend_agg:
                 p["value"] = round(p["value"] / num_devices_with_dim, 1)
+
+        # -- Aggregate savings trends ---------------------------------------
+        energy_saving_trend_agg: list[dict] = []
+        energy_baseline_trend_agg: list[dict] = []
+        saving_pct_trend_agg: list[dict] = []
+        avg_saving_pct = 0.0
+
+        if "savings" in request.sections and devices_with_baseline > 0:
+            # Sum energy_saving_wh across devices, convert Wh -> kWh
+            energy_saving_trend_agg = _aggregate_trend(savings_trends, "energy_saving_wh")
+            for p in energy_saving_trend_agg:
+                p["value"] = round(p["value"] / 1000, 2)
+
+            # Build baseline comparison: actual + saving per bucket
+            actual_by_ts: dict[int, float] = {}
+            for p in energy_trend_agg:
+                actual_by_ts[p["ts"]] = p["value"]
+            saving_by_ts: dict[int, float] = {}
+            for p in energy_saving_trend_agg:
+                saving_by_ts[p["ts"]] = p["value"]
+
+            all_ts = sorted(set(actual_by_ts) | set(saving_by_ts))
+            for ts in all_ts:
+                actual_val = actual_by_ts.get(ts, 0)
+                saving_val = saving_by_ts.get(ts, 0)
+                energy_baseline_trend_agg.append({
+                    "ts": ts,
+                    "actual": round(actual_val, 2),
+                    "saving": round(saving_val, 2),
+                    "baseline": round(actual_val + saving_val, 2),
+                })
+
+            # Average saving_pct across devices per bucket
+            saving_pct_trend_agg = _aggregate_trend_avg(saving_pct_trends, "saving_pct")
+
+            # Overall average saving_pct
+            if saving_pct_values:
+                avg_saving_pct = round(sum(saving_pct_values) / len(saving_pct_values), 1)
 
         # -- Compute summary stats ------------------------------------------
         device_count = total_online + total_offline + total_fault
@@ -360,9 +481,30 @@ def generate_report(request: ReportRequest) -> ReportResult:
             # Per-device detail
             "devices": devices_detail,
 
+            # Savings
+            "energy_saving_kwh": round(total_energy_saving_wh / 1000, 2),
+            "cost_saving_total": round(total_cost_saving, 2),
+            "co2_saving_kg": round(total_co2_saving_grams / 1000, 2),
+            "avg_saving_pct": avg_saving_pct,
+            "energy_saving_trend": energy_saving_trend_agg,
+            "energy_baseline_trend": energy_baseline_trend_agg,
+            "saving_pct_trend": saving_pct_trend_agg,
+            "devices_with_baseline": devices_with_baseline,
+            "devices_without_baseline": devices_without_baseline,
+            "savings_configured": devices_with_baseline > 0,
+
             # Fault log
             "faults": all_faults,
             "alarm_count": len(all_faults),
+
+            # Totals for email template
+            "totals": {
+                "energy_kwh": energy_kwh,
+                "co2_kg": co2_kg,
+                "fault_count": total_fault,
+                "energy_saving_kwh": round(total_energy_saving_wh / 1000, 2),
+                "cost_saving_total": round(total_cost_saving, 2),
+            },
 
             # Charts (populated below)
             "charts": {},
