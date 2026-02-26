@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 // SITE state header widget. Shows:
 //   - Site name, tier badge, device status counts
-//   - 4 metric cards: Energy, Cost, CO2, Power (today aggregates)
+//   - 8 metric cards: Energy, Cost, CO2, Power + savings (today aggregates)
 //
 // Receives site ASSET ID from dashboard state params (Fleet nav).
 // Queries relations to find child devices, polls telemetry.
@@ -211,8 +211,8 @@ self.onInit = function () {
         else timeRangeLabel = 'last ' + Math.round(rangeMs / 86400000) + ' days';
 
         var promises = devices.map(function (dev) {
-            return apiGet('/plugins/telemetry/DEVICE/' + dev.id +
-                '/values/timeseries?keys=energy_wh,co2_grams,cost_currency&startTs=' + startTs +
+            var sumCall = apiGet('/plugins/telemetry/DEVICE/' + dev.id +
+                '/values/timeseries?keys=energy_wh,co2_grams,cost_currency,energy_saving_wh,co2_saving_grams,cost_saving&startTs=' + startTs +
                 '&endTs=' + endTs + '&agg=SUM&interval=' + interval)
                 .then(function (data) {
                     dev.telemetry.energy_today_wh = (data.energy_wh && data.energy_wh.length > 0)
@@ -221,12 +221,34 @@ self.onInit = function () {
                         ? (parseFloat(data.co2_grams[0].value) || 0) : 0;
                     dev.telemetry.cost_today = (data.cost_currency && data.cost_currency.length > 0)
                         ? (parseFloat(data.cost_currency[0].value) || 0) : 0;
+                    dev.telemetry.energy_saving_today_wh = (data.energy_saving_wh && data.energy_saving_wh.length > 0)
+                        ? (parseFloat(data.energy_saving_wh[0].value) || 0) : 0;
+                    dev.telemetry.co2_saving_today_grams = (data.co2_saving_grams && data.co2_saving_grams.length > 0)
+                        ? (parseFloat(data.co2_saving_grams[0].value) || 0) : 0;
+                    dev.telemetry.cost_saving_today = (data.cost_saving && data.cost_saving.length > 0)
+                        ? (parseFloat(data.cost_saving[0].value) || 0) : 0;
                 })
                 .catch(function () {
                     dev.telemetry.energy_today_wh = 0;
                     dev.telemetry.co2_today_grams = 0;
                     dev.telemetry.cost_today = 0;
+                    dev.telemetry.energy_saving_today_wh = 0;
+                    dev.telemetry.co2_saving_today_grams = 0;
+                    dev.telemetry.cost_saving_today = 0;
                 });
+
+            var avgCall = apiGet('/plugins/telemetry/DEVICE/' + dev.id +
+                '/values/timeseries?keys=saving_pct&startTs=' + startTs +
+                '&endTs=' + endTs + '&agg=AVG&interval=' + interval)
+                .then(function (data) {
+                    dev.telemetry.saving_pct_avg = (data.saving_pct && data.saving_pct.length > 0)
+                        ? (parseFloat(data.saving_pct[0].value) || 0) : 0;
+                })
+                .catch(function () {
+                    dev.telemetry.saving_pct_avg = 0;
+                });
+
+            return Promise.all([sumCall, avgCall]);
         });
 
         return Promise.all(promises);
@@ -274,7 +296,9 @@ self.onInit = function () {
         energy: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#f59e0b"><path d="M11.3 1.05a.75.75 0 0 1 .4.85L10.15 8h4.1a.75.75 0 0 1 .58 1.22l-6.5 8a.75.75 0 0 1-1.33-.72L8.55 10.5H4.75a.75.75 0 0 1-.6-1.2l6.5-8a.75.75 0 0 1 .65-.25z"/></svg>',
         cost: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#059669"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm.75-11.25a.75.75 0 0 0-1.5 0v.1c-.82.12-1.57.44-2.05.95-.54.57-.77 1.32-.48 2.14.27.76.93 1.2 1.56 1.46.56.24 1.25.4 1.8.53l.07.02c.63.15 1.13.28 1.48.44.3.14.35.25.37.31.05.13.02.35-.24.6-.28.27-.78.48-1.51.48-.85 0-1.3-.27-1.52-.5a.75.75 0 0 0-1.06 1.06c.47.47 1.13.8 1.83.94v.06a.75.75 0 0 0 1.5 0v-.1c.82-.12 1.57-.44 2.05-.95.54-.57.77-1.32.48-2.14-.27-.76-.93-1.2-1.56-1.46a14.6 14.6 0 0 0-1.8-.53l-.07-.02c-.63-.15-1.13-.28-1.48-.44-.3-.14-.35-.25-.37-.31-.05-.13-.02-.35.24-.6.28-.27.78-.48 1.51-.48.85 0 1.3.27 1.52.5a.75.75 0 0 0 1.06-1.06 3.22 3.22 0 0 0-1.83-.94v-.06z" clip-rule="evenodd"/></svg>',
         co2: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#06b6d4"><path d="M15.59 7.02a4.5 4.5 0 0 0-8.68-.98 3.5 3.5 0 0 0-.46 6.96h8.05a3 3 0 0 0 1.1-5.98zM10 4a3.5 3.5 0 0 1 3.44 2.85.75.75 0 0 0 .72.58 2 2 0 0 1-.16 4H6.45a2.5 2.5 0 0 1 .29-4.98.75.75 0 0 0 .7-.53A3.5 3.5 0 0 1 10 4z"/></svg>',
-        power: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#8b5cf6"><path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1zm5.3 2.2a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0zM18 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 18 10zm-3.76 5.3a.75.75 0 0 1-1.06 0l-1.06-1.06a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 0 1 0 1.06zM10 18a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5A.75.75 0 0 1 10 18zM4.7 15.3a.75.75 0 0 1 0-1.06l1.06-1.06a.75.75 0 0 1 1.06 1.06L5.76 15.3a.75.75 0 0 1-1.06 0zM2 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 2 10zm2.7-5.3a.75.75 0 0 1 1.06 0l1.06 1.06A.75.75 0 0 1 5.76 6.82L4.7 5.76a.75.75 0 0 1 0-1.06zM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm-4 3a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"/></svg>'
+        power: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#8b5cf6"><path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1zm5.3 2.2a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0zM18 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 18 10zm-3.76 5.3a.75.75 0 0 1-1.06 0l-1.06-1.06a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 0 1 0 1.06zM10 18a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5A.75.75 0 0 1 10 18zM4.7 15.3a.75.75 0 0 1 0-1.06l1.06-1.06a.75.75 0 0 1 1.06 1.06L5.76 15.3a.75.75 0 0 1-1.06 0zM2 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 2 10zm2.7-5.3a.75.75 0 0 1 1.06 0l1.06 1.06A.75.75 0 0 1 5.76 6.82L4.7 5.76a.75.75 0 0 1 0-1.06zM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm-4 3a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"/></svg>',
+        savings: '<svg class="ses-card-icon" viewBox="0 0 256 256" fill="#10b981"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,50,52.82,94a87.09,87.09,0,0,0-12.76,49c.57,15.92,5.37,32,13.82,46.31L34.34,208.84a8,8,0,0,0,11.32,11.32l19.53-19.54C79.55,209.06,95.72,213.86,111.64,214.43q2.55.09,5.09.09A87.29,87.29,0,0,0,161,201.2C205,175.2,227,114.26,223.45,40.07Z"/></svg>',
+        savingPct: '<svg class="ses-card-icon" viewBox="0 0 256 256" fill="#10b981"><path d="M102,52A18,18,0,1,0,84,34,18,18,0,0,0,102,52Zm72,152a18,18,0,1,0-18-18A18,18,0,0,0,174,204ZM213.66,42.34a8,8,0,0,0-11.32,0l-160,160a8,8,0,0,0,11.32,11.32l160-160A8,8,0,0,0,213.66,42.34Z"/></svg>'
     };
 
     // ── Render ────────────────────────────────────────────────
@@ -339,16 +363,28 @@ self.onInit = function () {
 
     function renderCards() {
         var totalEnergyWh = 0, totalCost = 0, totalCO2g = 0, totalPowerW = 0;
+        var totalEnergySavingWh = 0, totalCostSaving = 0, totalCO2SavingG = 0;
+        var totalSavingPct = 0, savingPctCount = 0;
         devices.forEach(function (d) {
             totalEnergyWh += d.telemetry.energy_today_wh || 0;
             totalCost += d.telemetry.cost_today || 0;
             totalCO2g += d.telemetry.co2_today_grams || 0;
             totalPowerW += parseFloat(d.telemetry.power_watts) || 0;
+            totalEnergySavingWh += d.telemetry.energy_saving_today_wh || 0;
+            totalCostSaving += d.telemetry.cost_saving_today || 0;
+            totalCO2SavingG += d.telemetry.co2_saving_today_grams || 0;
+            if (d.telemetry.saving_pct_avg > 0) {
+                totalSavingPct += d.telemetry.saving_pct_avg;
+                savingPctCount++;
+            }
         });
+        var avgSavingPct = savingPctCount > 0 ? totalSavingPct / savingPctCount : 0;
 
         var currency = esc(siteAttrs.currency_symbol || '\u00A3');
         var energy = formatEnergy(totalEnergyWh);
         var co2 = formatCO2(totalCO2g);
+        var energySaving = formatEnergy(totalEnergySavingWh);
+        var co2Saving = formatCO2(totalCO2SavingG);
 
         var html = '<div class="ses-cards">';
 
@@ -378,6 +414,34 @@ self.onInit = function () {
         html += '<div class="ses-card-label">' + ICONS.power + '<span class="ses-label-text">Total Power</span></div>';
         html += '<div class="ses-card-value">' + formatValue(totalPowerW, 0) + '<span class="ses-card-unit">W</span></div>';
         html += '<div class="ses-card-sub">now</div>';
+        html += '</div>';
+
+        // Card 5: Energy Savings
+        html += '<div class="ses-card ses-card-energy-saving">';
+        html += '<div class="ses-card-label">' + ICONS.savings + '<span class="ses-label-text">Energy Savings</span></div>';
+        html += '<div class="ses-card-value">' + energySaving.value + '<span class="ses-card-unit">' + energySaving.unit + '</span></div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
+        html += '</div>';
+
+        // Card 6: Cost Savings
+        html += '<div class="ses-card ses-card-cost-saving">';
+        html += '<div class="ses-card-label">' + ICONS.savings + '<span class="ses-label-text">Cost Savings</span></div>';
+        html += '<div class="ses-card-value">' + currency + formatValue(totalCostSaving, 2) + '</div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
+        html += '</div>';
+
+        // Card 7: CO2 Savings
+        html += '<div class="ses-card ses-card-co2-saving">';
+        html += '<div class="ses-card-label">' + ICONS.savings + '<span class="ses-label-text">CO\u2082 Savings</span></div>';
+        html += '<div class="ses-card-value">' + co2Saving.value + '<span class="ses-card-unit">' + co2Saving.unit + '</span></div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
+        html += '</div>';
+
+        // Card 8: Saving %
+        html += '<div class="ses-card ses-card-saving-pct">';
+        html += '<div class="ses-card-label">' + ICONS.savingPct + '<span class="ses-label-text">Saving %</span></div>';
+        html += '<div class="ses-card-value">' + formatValue(avgSavingPct, 1) + '<span class="ses-card-unit">%</span></div>';
+        html += '<div class="ses-card-sub">avg across devices</div>';
         html += '</div>';
 
         html += '</div>';

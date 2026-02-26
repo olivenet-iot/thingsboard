@@ -163,7 +163,7 @@
   padding: 16px !important;
   display: flex !important;
   flex-direction: column !important;
-  min-height: 90px !important;
+  min-height: 80px !important;
   position: relative !important;
   overflow: hidden !important;
   transition: border-color 0.2s ease !important;
@@ -197,6 +197,22 @@
 
 .ses-card-power::before {
   background-color: #8b5cf6 !important;
+}
+
+.ses-card-energy-saving::before {
+  background-color: #10b981 !important;
+}
+
+.ses-card-cost-saving::before {
+  background-color: #10b981 !important;
+}
+
+.ses-card-co2-saving::before {
+  background-color: #10b981 !important;
+}
+
+.ses-card-saving-pct::before {
+  background-color: #10b981 !important;
 }
 
 /* Card label row */
