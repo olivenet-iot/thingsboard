@@ -5,7 +5,7 @@
    site-energy-summary widgets.
    =================================================================== */
 
-var API_URL = 'http://46.225.54.21:5001';
+var API_URL_DEFAULT = 'http://46.225.54.21:5001';
 var HISTORY_LIMIT = 20;
 
 // ── SVG icons ──────────────────────────────────────────────────────
@@ -23,6 +23,9 @@ self.onInit = function () {
         $root.innerHTML = '<div class="sc-chat-root"></div>';
         container = $root.querySelector('.sc-chat-root');
     }
+
+    // Resolve API URL from widget settings, fall back to default
+    var API_URL = (self.ctx.settings && self.ctx.settings.apiUrl) || API_URL_DEFAULT;
 
     // State
     var isOpen = false;

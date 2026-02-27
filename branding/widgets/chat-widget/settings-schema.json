@@ -1,0 +1,17 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "SignConnect Chat Settings",
+        "properties": {
+            "apiUrl": {
+                "title": "AI Backend URL",
+                "type": "string",
+                "default": "http://46.225.54.21:5001",
+                "description": "Base URL of the SignConnect AI chat backend"
+            }
+        }
+    },
+    "form": [
+        "apiUrl"
+    ]
+}
