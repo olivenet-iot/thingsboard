@@ -205,11 +205,12 @@ TOOL_DEFINITIONS = [
     {
         "name": "send_dim_command",
         "description": (
-            "Send a dim command to a lighting controller. Sets the DALI "
-            "dim level (0-100%). Accepts a device UUID or a site asset UUID — "
-            "if a site ID is given, the command is sent to ALL devices at "
-            "that site. IMPORTANT: Always confirm with the user before "
-            "sending commands."
+            "Set the dim level on a lighting controller via shared attributes. "
+            "The MQTT bridge detects the dimLevel attribute change and sends a "
+            "LoRaWAN downlink to the device. Accepts a device UUID or site "
+            "asset UUID — if a site ID is given, the command is sent to ALL "
+            "devices at that site. IMPORTANT: Always confirm with the user "
+            "before sending commands."
         ),
         "input_schema": {
             "type": "object",
@@ -648,7 +649,7 @@ async def _resolve_device_ids(entity_id: str, tb: TBClient) -> list[dict]:
 
 
 async def _send_dim_command(inp: dict, tb: TBClient) -> dict:
-    """Send an RPC dim command to a device or all devices at a site."""
+    """Set dim level via shared attributes for a device or all devices at a site."""
     device_id = inp["device_id"]
     dim_value = inp["dim_value"]
 
@@ -658,7 +659,7 @@ async def _send_dim_command(inp: dict, tb: TBClient) -> dict:
 
     results = []
     for dev in devices:
-        await tb.send_rpc(dev["id"], "dim", {"value": dim_value})
+        await tb.update_shared_attributes(dev["id"], {"dimLevel": dim_value})
         results.append({
             "device_name": dev["name"],
             "device_id": dev["id"],

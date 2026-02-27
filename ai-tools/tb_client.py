@@ -264,6 +264,23 @@ class TBClient:
             return resp.json()
         return None
 
+    # -- Shared attributes ---------------------------------------------------
+
+    async def update_shared_attributes(
+        self, device_id: str, attributes: dict
+    ) -> dict:
+        """Update shared attributes for a device.
+
+        This is how dim commands work — the MQTT bridge listens for
+        attribute changes and sends LoRaWAN downlinks.
+        """
+        resp = await self._request(
+            "POST",
+            f"/api/plugins/telemetry/DEVICE/{device_id}/attributes/SHARED_SCOPE",
+            json=attributes,
+        )
+        return {"status": resp.status_code}
+
     # -- connectivity check -------------------------------------------------
 
     async def check_connectivity(self) -> bool:
