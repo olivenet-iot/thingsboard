@@ -17,6 +17,23 @@ var ICON_SPARK = '<svg viewBox="0 0 24 24"><path d="M12 2L9.19 8.63 2 9.24l5.46 
 // ── Lifecycle ──────────────────────────────────────────────────────
 
 self.onInit = function () {
+    // === DEBUG: Log all available TB context ===
+    console.log('[SC-CHAT] DEBUG currentUser:', JSON.stringify(self.ctx.currentUser));
+    console.log('[SC-CHAT] DEBUG dashboard:', JSON.stringify(self.ctx.dashboard?.id));
+    console.log('[SC-CHAT] DEBUG stateController:', self.ctx.stateController ? 'exists' : 'null');
+    console.log('[SC-CHAT] DEBUG stateParams:', JSON.stringify(self.ctx.stateController?.getStateParams()));
+    console.log('[SC-CHAT] DEBUG datasources:', JSON.stringify(self.ctx.datasources));
+    console.log('[SC-CHAT] DEBUG settings:', JSON.stringify(self.ctx.settings));
+    if (self.ctx.currentUser) {
+        var cu = self.ctx.currentUser;
+        console.log('[SC-CHAT] DEBUG cu.customerId:', JSON.stringify(cu.customerId));
+        console.log('[SC-CHAT] DEBUG cu.authority:', cu.authority);
+        console.log('[SC-CHAT] DEBUG cu.userId:', JSON.stringify(cu.userId));
+    }
+    if (self.ctx.dashboard) {
+        console.log('[SC-CHAT] DEBUG dashboard keys:', Object.keys(self.ctx.dashboard));
+    }
+
     var $root = self.ctx.$container[0];
     var container = $root.querySelector('.sc-chat-root');
     if (!container) {
