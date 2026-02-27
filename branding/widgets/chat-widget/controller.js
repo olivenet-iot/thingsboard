@@ -221,6 +221,9 @@ self.onInit = function () {
             if (cu.customerId && cu.customerId.id && cu.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
                 ctx.customer_id = cu.customerId.id;
             }
+            if (cu.customerTitle) {
+                ctx.customer_name = cu.customerTitle;
+            }
         } catch (e) {}
 
         try {
@@ -232,6 +235,7 @@ self.onInit = function () {
                     ctx.entity_type = sp.entityId.entityType || null;
                 }
                 if (sp && sp.entityName) ctx.entity_name = sp.entityName;
+                if (sp && sp.entityLabel) ctx.entity_subtype = sp.entityLabel;
                 ctx.dashboard_state = sc.getStateId ? sc.getStateId() : null;
             }
         } catch (e) {}
@@ -248,6 +252,9 @@ self.onInit = function () {
                 if (!ctx.entity_name && ds[0].entityName) {
                     ctx.entity_name = ds[0].entityName;
                 }
+                if (!ctx.entity_subtype && ds[0].entitySubtype) {
+                    ctx.entity_subtype = ds[0].entitySubtype;
+                }
             }
         } catch (e) {}
 
@@ -258,6 +265,14 @@ self.onInit = function () {
             }
         } catch (e) {}
 
+        // Dashboard tier from widget settings or state params
+        try {
+            if (self.ctx.settings && self.ctx.settings.dashboardTier) {
+                ctx.dashboard_tier = self.ctx.settings.dashboardTier;
+            }
+        } catch (e) {}
+
+        console.log('[SC-CHAT] Entity context:', JSON.stringify(ctx));
         return ctx;
     }
 

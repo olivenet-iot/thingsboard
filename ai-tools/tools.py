@@ -206,16 +206,17 @@ TOOL_DEFINITIONS = [
         "name": "send_dim_command",
         "description": (
             "Send a dim command to a lighting controller. Sets the DALI "
-            "dim level (0-100%). IMPORTANT: Always confirm with the user "
-            "before sending commands. Use when user explicitly asks to "
-            "change brightness or dim level."
+            "dim level (0-100%). Accepts a device UUID or a site asset UUID — "
+            "if a site ID is given, the command is sent to ALL devices at "
+            "that site. IMPORTANT: Always confirm with the user before "
+            "sending commands."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "device_id": {
                     "type": "string",
-                    "description": "Device UUID",
+                    "description": "Device UUID or Site asset UUID",
                 },
                 "dim_value": {
                     "type": "integer",
@@ -622,22 +623,56 @@ async def _get_device_attributes(inp: dict, tb: TBClient) -> dict:
     }
 
 
+async def _resolve_device_ids(entity_id: str, tb: TBClient) -> list[dict]:
+    """If entity_id is a device, return it. If it's an asset (site), resolve child devices."""
+    # Try as device first
+    try:
+        dev = await tb.get_device(entity_id)
+        return [{"id": entity_id, "name": dev.get("name", "")}]
+    except Exception:
+        pass
+    # Try as asset — get child device relations
+    try:
+        rels = await tb.get_entity_relations(entity_id, "ASSET")
+        devices = []
+        for rel in rels:
+            child = rel["to"]
+            if child["entityType"] == "DEVICE":
+                dev = await tb.get_device(child["id"])
+                devices.append({"id": child["id"], "name": dev.get("name", "")})
+        if devices:
+            return devices
+    except Exception:
+        pass
+    return []
+
+
 async def _send_dim_command(inp: dict, tb: TBClient) -> dict:
-    """Send an RPC dim command to a device."""
+    """Send an RPC dim command to a device or all devices at a site."""
     device_id = inp["device_id"]
     dim_value = inp["dim_value"]
 
-    dev = await tb.get_device(device_id)
-    await tb.send_rpc(device_id, "dim", {"value": dim_value})
+    devices = await _resolve_device_ids(device_id, tb)
+    if not devices:
+        return {"error": f"No devices found for ID {device_id}"}
+
+    results = []
+    for dev in devices:
+        await tb.send_rpc(dev["id"], "dim", {"value": dim_value})
+        results.append({
+            "device_name": dev["name"],
+            "device_id": dev["id"],
+            "dim_value": dim_value,
+            "status": "sent",
+        })
 
     return {
-        "device_name": dev.get("name", ""),
-        "device_id": device_id,
+        "devices_commanded": len(results),
         "dim_value": dim_value,
-        "status": "sent",
+        "results": results,
         "message": (
-            f"Dim command sent to {dev.get('name', device_id)}: "
-            f"{dim_value}%"
+            f"Dim {dim_value}% sent to {len(results)} device(s): "
+            f"{', '.join(d['name'] for d in devices)}"
         ),
     }
 

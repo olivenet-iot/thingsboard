@@ -40,7 +40,25 @@ async def process_chat(
     3. Call Claude — if it returns tool_use blocks, execute them and loop.
     4. Extract the final text response, suggestions, and metadata.
     """
-    system_prompt = build_system_prompt(request.context)
+    # Pre-fetch hierarchy on first message if customer_id available
+    hierarchy_data = None
+    if not request.chat_history and request.context and request.context.customer_id:
+        try:
+            hierarchy_data = await execute_tool(
+                "get_hierarchy",
+                {"customer_id": request.context.customer_id},
+                tb_client,
+            )
+            if "error" not in hierarchy_data:
+                logger.info("Pre-fetched hierarchy for customer %s", request.context.customer_id)
+            else:
+                logger.warning("Hierarchy pre-fetch returned error: %s", hierarchy_data.get("error"))
+                hierarchy_data = None
+        except Exception:
+            logger.warning("Failed to pre-fetch hierarchy", exc_info=True)
+            hierarchy_data = None
+
+    system_prompt = build_system_prompt(request.context, hierarchy_data=hierarchy_data)
 
     # Build conversation messages
     messages: list[dict] = []
