@@ -217,6 +217,9 @@ if ! $NO_BACKUP && [[ "$CREATE_BACKUP" == "true" ]]; then
     backup_file "$UI_SRC/app/app.component.ts"
     backup_file "$UI_SRC/app/modules/home/components/dashboard-page/dashboard-page.component.html"
     backup_file "$UI_SRC/app/modules/home/home.component.html"
+    backup_file "$UI_SRC/app/modules/home/home.component.ts"
+    backup_file "$UI_SRC/app/shared/components/user-menu.component.ts"
+    backup_file "$UI_SRC/app/shared/components/user-menu.component.html"
     backup_file "$UI_SRC/app/modules/home/components/github-badge/github-badge.component.html"
 
     # Login and connectivity files
@@ -772,6 +775,135 @@ if [[ -f "$NOTIFICATION_ROUTING" ]]; then
     fi
 else
     log "WARNING: notification-settings-routing.modules.ts not found"
+fi
+
+# =============================================================================
+# 24. ADD "BACK TO DASHBOARD" NAVIGATION FOR FULLSCREEN CUSTOMERS
+# =============================================================================
+
+log_section "24. Adding Back-to-Dashboard Navigation"
+
+HOME_TS="$UI_SRC/app/modules/home/home.component.ts"
+USER_MENU_TS="$UI_SRC/app/shared/components/user-menu.component.ts"
+USER_MENU_HTML="$UI_SRC/app/shared/components/user-menu.component.html"
+
+# 24a. home.component.ts — Fix goBack() to use deterministic navigation
+if [[ -f "$HOME_TS" ]]; then
+    if ! grep -q 'goHome' "$HOME_TS" 2>/dev/null; then
+        log_action "Patch home.component.ts with goHome() navigation"
+        if ! $DRY_RUN; then
+            # Add Router to existing ActivatedRoute import
+            sed -i "s|import { ActivatedRoute } from '@angular/router';|import { ActivatedRoute, Router } from '@angular/router';|" "$HOME_TS"
+
+            # Inject Router in constructor after FormBuilder
+            sed -i "s|private fb: FormBuilder,|private fb: FormBuilder,\n              private router: Router,|" "$HOME_TS"
+
+            # Replace window.history.back() with goHome()
+            sed -i "s|this.window.history.back();|this.goHome();|" "$HOME_TS"
+
+            # Insert goHome() method before activeComponentChanged()
+            LINE=$(grep -n '  activeComponentChanged(activeComponent: any) {' "$HOME_TS" | head -1 | cut -d: -f1)
+            if [[ -n "$LINE" ]]; then
+                {
+                    head -n $((LINE - 1)) "$HOME_TS"
+                    cat <<'GOHOME_HOME_EOF'
+  goHome() {
+    const dashboardId = this.authState.userDetails?.additionalInfo?.defaultDashboardId;
+    if (dashboardId) {
+      this.router.navigate([this.forceFullscreen ? 'dashboard' : 'dashboards', dashboardId]);
+    } else {
+      this.router.navigate(['/home']);
+    }
+  }
+
+GOHOME_HOME_EOF
+                    tail -n +"$LINE" "$HOME_TS"
+                } > "${HOME_TS}.tmp" && mv "${HOME_TS}.tmp" "$HOME_TS"
+            fi
+
+            log "Patched home.component.ts with goHome() navigation"
+        fi
+    else
+        log "home.component.ts already patched (skipping)"
+    fi
+else
+    log "WARNING: home.component.ts not found"
+fi
+
+# 24b. user-menu.component.ts — Add goHome() and fullscreen detection
+if [[ -f "$USER_MENU_TS" ]]; then
+    if ! grep -q 'goHome' "$USER_MENU_TS" 2>/dev/null; then
+        log_action "Patch user-menu.component.ts with goHome() and fullscreen detection"
+        if ! $DRY_RUN; then
+            # Add getCurrentAuthState to existing selectors import
+            sed -i "s|import { selectAuthUser, selectUserDetails } from '@core/auth/auth.selectors';|import { getCurrentAuthState, selectAuthUser, selectUserDetails } from '@core/auth/auth.selectors';|" "$USER_MENU_TS"
+
+            # Add AuthState import after the updated selectors import
+            sed -i "/import { getCurrentAuthState, selectAuthUser, selectUserDetails } from '@core\/auth\/auth.selectors';/a\import { AuthState } from '@core\/auth\/auth.models';" "$USER_MENU_TS"
+
+            # Add properties after 'authorities = Authority;'
+            sed -i "/  authorities = Authority;/a\\
+\\
+  authState: AuthState = getCurrentAuthState(this.store);\\
+  isCustomerFullscreen = this.authState.forceFullscreen && this.authState.authUser?.authority === Authority.CUSTOMER_USER;\\
+  defaultDashboardId = this.authState.userDetails?.additionalInfo?.defaultDashboardId;" "$USER_MENU_TS"
+
+            # Insert goHome() method before logout()
+            LINE=$(grep -n '  logout(): void {' "$USER_MENU_TS" | head -1 | cut -d: -f1)
+            if [[ -n "$LINE" ]]; then
+                {
+                    head -n $((LINE - 1)) "$USER_MENU_TS"
+                    cat <<'GOHOME_MENU_EOF'
+  goHome(): void {
+    const dashboardId = this.defaultDashboardId;
+    if (dashboardId) {
+      this.router.navigate([this.authState.forceFullscreen ? 'dashboard' : 'dashboards', dashboardId]);
+    } else {
+      this.router.navigate(['/home']);
+    }
+  }
+
+GOHOME_MENU_EOF
+                    tail -n +"$LINE" "$USER_MENU_TS"
+                } > "${USER_MENU_TS}.tmp" && mv "${USER_MENU_TS}.tmp" "$USER_MENU_TS"
+            fi
+
+            log "Patched user-menu.component.ts with goHome() and fullscreen detection"
+        fi
+    else
+        log "user-menu.component.ts already patched (skipping)"
+    fi
+else
+    log "WARNING: user-menu.component.ts not found"
+fi
+
+# 24c. user-menu.component.html — Add "Home" menu item for fullscreen customers
+if [[ -f "$USER_MENU_HTML" ]]; then
+    if ! grep -q 'goHome' "$USER_MENU_HTML" 2>/dev/null; then
+        log_action "Add Home menu item to user-menu.component.html"
+        if ! $DRY_RUN; then
+            # Insert Home button before the Account button
+            LINE=$(grep -n 'openAccount()' "$USER_MENU_HTML" | head -1 | cut -d: -f1)
+            if [[ -n "$LINE" ]]; then
+                {
+                    head -n $((LINE - 1)) "$USER_MENU_HTML"
+                    cat <<'HOME_BTN_EOF'
+      <button *ngIf="isCustomerFullscreen" mat-menu-item (click)="goHome()">
+        <mat-icon class="material-icons">home</mat-icon>
+        <span translate>home.home</span>
+      </button>
+HOME_BTN_EOF
+                    tail -n +"$LINE" "$USER_MENU_HTML"
+                } > "${USER_MENU_HTML}.tmp" && mv "${USER_MENU_HTML}.tmp" "$USER_MENU_HTML"
+            fi
+
+            log "Added Home menu item to user-menu.component.html"
+        fi
+    else
+        log "user-menu.component.html already patched (skipping)"
+    fi
+else
+    log "WARNING: user-menu.component.html not found"
 fi
 
 # =============================================================================
