@@ -86,7 +86,7 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
    FIX 6: Login Page — portal.lumosoft.io style
    ============================================ */
 
-/* Top amber stripe */
+/* Top amber stripe + full-height split layout */
 .tb-login-content {
   display: flex !important;
   flex-direction: row !important;
@@ -100,25 +100,36 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   border-top: 4px solid #E8A020 !important;
 }
 
-/* Left panel: background image fills remaining space */
+/* Left panel: image + right-edge gradient fade (Problem 3) */
 .tb-login-content::before {
   content: '';
   flex: 1 1 0;
   min-height: 100vh;
-  background: url('/assets/login-bg.png') no-repeat center center / contain;
-  background-color: #0d1b2e;
+  background:
+    linear-gradient(
+      to right,
+      transparent 50%,
+      rgba(255, 255, 255, 0.05) 70%,
+      rgba(255, 255, 255, 0.15) 85%,
+      rgba(255, 255, 255, 0.35) 100%
+    ),
+    url('/assets/login-bg.png') no-repeat center center / contain,
+    #0d1b2e;
   display: block;
 }
 
-/* Right panel: responsive width with clamp */
+/* Right panel: wider ratio + softer shadow (Problems 2 & 3) */
 .tb-login-content .mat-mdc-card {
   flex: 0 0 auto !important;
-  width: clamp(340px, 30vw, 480px) !important;
+  width: clamp(420px, 38vw, 640px) !important;
   min-height: 100vh !important;
+  max-height: none !important;
   margin: 0 !important;
   border-radius: 0 !important;
   background-color: #ffffff !important;
-  box-shadow: -8px 0 32px rgba(0,0,0,0.35) !important;
+  box-shadow:
+    -30px 0 60px rgba(0, 0, 0, 0.12),
+    -2px 0 12px rgba(0, 0, 0, 0.08) !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -131,13 +142,31 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
 /* Card content padding */
 .tb-login-content .mat-mdc-card .mat-mdc-card-content,
 .tb-login-content .mat-mdc-card mat-card-content {
-  padding: 48px 36px !important;
+  padding: 48px 40px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+}
+
+/* Override Angular component's fixed 480px form width (Problem 1).
+   Component has [_nghost-xxx] .tb-login-content .tb-login-form = specificity (0,3,0).
+   We match with 3-class chain + !important. */
+.tb-login-content .mat-mdc-card-content .tb-login-form,
+.tb-login-content .mat-mdc-card .tb-login-form {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Logo sizing */
 .tb-login-content tb-logo {
   max-width: 220px !important;
   margin: 0 auto 8px !important;
+}
+
+/* Dark logo for white panel */
+.tb-login-content tb-logo img {
+  content: url('/assets/logo_title_dark.svg') !important;
 }
 
 /* "Sign in to your account" title */
@@ -147,21 +176,35 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   font-weight: 500 !important;
 }
 
-/* Form inputs — Material CSS custom properties for white background */
+/* Form field tokens — improved contrast (Problem 4)
+   #555 on #fff = 7.4:1 ratio (AAA compliant) */
 .tb-login-content .mat-mdc-card {
   --mdc-outlined-text-field-input-text-color: #1a1a2e;
-  --mdc-outlined-text-field-label-text-color: #666;
-  --mdc-outlined-text-field-hover-label-text-color: #333;
+  --mdc-outlined-text-field-label-text-color: #555;
+  --mdc-outlined-text-field-hover-label-text-color: #222;
   --mdc-outlined-text-field-focus-label-text-color: #E8A020;
-  --mdc-outlined-text-field-outline-color: #ccc;
-  --mdc-outlined-text-field-hover-outline-color: #999;
+  --mdc-outlined-text-field-outline-color: #bbb;
+  --mdc-outlined-text-field-hover-outline-color: #888;
   --mdc-outlined-text-field-focus-outline-color: #E8A020;
   --mdc-outlined-text-field-caret-color: #E8A020;
 }
 
-/* Mat icon prefix color */
+/* Form field icons */
 .tb-login-content .mat-mdc-card .mat-icon {
-  color: #999 !important;
+  color: #888 !important;
+}
+
+/* Password toggle icon alignment (Problem 5) */
+.tb-login-content tb-toggle-password {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tb-login-content tb-toggle-password .mat-mdc-icon-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* Submit button — amber accent */
@@ -171,6 +214,7 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   border-radius: 6px !important;
   font-weight: 600 !important;
   letter-spacing: 0.5px !important;
+  margin: 20px 0 16px !important;
 }
 
 /* Links */
@@ -179,17 +223,12 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   color: #E8A020 !important;
 }
 
-/* Dark logo for white panel */
-.tb-login-content tb-logo img {
-  content: url('/assets/logo_title_dark.svg') !important;
-}
-
 /* Hide injected floating logo */
 .login-page-logo {
   display: none !important;
 }
 
-/* Footer copyright via pseudo-element */
+/* Copyright footer */
 .tb-login-content .mat-mdc-card::after {
   content: '\00A9 2025 Lumosoft';
   display: block;
@@ -200,7 +239,18 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   margin-top: auto;
 }
 
-/* Mobile: single column */
+/* Intermediate breakpoint: 769–1000px (covers 150% zoom on 1280-1440px screens) */
+@media (min-width: 769px) and (max-width: 1000px) {
+  .tb-login-content .mat-mdc-card {
+    width: clamp(380px, 48vw, 520px) !important;
+  }
+  .tb-login-content .mat-mdc-card .mat-mdc-card-content,
+  .tb-login-content .mat-mdc-card mat-card-content {
+    padding: 40px 32px !important;
+  }
+}
+
+/* Mobile / high-zoom: single column */
 @media (max-width: 768px) {
   .tb-login-content::before {
     display: none !important;
@@ -208,6 +258,11 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   .tb-login-content .mat-mdc-card {
     width: 100% !important;
     flex: 1 1 auto !important;
+    box-shadow: none !important;
+  }
+  .tb-login-content .mat-mdc-card .mat-mdc-card-content,
+  .tb-login-content .mat-mdc-card mat-card-content {
+    padding: 32px 24px !important;
   }
 }
 
