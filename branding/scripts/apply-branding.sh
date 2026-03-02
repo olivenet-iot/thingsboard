@@ -277,6 +277,12 @@ if [[ -f "$BRAND_ASSETS/login-bg.png" ]]; then
     log "Copied login background image"
 fi
 
+# Copy dark logo variant (for login page white panel)
+if [[ -f "$BRAND_ASSETS/logo_title_dark.svg" ]]; then
+    copy_asset "$BRAND_ASSETS/logo_title_dark.svg" "$ASSETS/logo_title_dark.svg"
+    log "Copied dark logo variant"
+fi
+
 # =============================================================================
 # 3. UPDATE PAGE TITLE (index.html)
 # =============================================================================
@@ -574,12 +580,12 @@ modify_file "$LOGIN_SCSS" "background-color: #eee" "background-color: transparen
 # Update mat-card height for full-height split layout
 modify_file "$LOGIN_COMPONENT" \
     'style="max-height: 80vh; overflow-y: auto;"' \
-    'style="height: 100%; overflow: hidden;"'
+    'style="min-height: 100vh; overflow: visible;"'
 
 # Add Lumosoft logo to login page top-left
 if ! grep -q "login-page-logo" "$LOGIN_COMPONENT" 2>/dev/null; then
     if ! $DRY_RUN; then
-        sed -i 's|<div class="tb-login-content|<img src="assets/logo_title_white.svg" class="login-page-logo" alt="Lumosoft">\n<div class="tb-login-content|' "$LOGIN_COMPONENT"
+        sed -i 's|<div class="tb-login-content|<img src="assets/logo_title_dark.svg" class="login-page-logo" alt="Lumosoft">\n<div class="tb-login-content|' "$LOGIN_COMPONENT"
         log "Added Lumosoft logo to login page"
     else
         log_action "Add Lumosoft logo to login page"

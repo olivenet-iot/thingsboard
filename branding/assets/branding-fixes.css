@@ -82,93 +82,102 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: none !important;
 }
 
-/* FIX 6: Login page — split layout (sol: görsel, sağ: beyaz panel) */
-.login-page-logo {
-  position: fixed;
-  top: 24px;
-  left: 32px;
-  height: 36px;
-  z-index: 10;
-  pointer-events: none;
-}
+/* ============================================
+   FIX 6: Login Page — Zoom-Proof Split Layout
+   ============================================ */
 
-:host-context(app-login) .tb-login-content,
 .tb-login-content {
-  background: #0a1628 !important;
-  justify-content: flex-end !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
   padding: 0 !important;
   margin: 0 !important;
-  position: relative !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  background: #0d1b2e !important;
   overflow: hidden !important;
 }
 
+/* Sol panel: background image, geriye kalan tüm alan */
 .tb-login-content::before {
   content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 72%;
-  height: 100%;
-  background: url('/assets/login-bg.png') no-repeat center center / cover;
-  background-position: 40% center;
-  z-index: 0;
+  flex: 1 1 auto;
+  min-height: 100vh;
+  background: url('/assets/login-bg.png') no-repeat center center;
+  background-size: contain;
+  background-color: #0d1b2e;
+  display: block;
 }
 
+/* Sağ panel: FIXED 420px — zoom'dan etkilenmez */
 .tb-login-content .mat-mdc-card {
-  position: relative;
-  z-index: 1;
-  width: 28% !important;
-  min-width: 340px !important;
-  max-width: 420px !important;
+  flex: 0 0 420px !important;
+  width: 420px !important;
   min-height: 100vh !important;
-  height: 100% !important;
   margin: 0 !important;
   border-radius: 0 !important;
   background-color: #ffffff !important;
   backdrop-filter: none !important;
-  box-shadow: -4px 0 24px rgba(0,0,0,0.3) !important;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.4) !important;
   display: flex !important;
-  align-items: center !important;
+  flex-direction: column !important;
   justify-content: center !important;
+  align-items: stretch !important;
+  overflow-y: auto !important;
+  position: relative !important;
+  z-index: 2 !important;
 }
 
-.tb-login-content .mat-mdc-card mat-card-content,
-.tb-login-content .mat-mdc-card .mat-mdc-card-content {
-  width: 100% !important;
+/* Kart içi padding */
+.tb-login-content .mat-mdc-card .mat-mdc-card-content,
+.tb-login-content .mat-mdc-card mat-card-content {
   padding: 48px 40px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
 }
 
-/* Form text colors for white background */
-.tb-login-content .tb-login-form {
-  width: 100% !important;
-}
-
-.tb-login-content .mat-mdc-card .mat-mdc-input-element,
-.tb-login-content .mat-mdc-card input {
+/* Form text renkleri — beyaz zemin */
+.tb-login-content .mat-mdc-card input,
+.tb-login-content .mat-mdc-card .mdc-text-field__input {
   color: #1a1a2e !important;
 }
 
-.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__leading,
-.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__notch,
-.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__trailing {
-  border-color: #d0d0d0 !important;
+.tb-login-content .mat-mdc-card .mdc-floating-label,
+.tb-login-content .mat-mdc-card label {
+  color: #666666 !important;
 }
 
-.tb-login-content .mat-mdc-card .mat-mdc-form-field-label,
-.tb-login-content .mat-mdc-card label,
-.tb-login-content .mat-mdc-card .mdc-floating-label {
-  color: #666 !important;
-}
-
-.tb-login-content .mat-mdc-card h1,
-.tb-login-content .mat-mdc-card h2,
-.tb-login-content .mat-mdc-card p,
-.tb-login-content .mat-mdc-card span:not(.mat-button-wrapper) {
-  color: #1a1a2e !important;
+.tb-login-content .mat-mdc-card .mdc-notched-outline__leading,
+.tb-login-content .mat-mdc-card .mdc-notched-outline__notch,
+.tb-login-content .mat-mdc-card .mdc-notched-outline__trailing {
+  border-color: #cccccc !important;
 }
 
 .tb-login-content .mat-mdc-card a {
   color: #E8A020 !important;
+}
+
+/* Kart içi tb-logo: dark variant kullan (beyaz zeminde görünsün) */
+.tb-login-content tb-logo img {
+  content: url('/assets/logo_title_dark.svg') !important;
+}
+
+/* Sol üst sabit logo — kaldır (kart içindekini kullan) */
+.login-page-logo {
+  display: none !important;
+}
+
+/* Dar ekran: tek kolon */
+@media (max-width: 768px) {
+  .tb-login-content::before {
+    display: none !important;
+  }
+  .tb-login-content .mat-mdc-card {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
 }
 
 /* ============================================================================
