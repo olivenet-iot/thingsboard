@@ -83,11 +83,13 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
 }
 
 /* ============================================
-   FIX 6: Login Page — portal.lumosoft.io style
+   FIX 6: Login & Password Reset Pages
+   portal.lumosoft.io split-panel style
    ============================================ */
 
 /* Top amber stripe + full-height split layout */
-.tb-login-content {
+.tb-login-content,
+.tb-password-content {
   display: flex !important;
   flex-direction: row !important;
   align-items: stretch !important;
@@ -100,8 +102,9 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   border-top: 4px solid #E8A020 !important;
 }
 
-/* Left panel: image + right-edge gradient fade (Problem 3) */
-.tb-login-content::before {
+/* Left panel: image + right-edge gradient fade */
+.tb-login-content::before,
+.tb-password-content::before {
   content: '';
   flex: 1 1 0;
   min-height: 100vh;
@@ -118,8 +121,9 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: block;
 }
 
-/* Right panel: wider ratio + softer shadow (Problems 2 & 3) */
-.tb-login-content .mat-mdc-card {
+/* Right panel: card */
+.tb-login-content .mat-mdc-card,
+.tb-password-content .mat-mdc-card {
   flex: 0 0 auto !important;
   width: clamp(420px, 38vw, 640px) !important;
   min-height: 100vh !important;
@@ -139,16 +143,25 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   z-index: 2 !important;
 }
 
+/* Override password component's 450px !important fixed width
+   (component specificity: [_nghost] .tb-password-content .tb-password-card = 0,3,0)
+   We use .tb-dark to reach 0,4,0 and guarantee override */
+.tb-password-content.tb-dark .mat-mdc-card.tb-password-card {
+  width: clamp(420px, 38vw, 640px) !important;
+}
+
 /* Card content padding */
 .tb-login-content .mat-mdc-card .mat-mdc-card-content,
-.tb-login-content .mat-mdc-card mat-card-content {
+.tb-login-content .mat-mdc-card mat-card-content,
+.tb-password-content .mat-mdc-card .mat-mdc-card-content,
+.tb-password-content .mat-mdc-card mat-card-content {
   padding: 48px 40px !important;
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 auto !important;
 }
 
-/* Override Angular component's fixed 480px form width (Problem 1).
+/* Override Angular component's fixed 480px form width.
    Component has [_nghost-xxx] .tb-login-content .tb-login-form = specificity (0,3,0).
    We match with 3-class chain + !important. */
 .tb-login-content .mat-mdc-card-content .tb-login-form,
@@ -158,27 +171,27 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   box-sizing: border-box !important;
 }
 
-/* Logo sizing */
+/* Logo sizing (login only) */
 .tb-login-content tb-logo {
   max-width: 220px !important;
   margin: 0 auto 8px !important;
 }
 
-/* Dark logo for white panel */
+/* Dark logo for white panel (login only) */
 .tb-login-content tb-logo img {
   content: url('/assets/logo_title_dark.svg') !important;
 }
 
-/* "Sign in to your account" title */
+/* "Sign in to your account" title (login only) */
 .tb-login-content .oauth-container .title {
   color: #1a1a2e !important;
   font-size: 16px !important;
   font-weight: 500 !important;
 }
 
-/* Form field tokens — improved contrast (Problem 4)
-   #555 on #fff = 7.4:1 ratio (AAA compliant) */
-.tb-login-content .mat-mdc-card {
+/* Form field tokens — light theme for white card (shared) */
+.tb-login-content .mat-mdc-card,
+.tb-password-content .mat-mdc-card {
   --mdc-outlined-text-field-input-text-color: #1a1a2e;
   --mdc-outlined-text-field-label-text-color: #555;
   --mdc-outlined-text-field-hover-label-text-color: #222;
@@ -189,12 +202,13 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   --mdc-outlined-text-field-caret-color: #E8A020;
 }
 
-/* Form field icons */
-.tb-login-content .mat-mdc-card .mat-icon {
+/* Form field icons (shared) */
+.tb-login-content .mat-mdc-card .mat-icon,
+.tb-password-content .mat-mdc-card .mat-icon {
   color: #888 !important;
 }
 
-/* Password toggle icon alignment (Problem 5) */
+/* Password toggle icon alignment (login only) */
 .tb-login-content tb-toggle-password {
   display: inline-flex !important;
   align-items: center !important;
@@ -207,7 +221,7 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   justify-content: center !important;
 }
 
-/* Submit button — amber accent */
+/* Submit button — amber accent (login only) */
 .tb-login-content .tb-action-button {
   background-color: #E8A020 !important;
   color: #fff !important;
@@ -217,9 +231,28 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   margin: 20px 0 16px !important;
 }
 
-/* Links */
+/* Password reset accent button (uses mat-flat-button[color=accent]) */
+.tb-password-content .mat-mdc-card .mat-mdc-unelevated-button {
+  background-color: #E8A020 !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Password reset card header — dark text on white card */
+.tb-password-content .mat-mdc-card-header .mat-mdc-card-title {
+  color: #1a1a2e !important;
+}
+
+.tb-password-content .mat-mdc-card-header .mat-mdc-card-subtitle {
+  color: #555 !important;
+}
+
+/* Links (shared) */
 .tb-login-content .mat-mdc-card a,
-.tb-login-content .mat-mdc-card .tb-reset-password {
+.tb-login-content .mat-mdc-card .tb-reset-password,
+.tb-password-content .mat-mdc-card a {
   color: #E8A020 !important;
 }
 
@@ -228,9 +261,10 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: none !important;
 }
 
-/* Copyright footer */
-.tb-login-content .mat-mdc-card::after {
-  content: '\00A9 2025 Lumosoft';
+/* Copyright footer (shared) */
+.tb-login-content .mat-mdc-card::after,
+.tb-password-content .mat-mdc-card::after {
+  content: '\00A9 2026 Lumosoft';
   display: block;
   text-align: center;
   font-size: 12px;
@@ -241,27 +275,40 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
 
 /* Intermediate breakpoint: 769–1000px (covers 150% zoom on 1280-1440px screens) */
 @media (min-width: 769px) and (max-width: 1000px) {
-  .tb-login-content .mat-mdc-card {
+  .tb-login-content .mat-mdc-card,
+  .tb-password-content .mat-mdc-card {
+    width: clamp(380px, 48vw, 520px) !important;
+  }
+  .tb-password-content.tb-dark .mat-mdc-card.tb-password-card {
     width: clamp(380px, 48vw, 520px) !important;
   }
   .tb-login-content .mat-mdc-card .mat-mdc-card-content,
-  .tb-login-content .mat-mdc-card mat-card-content {
+  .tb-login-content .mat-mdc-card mat-card-content,
+  .tb-password-content .mat-mdc-card .mat-mdc-card-content,
+  .tb-password-content .mat-mdc-card mat-card-content {
     padding: 40px 32px !important;
   }
 }
 
 /* Mobile / high-zoom: single column */
 @media (max-width: 768px) {
-  .tb-login-content::before {
+  .tb-login-content::before,
+  .tb-password-content::before {
     display: none !important;
   }
-  .tb-login-content .mat-mdc-card {
+  .tb-login-content .mat-mdc-card,
+  .tb-password-content .mat-mdc-card {
     width: 100% !important;
     flex: 1 1 auto !important;
     box-shadow: none !important;
   }
+  .tb-password-content.tb-dark .mat-mdc-card.tb-password-card {
+    width: 100% !important;
+  }
   .tb-login-content .mat-mdc-card .mat-mdc-card-content,
-  .tb-login-content .mat-mdc-card mat-card-content {
+  .tb-login-content .mat-mdc-card mat-card-content,
+  .tb-password-content .mat-mdc-card .mat-mdc-card-content,
+  .tb-password-content .mat-mdc-card mat-card-content {
     padding: 32px 24px !important;
   }
 }
