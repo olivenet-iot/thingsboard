@@ -113,7 +113,7 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
       rgba(255, 255, 255, 0.15) 85%,
       rgba(255, 255, 255, 0.35) 100%
     ),
-    url('/assets/login-bg.png') no-repeat center center / contain,
+    url('/assets/login-bg.png') no-repeat right center / contain,
     #0d1b2e;
   display: block;
 }
