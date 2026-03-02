@@ -88,6 +88,9 @@ declare -A RESTORE_MAP=(
     ["home.component.html"]="$UI_SRC/app/modules/home/home.component.html"
     ["github-badge.component.html"]="$UI_SRC/app/modules/home/components/github-badge/github-badge.component.html"
     ["thingsboard.yml"]="$APP_RESOURCES/thingsboard.yml"
+    ["security.component.ts"]="$UI_SRC/app/modules/home/pages/security/security.component.ts"
+    ["security.component.html"]="$UI_SRC/app/modules/home/pages/security/security.component.html"
+    ["notification-settings-routing.modules.ts"]="$UI_SRC/app/modules/home/pages/notification/settings/notification-settings-routing.modules.ts"
 )
 
 # Restore UI files from backup

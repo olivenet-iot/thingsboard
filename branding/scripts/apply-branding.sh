@@ -225,6 +225,11 @@ if ! $NO_BACKUP && [[ "$CREATE_BACKUP" == "true" ]]; then
     backup_file "$UI_SRC/app/modules/home/pages/admin/two-factor-auth-settings.component.ts"
     backup_file "$UI_SRC/app/modules/home/pages/device/device-check-connectivity-dialog.component.html"
 
+    # Security page files (customer user restrictions)
+    backup_file "$UI_SRC/app/modules/home/pages/security/security.component.ts"
+    backup_file "$UI_SRC/app/modules/home/pages/security/security.component.html"
+    backup_file "$UI_SRC/app/modules/home/pages/notification/settings/notification-settings-routing.modules.ts"
+
     # Backend config
     backup_file "$APP_RESOURCES/thingsboard.yml"
 
@@ -700,6 +705,73 @@ if [[ -f "$THINGSBOARD_YML" ]]; then
     fi
 else
     log "WARNING: thingsboard.yml not found"
+fi
+
+# =============================================================================
+# 23. HIDE JWT/API KEYS/NOTIFICATIONS FOR CUSTOMER USERS
+# =============================================================================
+
+log_section "23. Hiding JWT/API Keys/Notifications for Customer Users"
+
+SECURITY_TS="$UI_SRC/app/modules/home/pages/security/security.component.ts"
+SECURITY_HTML="$UI_SRC/app/modules/home/pages/security/security.component.html"
+NOTIFICATION_ROUTING="$UI_SRC/app/modules/home/pages/notification/settings/notification-settings-routing.modules.ts"
+
+# 23a. security.component.ts — Add imports and isTenantAdmin property
+if [[ -f "$SECURITY_TS" ]]; then
+    if ! grep -q 'getCurrentAuthUser' "$SECURITY_TS" 2>/dev/null; then
+        log_action "Add getCurrentAuthUser/Authority imports and isTenantAdmin property"
+        if ! $DRY_RUN; then
+            # Add import lines after AuthService import
+            sed -i "/import { AuthService } from '@core\/auth\/auth.service';/a\\
+import { getCurrentAuthUser } from '@core\/auth\/auth.selectors';\\
+import { Authority } from '@shared\/models\/authority.enum';" "$SECURITY_TS"
+
+            # Add isTenantAdmin property after activeSingleProvider
+            sed -i '/activeSingleProvider = true;/a\  isTenantAdmin = getCurrentAuthUser(this.store).authority !== Authority.CUSTOMER_USER;' "$SECURITY_TS"
+
+            log "Added customer-user check to security.component.ts"
+        fi
+    else
+        log "security.component.ts already patched (skipping)"
+    fi
+else
+    log "WARNING: security.component.ts not found"
+fi
+
+# 23b. security.component.html — Add *ngIf="isTenantAdmin" to first two mat-cards
+if [[ -f "$SECURITY_HTML" ]]; then
+    if ! grep -q 'isTenantAdmin' "$SECURITY_HTML" 2>/dev/null; then
+        log_action "Add *ngIf=\"isTenantAdmin\" to JWT token and API keys cards"
+        if ! $DRY_RUN; then
+            # Replace first occurrence: JWT token card
+            sed -i '0,/<mat-card appearance="outlined" class="profile-card flex flex-col">/{s/<mat-card appearance="outlined" class="profile-card flex flex-col">/<mat-card *ngIf="isTenantAdmin" appearance="outlined" class="profile-card flex flex-col">/}' "$SECURITY_HTML"
+            # Replace second occurrence (now first remaining unmodified): API keys card
+            sed -i '0,/<mat-card appearance="outlined" class="profile-card flex flex-col">/{s/<mat-card appearance="outlined" class="profile-card flex flex-col">/<mat-card *ngIf="isTenantAdmin" appearance="outlined" class="profile-card flex flex-col">/}' "$SECURITY_HTML"
+
+            log "Added ngIf guards to security.component.html"
+        fi
+    else
+        log "security.component.html already patched (skipping)"
+    fi
+else
+    log "WARNING: security.component.html not found"
+fi
+
+# 23c. notification-settings-routing — Remove CUSTOMER_USER from route auth
+if [[ -f "$NOTIFICATION_ROUTING" ]]; then
+    if grep -q 'Authority.CUSTOMER_USER' "$NOTIFICATION_ROUTING" 2>/dev/null; then
+        log_action "Remove Authority.CUSTOMER_USER from notification settings route"
+        if ! $DRY_RUN; then
+            sed -i 's/Authority.SYS_ADMIN, Authority.TENANT_ADMIN, Authority.CUSTOMER_USER/Authority.SYS_ADMIN, Authority.TENANT_ADMIN/' "$NOTIFICATION_ROUTING"
+
+            log "Removed CUSTOMER_USER from notification-settings-routing"
+        fi
+    else
+        log "notification-settings-routing already patched (skipping)"
+    fi
+else
+    log "WARNING: notification-settings-routing.modules.ts not found"
 fi
 
 # =============================================================================
