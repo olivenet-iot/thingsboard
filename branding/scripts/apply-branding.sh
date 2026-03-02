@@ -571,6 +571,11 @@ fi
 LOGIN_SCSS="$UI_SRC/app/modules/login/pages/login/login.component.scss"
 modify_file "$LOGIN_SCSS" "background-color: #eee" "background-color: transparent"
 
+# Update mat-card height for full-height split layout
+modify_file "$LOGIN_COMPONENT" \
+    'style="max-height: 80vh; overflow-y: auto;"' \
+    'style="height: 100%; overflow: hidden;"'
+
 # Add Lumosoft logo to login page top-left
 if ! grep -q "login-page-logo" "$LOGIN_COMPONENT" 2>/dev/null; then
     if ! $DRY_RUN; then

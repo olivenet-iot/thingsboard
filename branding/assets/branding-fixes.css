@@ -82,28 +82,93 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: none !important;
 }
 
-/* FIX 6: Login page — background image + side layout + top-left logo */
+/* FIX 6: Login page — split layout (sol: görsel, sağ: beyaz panel) */
 .login-page-logo {
   position: fixed;
   top: 24px;
   left: 32px;
-  height: 40px;
+  height: 36px;
   z-index: 10;
   pointer-events: none;
 }
 
 :host-context(app-login) .tb-login-content,
 .tb-login-content {
-  background: url('/assets/login-bg.png') no-repeat center center / cover !important;
+  background: #0a1628 !important;
   justify-content: flex-end !important;
-  padding-right: 5% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.tb-login-content::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 72%;
+  height: 100%;
+  background: url('/assets/login-bg.png') no-repeat center center / cover;
+  background-position: 40% center;
+  z-index: 0;
 }
 
 .tb-login-content .mat-mdc-card {
-  background-color: rgba(23, 33, 43, 0.92) !important;
-  backdrop-filter: blur(8px);
-  border-radius: 12px !important;
-  margin-right: 48px;
+  position: relative;
+  z-index: 1;
+  width: 28% !important;
+  min-width: 340px !important;
+  max-width: 420px !important;
+  min-height: 100vh !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background-color: #ffffff !important;
+  backdrop-filter: none !important;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tb-login-content .mat-mdc-card mat-card-content,
+.tb-login-content .mat-mdc-card .mat-mdc-card-content {
+  width: 100% !important;
+  padding: 48px 40px !important;
+}
+
+/* Form text colors for white background */
+.tb-login-content .tb-login-form {
+  width: 100% !important;
+}
+
+.tb-login-content .mat-mdc-card .mat-mdc-input-element,
+.tb-login-content .mat-mdc-card input {
+  color: #1a1a2e !important;
+}
+
+.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__leading,
+.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__notch,
+.tb-login-content .mat-mdc-card .mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: #d0d0d0 !important;
+}
+
+.tb-login-content .mat-mdc-card .mat-mdc-form-field-label,
+.tb-login-content .mat-mdc-card label,
+.tb-login-content .mat-mdc-card .mdc-floating-label {
+  color: #666 !important;
+}
+
+.tb-login-content .mat-mdc-card h1,
+.tb-login-content .mat-mdc-card h2,
+.tb-login-content .mat-mdc-card p,
+.tb-login-content .mat-mdc-card span:not(.mat-button-wrapper) {
+  color: #1a1a2e !important;
+}
+
+.tb-login-content .mat-mdc-card a {
+  color: #E8A020 !important;
 }
 
 /* ============================================================================
