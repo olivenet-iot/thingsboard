@@ -221,6 +221,7 @@ if ! $NO_BACKUP && [[ "$CREATE_BACKUP" == "true" ]]; then
 
     # Login and connectivity files
     backup_file "$UI_SRC/app/modules/login/pages/login/login.component.html"
+    backup_file "$UI_SRC/app/modules/login/pages/login/login.component.scss"
     backup_file "$UI_SRC/app/modules/home/pages/admin/two-factor-auth-settings.component.ts"
     backup_file "$UI_SRC/app/modules/home/pages/device/device-check-connectivity-dialog.component.html"
 
@@ -269,6 +270,12 @@ BRAND_ASSETS="$BRANDING_DIR/assets"
 copy_asset "$BRAND_ASSETS/logo_title_white.svg" "$ASSETS/logo_title_white.svg"
 copy_asset "$BRAND_ASSETS/logo_white.svg" "$ASSETS/logo_white.svg"
 copy_asset "$BRAND_ASSETS/favicon.ico" "$UI_SRC/thingsboard.ico"
+
+# Copy login background image
+if [[ -f "$BRAND_ASSETS/login-bg.png" ]]; then
+    copy_asset "$BRAND_ASSETS/login-bg.png" "$ASSETS/login-bg.png"
+    log "Copied login background image"
+fi
 
 # =============================================================================
 # 3. UPDATE PAGE TITLE (index.html)
@@ -558,6 +565,20 @@ if [[ -n "$WEBSITE_URL" ]]; then
     log "Updated login logo link to $WEBSITE_URL"
 else
     log "Skipping login logo link (WEBSITE_URL not set)"
+fi
+
+# Update login background color (will be overridden by CSS background-image)
+LOGIN_SCSS="$UI_SRC/app/modules/login/pages/login/login.component.scss"
+modify_file "$LOGIN_SCSS" "background-color: #eee" "background-color: transparent"
+
+# Add Lumosoft logo to login page top-left
+if ! grep -q "login-page-logo" "$LOGIN_COMPONENT" 2>/dev/null; then
+    if ! $DRY_RUN; then
+        sed -i 's|<div class="tb-login-content|<img src="assets/logo_title_white.svg" class="login-page-logo" alt="Lumosoft">\n<div class="tb-login-content|' "$LOGIN_COMPONENT"
+        log "Added Lumosoft logo to login page"
+    else
+        log_action "Add Lumosoft logo to login page"
+    fi
 fi
 
 # =============================================================================

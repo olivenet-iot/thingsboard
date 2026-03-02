@@ -82,6 +82,30 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: none !important;
 }
 
+/* FIX 6: Login page — background image + side layout + top-left logo */
+.login-page-logo {
+  position: fixed;
+  top: 24px;
+  left: 32px;
+  height: 40px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+:host-context(app-login) .tb-login-content,
+.tb-login-content {
+  background: url('/assets/login-bg.png') no-repeat center center / cover !important;
+  justify-content: flex-end !important;
+  padding-right: 5% !important;
+}
+
+.tb-login-content .mat-mdc-card {
+  background-color: rgba(23, 33, 43, 0.92) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 12px !important;
+  margin-right: 48px;
+}
+
 /* ============================================================================
  * END SignConnect Branding CSS Fixes
  * ============================================================================ */
