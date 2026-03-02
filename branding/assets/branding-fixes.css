@@ -261,16 +261,18 @@ tb-getting-started-widget a[mat-stroked-button][href*='thingsboard.io'] {
   display: none !important;
 }
 
-/* Copyright footer (shared) */
+/* Copyright footer — pinned to bottom of card (shared) */
 .tb-login-content .mat-mdc-card::after,
 .tb-password-content .mat-mdc-card::after {
   content: '\00A9 2026 Lumosoft';
-  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   text-align: center;
   font-size: 12px;
   color: #aaa;
-  padding: 24px 0 20px;
-  margin-top: auto;
+  padding: 20px 0;
 }
 
 /* Intermediate breakpoint: 769–1000px (covers 150% zoom on 1280-1440px screens) */
