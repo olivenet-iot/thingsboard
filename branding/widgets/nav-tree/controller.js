@@ -323,6 +323,7 @@ self.loadDevices = function(siteId) {
     return promise;
 };
 
+// NOTE: Uses fault_overall_failure only for performance — nav-tree loads on every page
 self.enrichDevices = function(devices) {
     if (devices.length === 0) return Promise.resolve(devices);
 
@@ -338,7 +339,7 @@ self.enrichDevices = function(devices) {
                 }
                 if (telemetry.fault_overall_failure && telemetry.fault_overall_failure.length > 0) {
                     var val = telemetry.fault_overall_failure[0].value;
-                    device.fault = (val === true || val === 'true' || val === '1');
+                    device.fault = (val === true || val === 'true' || val === '1' || val === 1);
                 }
             }
             return device;

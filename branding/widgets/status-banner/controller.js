@@ -62,6 +62,8 @@ self.onInit = function () {
         'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
         'fault_light_src_failure', 'fault_light_src_short_circuit',
         'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
+        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
+        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
         // DALI status (Ch3) — present on BOTH D4i and DALI2
         'status_control_gear_failure', 'status_lamp_failure'
     ];
@@ -134,7 +136,7 @@ self.onInit = function () {
         // Check fault keys
         FAULT_KEYS.forEach(function (key) {
             var val = getLatestValue(telemetryData, key);
-            if (val === 'true' || val === true || val === '1') {
+            if (val === 'true' || val === true || val === '1' || val === 1) {
                 faultCount++;
                 labels.push(formatKeyLabel(key));
             }
@@ -143,7 +145,7 @@ self.onInit = function () {
         // Check warning keys
         WARNING_KEYS.forEach(function (key) {
             var val = getLatestValue(telemetryData, key);
-            if (val === 'true' || val === true || val === '1') {
+            if (val === 'true' || val === true || val === '1' || val === 1) {
                 warnCount++;
                 labels.push(formatKeyLabel(key));
             }

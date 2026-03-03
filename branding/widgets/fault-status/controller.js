@@ -13,6 +13,12 @@ var FAULT_KEYS = [
     { key: 'fault_light_src_short_circuit',   rowId: 'row-fault_light_src_short_circuit',   label: 'Short Circuit' },
     { key: 'fault_light_src_thermal_derate',  rowId: 'row-fault_light_src_thermal_derate',  label: 'Light Src Derating' },
     { key: 'fault_light_src_thermal_shutdn',  rowId: 'row-fault_light_src_thermal_shutdn',  label: 'Light Src Shutdown' },
+    { key: 'fault_input_power',               rowId: 'row-fault_input_power',               label: 'Input Power' },
+    { key: 'fault_current_limited',           rowId: 'row-fault_current_limited',           label: 'Current Limited' },
+    { key: 'fault_driver_failure',            rowId: 'row-fault_driver_failure',            label: 'Driver Failure' },
+    { key: 'fault_external',                  rowId: 'row-fault_external',                  label: 'External Fault' },
+    { key: 'fault_d4i_power_exceeded',        rowId: 'row-fault_d4i_power_exceeded',        label: 'D4i Power Exceeded' },
+    { key: 'fault_overcurrent',              rowId: 'row-fault_overcurrent',              label: 'Overcurrent' },
     { key: 'status_control_gear_failure',      rowId: 'row-status_control_gear_failure',     label: 'Control Gear Failure' },
     { key: 'status_lamp_failure',              rowId: 'row-status_lamp_failure',              label: 'Lamp Failure' }
 ];

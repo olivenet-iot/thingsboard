@@ -31,7 +31,7 @@ self.onInit = function () {
 
     // ── Fault & Warning Key Definitions ─────────────────────
 
-    var FAULT_KEYS_PLUS = [
+    var FAULT_KEYS = [
         { key: 'fault_overall_failure',          label: 'Overall Failure' },
         { key: 'fault_under_voltage',            label: 'Under Voltage' },
         { key: 'fault_over_voltage',             label: 'Over Voltage' },
@@ -41,12 +41,15 @@ self.onInit = function () {
         { key: 'fault_light_src_failure',        label: 'Light Src Failure' },
         { key: 'fault_light_src_short_circuit',  label: 'Short Circuit' },
         { key: 'fault_light_src_thermal_derate', label: 'Light Src Derating' },
-        { key: 'fault_light_src_thermal_shutdn', label: 'Light Src Shutdown' }
-    ];
-
-    var FAULT_KEYS_BOTH = [
-        { key: 'status_control_gear_failure', label: 'Control Gear Failure' },
-        { key: 'status_lamp_failure',         label: 'Lamp Failure' }
+        { key: 'fault_light_src_thermal_shutdn', label: 'Light Src Shutdown' },
+        { key: 'fault_input_power',              label: 'Input Power' },
+        { key: 'fault_current_limited',          label: 'Current Limited' },
+        { key: 'fault_driver_failure',           label: 'Driver Failure' },
+        { key: 'fault_external',                 label: 'External Fault' },
+        { key: 'fault_d4i_power_exceeded',       label: 'D4i Power Exceeded' },
+        { key: 'fault_overcurrent',              label: 'Overcurrent' },
+        { key: 'status_control_gear_failure',    label: 'Control Gear Failure' },
+        { key: 'status_lamp_failure',            label: 'Lamp Failure' }
     ];
 
     var WARNING_KEYS = [
@@ -121,7 +124,6 @@ self.onInit = function () {
                             id: dev.id.id,
                             name: dev.name || 'Unknown',
                             type: dev.type || '',
-                            tier: 'standard',
                             faults: [],
                             warnings: [],
                             hasData: false
@@ -149,49 +151,22 @@ self.onInit = function () {
             .catch(function () { siteAttrs = {}; });
     }
 
-    // ── Fetch Device Attributes (tier) ──────────────────────
-
-    function fetchDeviceAttributes() {
-        if (devices.length === 0) return Promise.resolve();
-
-        var promises = devices.map(function (dev) {
-            return apiGet('/plugins/telemetry/DEVICE/' + dev.id + '/values/attributes/SERVER_SCOPE')
-                .then(function (attrs) {
-                    if (attrs && Array.isArray(attrs)) {
-                        attrs.forEach(function (a) {
-                            if (a.key === 'dashboard_tier') {
-                                dev.tier = (String(a.value) || '').toLowerCase();
-                            }
-                        });
-                    }
-                    if (!dev.tier) dev.tier = 'standard';
-                })
-                .catch(function () { dev.tier = 'standard'; });
-        });
-
-        return Promise.all(promises);
-    }
-
     // ── Fetch Fault Telemetry ───────────────────────────────
 
     function fetchFaultTelemetry() {
         if (devices.length === 0) return Promise.resolve();
 
-        var promises = devices.map(function (dev) {
-            var isPlus = dev.tier === 'plus';
-            var faultDefs = isPlus
-                ? FAULT_KEYS_PLUS.concat(FAULT_KEYS_BOTH)
-                : FAULT_KEYS_BOTH;
-            var allDefs = faultDefs.concat(WARNING_KEYS);
-            var keysParam = allDefs.map(function (d) { return d.key; }).join(',');
+        var allDefs = FAULT_KEYS.concat(WARNING_KEYS);
+        var keysParam = allDefs.map(function (d) { return d.key; }).join(',');
 
+        var promises = devices.map(function (dev) {
             return apiGet('/plugins/telemetry/DEVICE/' + dev.id + '/values/timeseries?keys=' + keysParam)
                 .then(function (data) {
                     var faults = [];
                     var warnings = [];
                     var gotData = false;
 
-                    faultDefs.forEach(function (fd) {
+                    FAULT_KEYS.forEach(function (fd) {
                         if (data[fd.key] && data[fd.key].length > 0) {
                             gotData = true;
                             if (isFault(data[fd.key][0].value)) {
@@ -392,8 +367,6 @@ self.onInit = function () {
         fetchDevices(),
         fetchSiteAttributes()
     ]).then(function () {
-        return fetchDeviceAttributes();
-    }).then(function () {
         return fetchFaultTelemetry();
     }).then(function () {
         render();

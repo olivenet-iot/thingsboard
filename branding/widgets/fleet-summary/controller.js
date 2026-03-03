@@ -2,6 +2,17 @@
 // Widget type: latest
 // Datasource: entity alias returning devices (all_devices or descendant_devices)
 // Required datasource keys: dim_value, fault_overall_failure
+//
+// NOTE: This widget is datasource-driven — it reads fault keys from the entity alias
+// subscription, not from direct API calls. For full fault coverage, the datasource
+// entity alias must include ALL 21 canonical fault/warning keys:
+//   fault_overall_failure, fault_under_voltage, fault_over_voltage, fault_power_limit,
+//   fault_thermal_derating, fault_thermal_shutdown, fault_light_src_failure,
+//   fault_light_src_short_circuit, fault_light_src_thermal_derate,
+//   fault_light_src_thermal_shutdn, fault_input_power, fault_current_limited,
+//   fault_driver_failure, fault_external, fault_d4i_power_exceeded, fault_overcurrent,
+//   status_control_gear_failure, status_lamp_failure,
+//   status_limit_error, status_reset_state, status_missing_short_addr
 
 self.onInit = function() {
     self.$container = self.ctx.$container;

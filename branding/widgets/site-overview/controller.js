@@ -135,11 +135,33 @@ self.onInit = function () {
     var TELEMETRY_KEYS = [
         'dim_value', 'power_watts', 'energy_wh', 'co2_grams',
         'status_light_src_on', 'status_driver_ok', 'status_ready',
-        'fault_overall_failure', 'fault_input_power', 'fault_thermal_shutdown',
-        'fault_thermal_derating', 'fault_current_limited', 'fault_light_src_failure',
-        'fault_driver_failure', 'fault_external', 'fault_d4i_power_exceeded',
-        'fault_overcurrent'
+        // All 18 canonical fault keys
+        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
+        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
+        'fault_light_src_failure', 'fault_light_src_short_circuit',
+        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
+        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
+        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
+        'status_control_gear_failure', 'status_lamp_failure',
+        // 3 canonical warning keys
+        'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
     ].join(',');
+
+    // Canonical fault key list for counting
+    var FAULT_COUNT_KEYS = [
+        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
+        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
+        'fault_light_src_failure', 'fault_light_src_short_circuit',
+        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
+        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
+        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
+        'status_control_gear_failure', 'status_lamp_failure'
+    ];
+
+    function isFault(val) {
+        if (val === undefined || val === null) return false;
+        return val === 'true' || val === true || val === '1' || val === 1;
+    }
 
     function pollAllDevices() {
         if (devices.length === 0) return Promise.resolve();
@@ -167,11 +189,8 @@ self.onInit = function () {
 
                     // Fault count
                     var faults = 0;
-                    ['fault_overall_failure', 'fault_input_power', 'fault_thermal_shutdown',
-                     'fault_thermal_derating', 'fault_current_limited', 'fault_light_src_failure',
-                     'fault_driver_failure', 'fault_external', 'fault_d4i_power_exceeded',
-                     'fault_overcurrent'].forEach(function (fk) {
-                        if (ts[fk] === 'true' || ts[fk] === '1' || ts[fk] === true) faults++;
+                    FAULT_COUNT_KEYS.forEach(function (fk) {
+                        if (isFault(ts[fk])) faults++;
                     });
                     dev.faultCount = faults;
                 });

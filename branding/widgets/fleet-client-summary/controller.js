@@ -228,16 +228,34 @@ self.getChildren = function(assetId) {
     });
 };
 
+// All 21 canonical fault/warning keys
+self.FAULT_KEYS = [
+    'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
+    'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
+    'fault_light_src_failure', 'fault_light_src_short_circuit',
+    'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
+    'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
+    'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
+    'status_control_gear_failure', 'status_lamp_failure',
+    'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
+];
+
+self.isFault = function(val) {
+    if (val === undefined || val === null) return false;
+    return val === 'true' || val === true || val === '1' || val === 1;
+};
+
 self.enrichDevices = function(devices) {
     if (devices.length === 0) return Promise.resolve(devices);
 
+    var allFaultKeys = self.FAULT_KEYS.join(',');
     var promises = devices.map(function(device) {
         // Skip if already enriched (from a cached sub-tree)
         if (device.enriched) return Promise.resolve(device);
 
         // 2 parallel calls per device: timeseries + shared attribute
         var tsUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
-                    '/values/timeseries?keys=dim_value,fault_overall_failure';
+                    '/values/timeseries?keys=dim_value,' + allFaultKeys;
         var dimUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
                      '/values/attributes/SHARED_SCOPE?keys=dimLevel';
 
@@ -253,11 +271,16 @@ self.enrichDevices = function(devices) {
                 device.lastTs = tsData.dim_value[0].ts;
             }
 
-            // fault from fault_overall_failure timeseries
-            if (tsData && tsData.fault_overall_failure && tsData.fault_overall_failure.length > 0) {
-                var val = tsData.fault_overall_failure[0].value;
-                device.fault = (val === true || val === 'true' || val === '1');
+            // Count ALL active faults across canonical keys
+            var hasFault = false;
+            if (tsData) {
+                self.FAULT_KEYS.forEach(function(fk) {
+                    if (tsData[fk] && tsData[fk].length > 0 && self.isFault(tsData[fk][0].value)) {
+                        hasFault = true;
+                    }
+                });
             }
+            device.fault = hasFault;
 
             // dimLevel from SHARED_SCOPE attribute
             if (dimData && Array.isArray(dimData) && dimData.length > 0) {
