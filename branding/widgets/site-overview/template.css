@@ -507,6 +507,10 @@
     background: #fff;
 }
 
+input.so-meta-input {
+    text-align: left;
+}
+
 .so-input-sm { max-width: 70px; text-align: center; }
 
 .so-meta-textarea {
