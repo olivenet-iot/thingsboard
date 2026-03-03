@@ -57,13 +57,27 @@ def read_file(name):
 
 # ── Build Descriptor ────────────────────────────
 def build_descriptor():
+    # All telemetry keys needed: dim_value + 21 canonical fault/warning keys
+    all_keys = [
+        "dim_value",
+        "fault_overall_failure", "fault_under_voltage", "fault_over_voltage",
+        "fault_power_limit", "fault_thermal_derating", "fault_thermal_shutdown",
+        "fault_light_src_failure", "fault_light_src_short_circuit",
+        "fault_light_src_thermal_derate", "fault_light_src_thermal_shutdn",
+        "fault_input_power", "fault_current_limited", "fault_driver_failure",
+        "fault_external", "fault_d4i_power_exceeded", "fault_overcurrent",
+        "status_control_gear_failure", "status_lamp_failure",
+        "status_limit_error", "status_reset_state", "status_missing_short_addr"
+    ]
+    data_keys = [
+        {"name": k, "type": "timeseries", "label": k, "settings": {}, "funcBody": None, "_hash": round(0.1 + i * 0.01, 4)}
+        for i, k in enumerate(all_keys)
+    ]
+
     default_config = json.dumps({
         "datasources": [{
             "type": "entity",
-            "dataKeys": [
-                {"name": "dim_value", "type": "timeseries", "label": "dim_value", "settings": {}, "funcBody": None, "_hash": 0.1},
-                {"name": "fault_overall_failure", "type": "timeseries", "label": "fault_overall_failure", "settings": {}, "funcBody": None, "_hash": 0.2}
-            ]
+            "dataKeys": data_keys
         }],
         "timewindow": {"realtime": {"timewindowMs": 600000}},
         "showTitle": False,
@@ -176,7 +190,7 @@ def main():
     print(f"  ✅ Done! Widget ID: {widget_id}")
     print(f"  Bundle: {BUNDLE_NAME}")
     print(f"  Type: latest")
-    print(f"  Keys: dim_value, fault_overall_failure")
+    print(f"  Keys: dim_value + 21 fault/warning keys")
     print(f"  Size: 24 × 3")
     print("═" * 50)
 

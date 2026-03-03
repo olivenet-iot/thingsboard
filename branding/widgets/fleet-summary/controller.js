@@ -1,7 +1,7 @@
 // Fleet Summary Cards — Controller
 // Widget type: latest
 // Datasource: entity alias returning devices (all_devices or descendant_devices)
-// Required datasource keys: dim_value, fault_overall_failure
+// Required datasource keys: dim_value + 21 canonical fault/warning keys (see deploy.py)
 //
 // NOTE: This widget is datasource-driven — it reads fault keys from the entity alias
 // subscription, not from direct API calls. For full fault coverage, the datasource
