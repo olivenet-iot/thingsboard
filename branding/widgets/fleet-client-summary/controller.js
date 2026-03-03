@@ -1,7 +1,7 @@
 // Fleet Client Summary Widget — Controller
-// Operational overview per client: product tier, connectivity, alarm health, sign state.
+// Operational overview per client: connectivity, alarm health, sign state.
 // Walks the asset hierarchy to find descendant devices, then fetches
-// status (online/offline), alarms (active), attributes (tier, dimLevel) in parallel.
+// status (online/offline), alarms (active), attributes (dimLevel) in parallel.
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -12,8 +12,8 @@ self.onInit = function() {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10
     };
 
-    self.deviceCache = {};    // assetId → { devices: [{id,lastTs,dashboard_tier,dimLevel}], fetchedAt }
-    self.statsCache = {};     // entityId → { totalDevices, online, offline, alarmCount, signsOn, signsOff, productType, fetchedAt }
+    self.deviceCache = {};    // assetId → { devices: [{id,lastTs,dimLevel}], fetchedAt }
+    self.statsCache = {};     // entityId → { totalDevices, online, offline, alarmCount, signsOn, signsOff, fetchedAt }
     self.alarmCache = null;   // { alarmDeviceSet: {deviceId: count}, fetchedAt }
     self.fetchInProgress = {};
 };
@@ -117,7 +117,6 @@ self.getEntityStats = function(entityId) {
             alarmCount: 0,
             signsOn: 0,
             signsOff: 0,
-            productType: 'SignConnect',
             fetchedAt: now
         };
 
@@ -141,10 +140,6 @@ self.getEntityStats = function(entityId) {
                 stats.signsOff++;
             }
 
-            // Product tier
-            if (d.dashboard_tier === 'plus') {
-                stats.productType = 'SignConnect Plus';
-            }
         });
 
         self.statsCache[entityId] = stats;
@@ -152,7 +147,7 @@ self.getEntityStats = function(entityId) {
         return stats;
     }).catch(function() {
         delete self.fetchInProgress[key];
-        return { totalDevices: 0, online: 0, offline: 0, alarmCount: 0, signsOn: 0, signsOff: 0, productType: 'SignConnect', fetchedAt: Date.now() };
+        return { totalDevices: 0, online: 0, offline: 0, alarmCount: 0, signsOn: 0, signsOff: 0, fetchedAt: Date.now() };
     });
 
     self.fetchInProgress[key] = promise;
@@ -178,7 +173,7 @@ self.fetchDescendantDevices = function(assetId) {
 
         children.forEach(function(child) {
             if (child.to.entityType === 'DEVICE') {
-                devices.push({ id: child.to.id, lastTs: 0, dashboard_tier: null, dimLevel: null, enriched: false });
+                devices.push({ id: child.to.id, lastTs: 0, dimLevel: null, enriched: false });
             } else if (child.to.entityType === 'ASSET') {
                 assetChildren.push(child.to.id);
             }
@@ -231,31 +226,22 @@ self.enrichDevices = function(devices) {
         // Skip if already enriched (from a cached sub-tree)
         if (device.enriched) return Promise.resolve(device);
 
-        // 3 parallel calls per device
+        // 2 parallel calls per device
         var tsUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
                     '/values/timeseries?keys=dim_value';
-        var tierUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
-                      '/values/attributes/SERVER_SCOPE?keys=dashboard_tier';
         var dimUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
                      '/values/attributes/SHARED_SCOPE?keys=dimLevel';
 
         return Promise.all([
             self.ctx.http.get(tsUrl).toPromise().catch(function() { return null; }),
-            self.ctx.http.get(tierUrl).toPromise().catch(function() { return null; }),
             self.ctx.http.get(dimUrl).toPromise().catch(function() { return null; })
         ]).then(function(results) {
             var tsData = results[0];
-            var tierData = results[1];
-            var dimData = results[2];
+            var dimData = results[1];
 
             // lastTs from dim_value timeseries
             if (tsData && tsData.dim_value && tsData.dim_value.length > 0) {
                 device.lastTs = tsData.dim_value[0].ts;
-            }
-
-            // dashboard_tier from SERVER_SCOPE attribute
-            if (tierData && Array.isArray(tierData) && tierData.length > 0) {
-                device.dashboard_tier = tierData[0].value || null;
             }
 
             // dimLevel from SHARED_SCOPE attribute
@@ -372,8 +358,6 @@ self.renderCardsHTML = function(entityList, loading) {
         var alarmCount = stats.alarmCount || 0;
         var signsOn = stats.signsOn || 0;
         var signsOff = stats.signsOff || 0;
-        var productType = stats.productType || 'SignConnect';
-
         // Status class for left border
         var statusClass = 'status-offline';
         if (alarmCount > 0) {
@@ -425,8 +409,6 @@ self.renderCardsHTML = function(entityList, loading) {
                     '<span class="card-chevron">\u203A</span>' +
                 '</div>' +
                 '<div class="card-subtitle-row">' +
-                    '<span>' + self.escapeHtml(productType) + '</span>' +
-                    '<span class="subtitle-sep"></span>' +
                     '<span>' + deviceText + '</span>' +
                 '</div>' +
                 '<div class="card-pills">' + pillsHtml + '</div>' +
