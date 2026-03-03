@@ -1,0 +1,22 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Fleet Client Summary Settings",
+    "properties": {
+      "fleetDashboardId": {
+        "title": "Fleet dashboard ID (for estate navigation)",
+        "type": "string",
+        "default": ""
+      },
+      "onlineThresholdMinutes": {
+        "title": "Online threshold (minutes)",
+        "type": "number",
+        "default": 10
+      }
+    }
+  },
+  "form": [
+    {"key": "fleetDashboardId", "type": "text", "placeholder": "Dashboard UUID"},
+    {"key": "onlineThresholdMinutes", "type": "number", "placeholder": "10"}
+  ]
+}

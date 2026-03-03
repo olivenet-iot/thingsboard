@@ -1,0 +1,248 @@
+/* Fleet Client Summary — SignConnect Design System */
+
+.fleet-client-summary {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 4px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Header row */
+.client-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+  padding: 0 2px !important;
+}
+
+.client-header .header-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: #64748b !important;
+}
+
+/* Cards container */
+.client-cards {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
+  align-content: flex-start !important;
+}
+
+/* Individual entity card */
+.client-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 3px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.client-card:hover {
+  background: #f8fafc !important;
+  border-left-color: #f59e0b !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Status border colors */
+.client-card.status-healthy {
+  border-left-color: #059669 !important;
+}
+
+.client-card.status-warning {
+  border-left-color: #f59e0b !important;
+}
+
+.client-card.status-fault {
+  border-left-color: #ef4444 !important;
+}
+
+.client-card.status-offline {
+  border-left-color: #94a3b8 !important;
+}
+
+/* Card main content area */
+.card-main {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Top row: entity name + chevron */
+.card-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.card-entity-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.card-chevron {
+  font-size: 18px !important;
+  font-weight: 300 !important;
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  transition: color 0.15s ease !important;
+}
+
+.client-card:hover .card-chevron {
+  color: #f59e0b !important;
+}
+
+/* Subtitle row: product type + device count */
+.card-subtitle-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+}
+
+.card-subtitle-row .subtitle-sep {
+  color: #cbd5e1 !important;
+}
+
+/* Status pills row */
+.card-pills {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.pill-online {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.pill-offline {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.pill-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+.pill-online .pill-dot {
+  background: #059669 !important;
+}
+
+.pill-offline .pill-dot {
+  background: #94a3b8 !important;
+}
+
+/* Status rows: health + signs */
+.card-status-rows {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  margin-top: 2px !important;
+}
+
+.card-status-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+}
+
+.card-status-row .status-icon {
+  flex-shrink: 0 !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+/* Health status */
+.client-health-ok {
+  color: #059669 !important;
+}
+
+.client-health-issues {
+  color: #ef4444 !important;
+}
+
+/* Signs styling */
+.client-signs {
+  color: #475569 !important;
+}
+
+.signs-on {
+  color: #059669 !important;
+  font-weight: 600 !important;
+}
+
+.signs-off {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+/* Loading state */
+.client-card.loading .card-status-rows {
+  opacity: 0.4 !important;
+}
+
+.client-card.loading .card-subtitle-row {
+  opacity: 0.4 !important;
+}
+
+/* Loading placeholder */
+.loading-placeholder {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 20px !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+/* Empty state */
+.client-empty {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 20px !important;
+  text-align: center !important;
+  width: 100% !important;
+}
