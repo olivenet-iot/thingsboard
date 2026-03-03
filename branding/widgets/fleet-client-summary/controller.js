@@ -1,7 +1,7 @@
 // Fleet Client Summary Widget — Controller
-// Operational overview per client: connectivity, alarm health, sign state.
+// Operational overview per client: connectivity, fault health, sign state.
 // Walks the asset hierarchy to find descendant devices, then fetches
-// status (online/offline), alarms (active), attributes (dimLevel) in parallel.
+// status (online/offline), faults (fault_overall_failure), attributes (dimLevel) in parallel.
 
 self.onInit = function() {
     self.$container = self.ctx.$container;
@@ -12,9 +12,8 @@ self.onInit = function() {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10
     };
 
-    self.deviceCache = {};    // assetId → { devices: [{id,lastTs,dimLevel}], fetchedAt }
-    self.statsCache = {};     // entityId → { totalDevices, online, offline, alarmCount, signsOn, signsOff, fetchedAt }
-    self.alarmCache = null;   // { alarmDeviceSet: {deviceId: count}, fetchedAt }
+    self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault,dimLevel}], fetchedAt }
+    self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, signsOn, signsOff, fetchedAt }
     self.fetchInProgress = {};
 };
 
@@ -44,52 +43,14 @@ self.onDataUpdated = function() {
     // Render loading state immediately
     self.renderCards(entityList, true);
 
-    // Fetch alarms once, then stats for all entities
-    self.fetchAllActiveAlarms().then(function() {
-        var promises = entityList.map(function(entity) {
-            return self.getEntityStats(entity.id);
-        });
-        return Promise.all(promises);
-    }).then(function() {
+    // Fetch stats for all entities
+    var promises = entityList.map(function(entity) {
+        return self.getEntityStats(entity.id);
+    });
+    Promise.all(promises).then(function() {
         self.renderCards(entityList, false);
         self.bindCardClicks(entityList);
     });
-};
-
-// ── Alarms (batch) ────────────────────────────────────────────
-
-self.fetchAllActiveAlarms = function() {
-    var cached = self.alarmCache;
-    if (cached && (Date.now() - cached.fetchedAt) < 30000) {
-        return Promise.resolve(cached.alarmDeviceSet);
-    }
-
-    var key = 'alarms_global';
-    if (self.fetchInProgress[key]) {
-        return self.fetchInProgress[key];
-    }
-
-    var promise = self.ctx.http.get('/api/alarms?searchStatus=ACTIVE&pageSize=1000&page=0')
-        .toPromise().then(function(resp) {
-            var deviceSet = {};
-            var items = (resp && resp.data) ? resp.data : [];
-            items.forEach(function(alarm) {
-                if (alarm.originator && alarm.originator.id) {
-                    var devId = alarm.originator.id;
-                    deviceSet[devId] = (deviceSet[devId] || 0) + 1;
-                }
-            });
-            self.alarmCache = { alarmDeviceSet: deviceSet, fetchedAt: Date.now() };
-            delete self.fetchInProgress[key];
-            return deviceSet;
-        }).catch(function() {
-            self.alarmCache = { alarmDeviceSet: {}, fetchedAt: Date.now() };
-            delete self.fetchInProgress[key];
-            return {};
-        });
-
-    self.fetchInProgress[key] = promise;
-    return promise;
 };
 
 // ── Device Status ─────────────────────────────────────────────
@@ -108,13 +69,12 @@ self.getEntityStats = function(entityId) {
     var promise = self.fetchDescendantDevices(entityId).then(function(devices) {
         var now = Date.now();
         var thresholdMs = self.settings.onlineThresholdMinutes * 60 * 1000;
-        var alarmDeviceSet = self.alarmCache ? self.alarmCache.alarmDeviceSet : {};
 
         var stats = {
             totalDevices: devices.length,
             online: 0,
             offline: 0,
-            alarmCount: 0,
+            faults: 0,
             signsOn: 0,
             signsOff: 0,
             fetchedAt: now
@@ -128,9 +88,9 @@ self.getEntityStats = function(entityId) {
                 stats.offline++;
             }
 
-            // Alarms
-            if (alarmDeviceSet[d.id]) {
-                stats.alarmCount += alarmDeviceSet[d.id];
+            // Faults
+            if (d.fault) {
+                stats.faults++;
             }
 
             // Signs on/off
@@ -147,7 +107,7 @@ self.getEntityStats = function(entityId) {
         return stats;
     }).catch(function() {
         delete self.fetchInProgress[key];
-        return { totalDevices: 0, online: 0, offline: 0, alarmCount: 0, signsOn: 0, signsOff: 0, fetchedAt: Date.now() };
+        return { totalDevices: 0, online: 0, offline: 0, faults: 0, signsOn: 0, signsOff: 0, fetchedAt: Date.now() };
     });
 
     self.fetchInProgress[key] = promise;
@@ -173,7 +133,7 @@ self.fetchDescendantDevices = function(assetId) {
 
         children.forEach(function(child) {
             if (child.to.entityType === 'DEVICE') {
-                devices.push({ id: child.to.id, lastTs: 0, dimLevel: null, enriched: false });
+                devices.push({ id: child.to.id, lastTs: 0, fault: false, dimLevel: null, enriched: false });
             } else if (child.to.entityType === 'ASSET') {
                 assetChildren.push(child.to.id);
             }
@@ -226,9 +186,9 @@ self.enrichDevices = function(devices) {
         // Skip if already enriched (from a cached sub-tree)
         if (device.enriched) return Promise.resolve(device);
 
-        // 2 parallel calls per device
+        // 2 parallel calls per device: timeseries + shared attribute
         var tsUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
-                    '/values/timeseries?keys=dim_value';
+                    '/values/timeseries?keys=dim_value,fault_overall_failure';
         var dimUrl = '/api/plugins/telemetry/DEVICE/' + device.id +
                      '/values/attributes/SHARED_SCOPE?keys=dimLevel';
 
@@ -242,6 +202,12 @@ self.enrichDevices = function(devices) {
             // lastTs from dim_value timeseries
             if (tsData && tsData.dim_value && tsData.dim_value.length > 0) {
                 device.lastTs = tsData.dim_value[0].ts;
+            }
+
+            // fault from fault_overall_failure timeseries
+            if (tsData && tsData.fault_overall_failure && tsData.fault_overall_failure.length > 0) {
+                var val = tsData.fault_overall_failure[0].value;
+                device.fault = (val === true || val === 'true' || val === '1');
             }
 
             // dimLevel from SHARED_SCOPE attribute
@@ -355,12 +321,12 @@ self.renderCardsHTML = function(entityList, loading) {
         var total = stats.totalDevices || 0;
         var online = stats.online || 0;
         var offline = stats.offline || 0;
-        var alarmCount = stats.alarmCount || 0;
+        var faults = stats.faults || 0;
         var signsOn = stats.signsOn || 0;
         var signsOff = stats.signsOff || 0;
         // Status class for left border
         var statusClass = 'status-offline';
-        if (alarmCount > 0) {
+        if (faults > 0) {
             statusClass = 'status-fault';
         } else if (online > 0 && offline === 0) {
             statusClass = 'status-healthy';
@@ -383,9 +349,9 @@ self.renderCardsHTML = function(entityList, loading) {
         var healthHtml = '';
         if (isLoading) {
             healthHtml = '<span class="health-dot loading"></span> <span>Health: ...</span>';
-        } else if (alarmCount > 0) {
+        } else if (faults > 0) {
             healthHtml = '<span class="health-dot fault"></span> <span class="client-health-issues">Health: ' +
-                alarmCount + ' active alarm' + (alarmCount !== 1 ? 's' : '') + '</span>';
+                faults + ' fault' + (faults !== 1 ? 's' : '') + '</span>';
         } else {
             healthHtml = '<span class="health-dot ok"></span> <span class="client-health-ok">Health: OK</span>';
         }
