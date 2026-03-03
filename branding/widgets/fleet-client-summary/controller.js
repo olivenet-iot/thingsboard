@@ -16,10 +16,6 @@ self.onInit = function() {
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, signsOn, signsOff, fetchedAt }
     self.tierCache = {};      // entityId → 'signconnect' | 'signconnect_plus' | null
     self.fetchInProgress = {};
-
-    // Detect current state level from URL
-    var stack = self.getCurrentStateStack();
-    self.currentLevel = (stack.length > 0) ? stack[stack.length - 1].id : 'default';
 };
 
 self.onDataUpdated = function() {
@@ -45,6 +41,9 @@ self.onDataUpdated = function() {
 
     var entityList = Object.values(entities);
 
+    // Detect current state level (fresh each update)
+    self.currentLevel = self.detectCurrentLevel();
+
     // Render loading state immediately
     self.renderCards(entityList, true);
 
@@ -61,6 +60,23 @@ self.onDataUpdated = function() {
         self.renderCards(entityList, false);
         self.bindCardClicks(entityList);
     });
+};
+
+// ── State Detection ──────────────────────────────────────────
+
+self.detectCurrentLevel = function() {
+    // Prefer ThingsBoard stateController API
+    try {
+        var sc = self.ctx.stateController;
+        if (sc && typeof sc.getStateId === 'function') {
+            var stateId = sc.getStateId();
+            if (stateId) return stateId;
+        }
+    } catch(e) {}
+
+    // Fallback: parse URL state parameter
+    var stack = self.getCurrentStateStack();
+    return (stack.length > 0) ? stack[stack.length - 1].id : 'default';
 };
 
 // ── Device Status ─────────────────────────────────────────────
