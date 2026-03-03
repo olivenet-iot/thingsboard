@@ -86,6 +86,17 @@
   line-height: 1.2;
 }
 
+.sb-site-name {
+  font-weight: 400;
+  color: #64748b;
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.sb-site-name:empty {
+  display: none;
+}
+
 .sb-device-meta {
   display: flex;
   align-items: center;
