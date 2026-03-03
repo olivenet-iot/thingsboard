@@ -56,7 +56,10 @@ def build_descriptor():
     default_config = json.dumps({
         "datasources": [{
             "type": "entity",
-            "dataKeys": []
+            "dataKeys": [
+                {"name": "name", "type": "entityField", "label": "name",
+                 "settings": {}, "funcBody": None, "_hash": 0.1}
+            ]
         }],
         "showTitle": False,
         "backgroundColor": "transparent",
