@@ -14,7 +14,7 @@ self.onInit = function() {
 
     self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault,dimLevel}], fetchedAt }
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, signsOn, signsOff, fetchedAt }
-    self.tierCache = {};      // entityId → 'signconnect' | 'signconnect_plus' | null
+    self.tierCache = {};      // entityId → 'standard' | 'plus' | null
     self.fetchInProgress = {};
 };
 
@@ -43,7 +43,6 @@ self.onDataUpdated = function() {
 
     // Detect current state level (fresh each update)
     self.currentLevel = self.detectCurrentLevel();
-    console.log('[CLIENT-SUMMARY] currentLevel:', self.currentLevel);
 
     // Render loading state immediately
     self.renderCards(entityList, true);
@@ -69,24 +68,15 @@ self.detectCurrentLevel = function() {
     // Prefer ThingsBoard stateController API
     try {
         var sc = self.ctx.stateController;
-        console.log('[CLIENT-SUMMARY] stateController exists:', !!sc);
-        if (sc) {
-            console.log('[CLIENT-SUMMARY] stateController methods:', Object.keys(sc).filter(function(k) { return typeof sc[k] === 'function'; }));
-        }
         if (sc && typeof sc.getStateId === 'function') {
             var stateId = sc.getStateId();
-            console.log('[CLIENT-SUMMARY] stateController.getStateId():', stateId);
             if (stateId) return stateId;
         }
-    } catch(e) {
-        console.log('[CLIENT-SUMMARY] stateController error:', e);
-    }
+    } catch(e) { /* ignore */ }
 
     // Fallback: parse URL state parameter
     var stack = self.getCurrentStateStack();
-    console.log('[CLIENT-SUMMARY] URL stack:', JSON.stringify(stack));
     var level = (stack.length > 0) ? stack[stack.length - 1].id : 'default';
-    console.log('[CLIENT-SUMMARY] URL fallback level:', level);
     return level;
 };
 
@@ -160,18 +150,14 @@ self.fetchEntityTier = function(entityId) {
 
     var url = '/api/plugins/telemetry/ASSET/' + entityId +
               '/values/attributes/SERVER_SCOPE?keys=dashboard_tier';
-    console.log('[CLIENT-SUMMARY] fetching tier for', entityId, url);
     return self.ctx.http.get(url).toPromise().then(function(attrs) {
-        console.log('[CLIENT-SUMMARY] tier response for', entityId, ':', JSON.stringify(attrs));
         var tier = null;
         if (attrs && Array.isArray(attrs) && attrs.length > 0) {
             tier = attrs[0].value || null;
         }
-        console.log('[CLIENT-SUMMARY] tier resolved:', entityId, '→', tier);
         self.tierCache[entityId] = tier;
         return tier;
-    }).catch(function(err) {
-        console.log('[CLIENT-SUMMARY] tier fetch error for', entityId, ':', err);
+    }).catch(function() {
         self.tierCache[entityId] = null;
         return null;
     });
@@ -403,10 +389,9 @@ self.renderCardsHTML = function(entityList, loading) {
         var tierBadgeHtml = '';
         if (self.currentLevel === 'region') {
             var tier = self.tierCache[entity.id];
-            console.log('[CLIENT-SUMMARY] render tier badge:', entity.id, '→ tier:', tier, '| level:', self.currentLevel);
-            if (tier === 'signconnect_plus') {
+            if (tier === 'plus') {
                 tierBadgeHtml = '<span class="tier-badge tier-plus">Plus</span>';
-            } else if (tier === 'signconnect') {
+            } else if (tier === 'standard') {
                 tierBadgeHtml = '<span class="tier-badge tier-standard">Standard</span>';
             }
         }
