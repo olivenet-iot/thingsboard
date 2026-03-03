@@ -274,22 +274,62 @@ self.enrichDevices = function(devices) {
 
 // ── Navigation ────────────────────────────────────────────────
 
-self.navigateToEstate = function(entityId, entityName) {
+// State hierarchy: default → estate → region → site
+var STATE_LEVELS = ['default', 'estate', 'region', 'site'];
+
+self.navigateToEntity = function(entityId, entityName) {
+    // Auto-detect dashboard ID from current URL; fall back to setting
     var fleetId = self.settings.fleetDashboardId;
+    var pathMatch = window.location.pathname.match(/\/dashboard\/([a-f0-9-]+)/);
+    if (pathMatch) {
+        fleetId = pathMatch[1];
+    }
     if (!fleetId) {
         console.error('[CLIENT-SUMMARY] No fleet dashboard configured');
         return;
     }
 
-    var estateState = [
-        { id: 'default', params: {} },
-        { id: 'estate', params: {
+    var currentStack = self.getCurrentStateStack();
+    var nextLevel = self.getNextLevel(currentStack);
+    if (!nextLevel) return;
+
+    // Copy current stack; ensure 'default' is at the start
+    var newStack = currentStack.slice();
+    if (newStack.length === 0 || newStack[0].id !== 'default') {
+        newStack.unshift({ id: 'default', params: {} });
+    }
+
+    // Append next level with the clicked entity
+    newStack.push({
+        id: nextLevel,
+        params: {
             entityId: { id: entityId, entityType: 'ASSET' },
             entityName: entityName
-        }}
-    ];
-    var estateParam = encodeURIComponent(self.objToBase64(estateState));
-    window.location.href = '/dashboard/' + fleetId + '?state=' + estateParam;
+        }
+    });
+
+    var stateParam = encodeURIComponent(self.objToBase64(newStack));
+    window.location.href = '/dashboard/' + fleetId + '?state=' + stateParam;
+};
+
+self.getCurrentStateStack = function() {
+    var params = new URLSearchParams(window.location.search);
+    var stateParam = params.get('state');
+    if (!stateParam) return [];
+    try {
+        return self.base64ToObj(stateParam);
+    } catch(e) {
+        console.error('[CLIENT-SUMMARY] Failed to parse state:', e);
+        return [];
+    }
+};
+
+self.getNextLevel = function(stack) {
+    if (!stack || stack.length === 0) return 'estate';
+    var lastId = stack[stack.length - 1].id;
+    var idx = STATE_LEVELS.indexOf(lastId);
+    if (idx < 0 || idx >= STATE_LEVELS.length - 1) return null;
+    return STATE_LEVELS[idx + 1];
 };
 
 self.objToBase64 = function(obj) {
@@ -298,6 +338,14 @@ self.objToBase64 = function(obj) {
         function(match, p1) {
             return String.fromCharCode(Number('0x' + p1));
         }));
+};
+
+self.base64ToObj = function(b64) {
+    var decoded = atob(b64);
+    var percent = decoded.split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join('');
+    return JSON.parse(decodeURIComponent(percent));
 };
 
 // ── Rendering ─────────────────────────────────────────────────
@@ -398,7 +446,7 @@ self.bindCardClicks = function(entityList) {
         var entityId = this.getAttribute('data-entity-id');
         var entityName = this.getAttribute('data-entity-name');
         if (entityId) {
-            self.navigateToEstate(entityId, entityName);
+            self.navigateToEntity(entityId, entityName);
         }
     });
 };
