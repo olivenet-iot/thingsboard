@@ -42,6 +42,30 @@ self.onInit = function () {
     var schedTimeSlotCount = 0;
     var schedTasksLoaded = false;
 
+    var CITY_PRESETS = [
+        { label: 'London, UK', lat: 51.5074, lng: -0.1278, utc: 0 },
+        { label: 'Dublin, IE', lat: 53.3498, lng: -6.2603, utc: 0 },
+        { label: 'Amsterdam, NL', lat: 52.3676, lng: 4.9041, utc: 1 },
+        { label: 'Brussels, BE', lat: 50.8503, lng: 4.3517, utc: 1 },
+        { label: 'Paris, FR', lat: 48.8566, lng: 2.3522, utc: 1 },
+        { label: 'Berlin, DE', lat: 52.5200, lng: 13.4050, utc: 1 },
+        { label: 'Bern, CH', lat: 46.9480, lng: 7.4474, utc: 1 },
+        { label: 'Vienna, AT', lat: 48.2082, lng: 16.3738, utc: 1 },
+        { label: 'Rome, IT', lat: 41.9028, lng: 12.4964, utc: 1 },
+        { label: 'Madrid, ES', lat: 40.4168, lng: -3.7038, utc: 1 },
+        { label: 'Lisbon, PT', lat: 38.7223, lng: -9.1393, utc: 0 },
+        { label: 'Copenhagen, DK', lat: 55.6761, lng: 12.5683, utc: 1 },
+        { label: 'Stockholm, SE', lat: 59.3293, lng: 18.0686, utc: 1 },
+        { label: 'Oslo, NO', lat: 59.9139, lng: 10.7522, utc: 1 },
+        { label: 'Helsinki, FI', lat: 60.1699, lng: 24.9384, utc: 2 },
+        { label: 'Warsaw, PL', lat: 52.2297, lng: 21.0122, utc: 1 },
+        { label: 'Prague, CZ', lat: 50.0755, lng: 14.4378, utc: 1 },
+        { label: 'Budapest, HU', lat: 47.4979, lng: 19.0402, utc: 1 },
+        { label: 'Bucharest, RO', lat: 44.4268, lng: 26.1025, utc: 2 },
+        { label: 'Athens, GR', lat: 37.9838, lng: 23.7275, utc: 2 },
+        { label: 'Custom', lat: null, lng: null, utc: null }
+    ];
+
     // ── Resolve Site Asset ID ─────────────────────────────────
 
     function resolveSiteId() {
@@ -453,6 +477,7 @@ self.onInit = function () {
 
         // Location
         html += metaCard('Location', 'map', [
+            cityPresetRow(),
             metaField('address', 'Address', siteAttrs.address || ''),
             metaField('latitude', 'Latitude', siteAttrs.latitude || ''),
             metaField('longitude', 'Longitude', siteAttrs.longitude || ''),
@@ -532,6 +557,35 @@ self.onInit = function () {
         return '<div class="so-meta-row">' +
             '<span class="so-meta-label">' + label + '</span>' +
             '<span class="so-meta-value">' + (displayLabel ? esc(displayLabel) : '<em class="so-meta-empty">Not set</em>') + '</span>' +
+        '</div>';
+    }
+
+    function detectCity(lat, lng) {
+        var la = parseFloat(lat), lo = parseFloat(lng);
+        if (isNaN(la) || isNaN(lo)) return 'Custom';
+        for (var i = 0; i < CITY_PRESETS.length - 1; i++) {
+            var c = CITY_PRESETS[i];
+            if (Math.abs(la - c.lat) < 0.01 && Math.abs(lo - c.lng) < 0.01) return c.label;
+        }
+        return 'Custom';
+    }
+
+    function cityPresetRow() {
+        var current = detectCity(siteAttrs.latitude, siteAttrs.longitude);
+        if (isEditing) {
+            var html = '<div class="so-meta-row">' +
+                '<span class="so-meta-label">City Preset</span>' +
+                '<select class="so-meta-input" data-city-preset>';
+            CITY_PRESETS.forEach(function (c) {
+                html += '<option value="' + esc(c.label) + '"' +
+                    (current === c.label ? ' selected' : '') + '>' + esc(c.label) + '</option>';
+            });
+            html += '</select></div>';
+            return html;
+        }
+        return '<div class="so-meta-row">' +
+            '<span class="so-meta-label">City Preset</span>' +
+            '<span class="so-meta-value">' + esc(current) + '</span>' +
         '</div>';
     }
 
@@ -1525,6 +1579,27 @@ self.onInit = function () {
                 var devId = card.getAttribute('data-device-id');
                 var devName = card.getAttribute('data-device-name');
                 openDeviceOverview(devId, devName);
+            });
+        });
+
+        // City preset auto-fill
+        container.querySelectorAll('[data-city-preset]').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+                var picked = sel.value;
+                for (var i = 0; i < CITY_PRESETS.length; i++) {
+                    if (CITY_PRESETS[i].label === picked && CITY_PRESETS[i].lat !== null) {
+                        var c = CITY_PRESETS[i];
+                        var latInp = container.querySelector('[data-attr="latitude"]');
+                        var lngInp = container.querySelector('[data-attr="longitude"]');
+                        var tzInp  = container.querySelector('[data-attr="timezone_offset"]');
+                        var addrInp = container.querySelector('[data-attr="address"]');
+                        if (latInp) latInp.value = c.lat;
+                        if (lngInp) lngInp.value = c.lng;
+                        if (tzInp)  tzInp.value = c.utc;
+                        if (addrInp) addrInp.value = c.label;
+                        break;
+                    }
+                }
             });
         });
 
