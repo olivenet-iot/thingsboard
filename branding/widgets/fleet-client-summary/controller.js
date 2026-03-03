@@ -14,7 +14,12 @@ self.onInit = function() {
 
     self.deviceCache = {};    // assetId → { devices: [{id,lastTs,fault,dimLevel}], fetchedAt }
     self.statsCache = {};     // entityId → { totalDevices, online, offline, faults, signsOn, signsOff, fetchedAt }
+    self.tierCache = {};      // entityId → 'signconnect' | 'signconnect_plus' | null
     self.fetchInProgress = {};
+
+    // Detect current state level from URL
+    var stack = self.getCurrentStateStack();
+    self.currentLevel = (stack.length > 0) ? stack[stack.length - 1].id : 'default';
 };
 
 self.onDataUpdated = function() {
@@ -43,10 +48,15 @@ self.onDataUpdated = function() {
     // Render loading state immediately
     self.renderCards(entityList, true);
 
-    // Fetch stats for all entities
+    // Fetch stats for all entities (+ tier at region level)
     var promises = entityList.map(function(entity) {
         return self.getEntityStats(entity.id);
     });
+    if (self.currentLevel === 'region') {
+        entityList.forEach(function(entity) {
+            promises.push(self.fetchEntityTier(entity.id));
+        });
+    }
     Promise.all(promises).then(function() {
         self.renderCards(entityList, false);
         self.bindCardClicks(entityList);
@@ -112,6 +122,28 @@ self.getEntityStats = function(entityId) {
 
     self.fetchInProgress[key] = promise;
     return promise;
+};
+
+// ── Tier Badge ────────────────────────────────────────────────
+
+self.fetchEntityTier = function(entityId) {
+    if (self.tierCache[entityId] !== undefined) {
+        return Promise.resolve(self.tierCache[entityId]);
+    }
+
+    var url = '/api/plugins/telemetry/ASSET/' + entityId +
+              '/values/attributes/SERVER_SCOPE?keys=dashboard_tier';
+    return self.ctx.http.get(url).toPromise().then(function(attrs) {
+        var tier = null;
+        if (attrs && Array.isArray(attrs) && attrs.length > 0) {
+            tier = attrs[0].value || null;
+        }
+        self.tierCache[entityId] = tier;
+        return tier;
+    }).catch(function() {
+        self.tierCache[entityId] = null;
+        return null;
+    });
 };
 
 // ── Hierarchy Walk ────────────────────────────────────────────
@@ -336,6 +368,17 @@ self.renderCardsHTML = function(entityList, loading) {
 
         var deviceText = total > 0 ? (total + ' device' + (total !== 1 ? 's' : '')) : '...';
 
+        // Tier badge (region level only)
+        var tierBadgeHtml = '';
+        if (self.currentLevel === 'region') {
+            var tier = self.tierCache[entity.id];
+            if (tier === 'signconnect_plus') {
+                tierBadgeHtml = '<span class="tier-badge tier-plus">Plus</span>';
+            } else if (tier === 'signconnect') {
+                tierBadgeHtml = '<span class="tier-badge tier-standard">Standard</span>';
+            }
+        }
+
         // Build pills
         var pillsHtml = '';
         if (online > 0) {
@@ -372,6 +415,7 @@ self.renderCardsHTML = function(entityList, loading) {
             '<div class="card-main">' +
                 '<div class="card-top-row">' +
                     '<span class="card-entity-name">' + self.escapeHtml(entity.name) + '</span>' +
+                    tierBadgeHtml +
                     '<span class="card-chevron">\u203A</span>' +
                 '</div>' +
                 '<div class="card-subtitle-row">' +
