@@ -444,6 +444,11 @@ self.onInit = function () {
             metaField('co2_per_kwh', 'CO₂ Factor (kg/kWh)', siteAttrs.co2_per_kwh || '0.207'),
             metaField('energy_rate', 'Energy Rate (per kWh)', siteAttrs.energy_rate || ''),
             metaField('total_connected_wattage', 'Total Connected Wattage (W)', siteAttrs.total_connected_wattage || ''),
+            metaSelect('currency_symbol', 'Currency', siteAttrs.currency_symbol || '£', [
+                { value: '£', label: '£ (GBP)' },
+                { value: '€', label: '€ (EUR)' },
+                { value: '$', label: '$ (USD)' }
+            ]),
         ]);
 
         // Location
@@ -505,6 +510,28 @@ self.onInit = function () {
         return '<div class="so-meta-row">' +
             '<span class="so-meta-label">' + label + '</span>' +
             '<span class="so-meta-value">' + (value ? esc(value) : '<em class="so-meta-empty">Not set</em>') + '</span>' +
+        '</div>';
+    }
+
+    function metaSelect(key, label, value, options) {
+        if (isEditing) {
+            var html = '<div class="so-meta-row">' +
+                '<span class="so-meta-label">' + label + '</span>' +
+                '<select class="so-meta-input" data-attr="' + key + '">';
+            options.forEach(function (opt) {
+                html += '<option value="' + esc(opt.value) + '"' +
+                    (value === opt.value ? ' selected' : '') + '>' + esc(opt.label) + '</option>';
+            });
+            html += '</select></div>';
+            return html;
+        }
+        var displayLabel = value || '';
+        options.forEach(function (opt) {
+            if (opt.value === value) displayLabel = opt.label;
+        });
+        return '<div class="so-meta-row">' +
+            '<span class="so-meta-label">' + label + '</span>' +
+            '<span class="so-meta-value">' + (displayLabel ? esc(displayLabel) : '<em class="so-meta-empty">Not set</em>') + '</span>' +
         '</div>';
     }
 
@@ -1544,6 +1571,17 @@ self.onInit = function () {
                                 });
                             });
                         }
+                    }
+                    // Propagate currency_symbol to all child devices
+                    if (attrs.currency_symbol !== undefined && attrs.currency_symbol !== '') {
+                        devices.forEach(function (dev) {
+                            apiPost(
+                                '/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SERVER_SCOPE',
+                                { currency_symbol: attrs.currency_symbol }
+                            ).catch(function (err) {
+                                console.warn('[SITE] currency_symbol propagate failed for ' + dev.id, err);
+                            });
+                        });
                     }
                     saveSiteAttributes(attrs).then(function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });

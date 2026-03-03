@@ -363,7 +363,7 @@
         <div class="kpi-label">Energy Saved (kWh)</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value accent-green">&pound;{{ "%.2f"|format(cost_saving_total) }}</div>
+        <div class="kpi-value accent-green">{{ currency_symbol }}{{ "%.2f"|format(cost_saving_total) }}</div>
         <div class="kpi-label">Cost Saved</div>
       </div>
       <div class="kpi-card">
@@ -408,7 +408,7 @@
           <th>Device</th>
           {% if entity_type != "site" %}<th>Site</th>{% endif %}
           <th class="num">Energy Saved (kWh)</th>
-          <th class="num">Cost Saved (&pound;)</th>
+          <th class="num">Cost Saved ({{ currency_symbol }})</th>
           <th class="num">CO&#x2082; Avoided (kg)</th>
           <th class="num">Saving %</th>
         </tr>

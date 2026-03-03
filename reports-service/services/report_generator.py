@@ -226,6 +226,14 @@ def generate_report(request: ReportRequest) -> ReportResult:
         period_label = _make_period_label(request.period.start, request.period.end)
         interval_ms, interval_label = _calculate_interval_ms(start_ts, end_ts)
 
+        # Fetch currency symbol from first site's attributes
+        currency_symbol = "£"
+        if hierarchy.sites:
+            site_attrs = tb.get_attributes(
+                hierarchy.sites[0].id, "ASSET", "SERVER_SCOPE", ["currency_symbol"]
+            )
+            currency_symbol = site_attrs.get("currency_symbol", "£") or "£"
+
         # -- Collect per-device data ----------------------------------------
         devices_detail: list[dict] = []
         all_faults: list[dict] = []
@@ -492,6 +500,7 @@ def generate_report(request: ReportRequest) -> ReportResult:
             "devices_with_baseline": devices_with_baseline,
             "devices_without_baseline": devices_without_baseline,
             "savings_configured": devices_with_baseline > 0,
+            "currency_symbol": currency_symbol,
 
             # Fault log
             "faults": all_faults,
@@ -504,6 +513,7 @@ def generate_report(request: ReportRequest) -> ReportResult:
                 "fault_count": total_fault,
                 "energy_saving_kwh": round(total_energy_saving_wh / 1000, 2),
                 "cost_saving_total": round(total_cost_saving, 2),
+                "currency_symbol": currency_symbol,
             },
 
             # Charts (populated below)
