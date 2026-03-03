@@ -126,7 +126,10 @@
 }
 
 .card-subtitle-row .subtitle-sep {
-  color: #cbd5e1 !important;
+  width: 1px !important;
+  height: 12px !important;
+  background: #cbd5e1 !important;
+  display: inline-block !important;
 }
 
 /* Status pills row */
@@ -190,10 +193,45 @@
   color: #475569 !important;
 }
 
-.card-status-row .status-icon {
+/* Health indicator dots */
+.health-dot {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
   flex-shrink: 0 !important;
-  font-size: 13px !important;
-  line-height: 1 !important;
+}
+
+.health-dot.ok {
+  background: #059669 !important;
+}
+
+.health-dot.fault {
+  background: #ef4444 !important;
+  animation: pulse-fault 2s ease-in-out infinite !important;
+}
+
+.health-dot.loading {
+  background: #cbd5e1 !important;
+}
+
+@keyframes pulse-fault {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Signs indicator dot */
+.signs-dot {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #f59e0b !important;
+  flex-shrink: 0 !important;
+}
+
+.signs-dot.loading {
+  background: #cbd5e1 !important;
 }
 
 /* Health status */

@@ -350,20 +350,20 @@ self.renderCardsHTML = function(entityList, loading) {
         // Health row
         var healthHtml = '';
         if (isLoading) {
-            healthHtml = '<span class="status-icon">\u2014</span> <span>Health: ...</span>';
+            healthHtml = '<span class="health-dot loading"></span> <span>Health: ...</span>';
         } else if (alarmCount > 0) {
-            healthHtml = '<span class="status-icon">\u26A0\uFE0F</span> <span class="client-health-issues">Health: ' +
+            healthHtml = '<span class="health-dot fault"></span> <span class="client-health-issues">Health: ' +
                 alarmCount + ' active alarm' + (alarmCount !== 1 ? 's' : '') + '</span>';
         } else {
-            healthHtml = '<span class="status-icon">\u2705</span> <span class="client-health-ok">Health: OK</span>';
+            healthHtml = '<span class="health-dot ok"></span> <span class="client-health-ok">Health: OK</span>';
         }
 
         // Signs row
         var signsHtml = '';
         if (isLoading) {
-            signsHtml = '<span class="status-icon">\u2014</span> <span>Signs: ...</span>';
+            signsHtml = '<span class="signs-dot loading"></span> <span>Signs: ...</span>';
         } else {
-            signsHtml = '<span class="status-icon">\uD83D\uDCA1</span> <span class="client-signs">Signs: ' +
+            signsHtml = '<span class="signs-dot"></span> <span class="client-signs">Signs: ' +
                 '<span class="signs-on">' + signsOn + ' On</span> / ' +
                 '<span class="signs-off">' + signsOff + ' Off</span></span>';
         }
@@ -378,7 +378,7 @@ self.renderCardsHTML = function(entityList, loading) {
                 '</div>' +
                 '<div class="card-subtitle-row">' +
                     '<span>' + self.escapeHtml(productType) + '</span>' +
-                    '<span class="subtitle-sep">\u2502</span>' +
+                    '<span class="subtitle-sep"></span>' +
                     '<span>' + deviceText + '</span>' +
                 '</div>' +
                 '<div class="card-pills">' + pillsHtml + '</div>' +
