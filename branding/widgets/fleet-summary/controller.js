@@ -14,9 +14,26 @@
 //   status_control_gear_failure, status_lamp_failure,
 //   status_limit_error, status_reset_state, status_missing_short_addr
 
+// All 21 canonical fault/warning keys
+var FAULT_WARNING_KEYS = {
+    'fault_overall_failure': true, 'fault_under_voltage': true, 'fault_over_voltage': true,
+    'fault_power_limit': true, 'fault_thermal_derating': true, 'fault_thermal_shutdown': true,
+    'fault_light_src_failure': true, 'fault_light_src_short_circuit': true,
+    'fault_light_src_thermal_derate': true, 'fault_light_src_thermal_shutdn': true,
+    'fault_input_power': true, 'fault_current_limited': true, 'fault_driver_failure': true,
+    'fault_external': true, 'fault_d4i_power_exceeded': true, 'fault_overcurrent': true,
+    'status_control_gear_failure': true, 'status_lamp_failure': true,
+    'status_limit_error': true, 'status_reset_state': true, 'status_missing_short_addr': true
+};
+
+function isFault(val) {
+    if (val === undefined || val === null) return false;
+    return val === 'true' || val === true || val === '1' || val === 1;
+}
+
 self.onInit = function() {
     self.$container = self.ctx.$container;
-    
+
     // Settings with defaults
     self.settings = {
         onlineThresholdMinutes: self.ctx.settings.onlineThresholdMinutes || 10,
@@ -83,12 +100,14 @@ self.onDataUpdated = function() {
             }
         }
         
-        // Check fault status
-        if (item.dataKey && item.dataKey.name === 'fault_overall_failure') {
+        // Check fault/warning status across all canonical keys
+        if (item.dataKey && FAULT_WARNING_KEYS[item.dataKey.name]) {
             device.hasFaultKey = true;
             if (item.data && item.data.length > 0) {
                 var val = item.data[item.data.length - 1][1];
-                device.fault = (val === true || val === 'true' || val === '1' || val === 1);
+                if (isFault(val)) {
+                    device.fault = true;
+                }
             }
         }
     });
