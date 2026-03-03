@@ -305,6 +305,7 @@ self.onInit = function () {
 
     function render() {
         var html = '';
+        html += '<div class="ses-section-title">SITE OPERATIONAL SUMMARY</div>';
         html += renderHeader();
         html += renderCards();
         container.innerHTML = html;
