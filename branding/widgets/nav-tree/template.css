@@ -38,28 +38,6 @@
     opacity: 0.7;
 }
 
-.nt-actions {
-    display: flex;
-    gap: 4px;
-}
-
-.nt-collapse-all {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    line-height: 1;
-    transition: color 0.15s, background 0.15s;
-}
-
-.nt-collapse-all:hover {
-    color: #0f172a;
-    background: #f1f5f9;
-}
-
 /* ── Search ────────────────────────────────────────────── */
 
 .nt-search {
@@ -553,24 +531,53 @@
 /* ── Clients Section Label ────────────────────────────── */
 
 .nt-clients-label {
+    flex-shrink: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.nt-clients-row {
     display: flex;
     align-items: center;
-    padding: 8px 12px 4px 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
     gap: 8px;
-    flex-shrink: 0;
+}
+
+.nt-clients-row:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.nt-clients-row:hover .nt-clients-text {
+    color: #d97706;
 }
 
 .nt-clients-icon {
     flex-shrink: 0;
-    color: #94a3b8;
+    color: #f59e0b;
 }
 
 .nt-clients-text {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: #94a3b8;
+    color: #64748b;
+    flex: 1;
+    transition: color 0.15s;
+}
+
+.nt-clients-chevron {
+    font-size: 10px;
+    color: #cbd5e1;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, color 0.15s;
+}
+
+.nt-clients-chevron.nt-clients-collapsed {
+    transform: rotate(-90deg);
+}
+
+.nt-clients-row:hover .nt-clients-chevron {
+    color: #f59e0b;
 }
 
 /* ── Footer ────────────────────────────────────────────── */

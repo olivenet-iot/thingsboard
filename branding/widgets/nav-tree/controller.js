@@ -115,10 +115,21 @@ self.onInit = function() {
         }, 300);
     });
 
-    // Bind collapse-all button
-    self.$container.find('.nt-collapse-all').on('click', function() {
-        self.expandedNodes = {};
-        self.renderTree();
+    // Clients section toggle
+    self.clientsCollapsed = false;
+    self.clientsLabelEl = self.$container.find('.nt-clients-label');
+    self.clientsChevronEl = self.$container.find('.nt-clients-chevron');
+    self.treeContainerEl = self.$container.find('.nt-tree-container');
+
+    self.clientsLabelEl.find('.nt-clients-row').on('click', function() {
+        self.clientsCollapsed = !self.clientsCollapsed;
+        if (self.clientsCollapsed) {
+            self.treeContainerEl.slideUp(200);
+            self.clientsChevronEl.addClass('nt-clients-collapsed');
+        } else {
+            self.treeContainerEl.slideDown(200);
+            self.clientsChevronEl.removeClass('nt-clients-collapsed');
+        }
     });
 
     // Start device status polling
@@ -1152,7 +1163,7 @@ self.onDestroy = function() {
     self.treeEl.find('.nt-label-zone').off('click');
     self.treeEl.find('.nt-nav-zone').off('click');
     self.searchInput.off('input');
-    self.$container.find('.nt-collapse-all').off('click');
+    self.clientsLabelEl.find('.nt-clients-row').off('click');
     self.reportsLinkEl.find('.nt-reports-row').off('click');
     self.alarmsLinkEl.find('.nt-alarms-row').off('click');
     self.brandEl.off('click');
