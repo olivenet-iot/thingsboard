@@ -238,14 +238,17 @@ self.onInit = function () {
                 });
 
             var avgCall = apiGet('/plugins/telemetry/DEVICE/' + dev.id +
-                '/values/timeseries?keys=saving_pct&startTs=' + startTs +
+                '/values/timeseries?keys=saving_pct,dim_value&startTs=' + startTs +
                 '&endTs=' + endTs + '&agg=AVG&interval=' + interval)
                 .then(function (data) {
                     dev.telemetry.saving_pct_avg = (data.saving_pct && data.saving_pct.length > 0)
                         ? (parseFloat(data.saving_pct[0].value) || 0) : 0;
+                    dev.telemetry.dim_value_avg = (data.dim_value && data.dim_value.length > 0)
+                        ? (parseFloat(data.dim_value[0].value) || 0) : 0;
                 })
                 .catch(function () {
                     dev.telemetry.saving_pct_avg = 0;
+                    dev.telemetry.dim_value_avg = 0;
                 });
 
             return Promise.all([sumCall, avgCall]);
@@ -298,7 +301,8 @@ self.onInit = function () {
         co2: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#06b6d4"><path d="M15.59 7.02a4.5 4.5 0 0 0-8.68-.98 3.5 3.5 0 0 0-.46 6.96h8.05a3 3 0 0 0 1.1-5.98zM10 4a3.5 3.5 0 0 1 3.44 2.85.75.75 0 0 0 .72.58 2 2 0 0 1-.16 4H6.45a2.5 2.5 0 0 1 .29-4.98.75.75 0 0 0 .7-.53A3.5 3.5 0 0 1 10 4z"/></svg>',
         power: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#8b5cf6"><path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1zm5.3 2.2a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0zM18 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 18 10zm-3.76 5.3a.75.75 0 0 1-1.06 0l-1.06-1.06a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 0 1 0 1.06zM10 18a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5A.75.75 0 0 1 10 18zM4.7 15.3a.75.75 0 0 1 0-1.06l1.06-1.06a.75.75 0 0 1 1.06 1.06L5.76 15.3a.75.75 0 0 1-1.06 0zM2 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 2 10zm2.7-5.3a.75.75 0 0 1 1.06 0l1.06 1.06A.75.75 0 0 1 5.76 6.82L4.7 5.76a.75.75 0 0 1 0-1.06zM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm-4 3a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"/></svg>',
         savings: '<svg class="ses-card-icon" viewBox="0 0 256 256" fill="#10b981"><path d="M223.45,40.07a8,8,0,0,0-7.52-7.52C139.8,28.08,78.82,50,52.82,94a87.09,87.09,0,0,0-12.76,49c.57,15.92,5.37,32,13.82,46.31L34.34,208.84a8,8,0,0,0,11.32,11.32l19.53-19.54C79.55,209.06,95.72,213.86,111.64,214.43q2.55.09,5.09.09A87.29,87.29,0,0,0,161,201.2C205,175.2,227,114.26,223.45,40.07Z"/></svg>',
-        savingPct: '<svg class="ses-card-icon" viewBox="0 0 256 256" fill="#10b981"><path d="M102,52A18,18,0,1,0,84,34,18,18,0,0,0,102,52Zm72,152a18,18,0,1,0-18-18A18,18,0,0,0,174,204ZM213.66,42.34a8,8,0,0,0-11.32,0l-160,160a8,8,0,0,0,11.32,11.32l160-160A8,8,0,0,0,213.66,42.34Z"/></svg>'
+        savingPct: '<svg class="ses-card-icon" viewBox="0 0 256 256" fill="#10b981"><path d="M102,52A18,18,0,1,0,84,34,18,18,0,0,0,102,52Zm72,152a18,18,0,1,0-18-18A18,18,0,0,0,174,204ZM213.66,42.34a8,8,0,0,0-11.32,0l-160,160a8,8,0,0,0,11.32,11.32l160-160A8,8,0,0,0,213.66,42.34Z"/></svg>',
+        dimLevel: '<svg class="ses-card-icon" viewBox="0 0 20 20" fill="#E8A020"><path d="M10 1a.75.75 0 0 1 .75.75V3a.75.75 0 0 1-1.5 0V1.75A.75.75 0 0 1 10 1zM5.05 3.05a.75.75 0 0 1 1.06 0l.7.7a.75.75 0 0 1-1.06 1.06l-.7-.7a.75.75 0 0 1 0-1.06zm9.9 0a.75.75 0 0 1 0 1.06l-.7.7a.75.75 0 0 1-1.06-1.06l.7-.7a.75.75 0 0 1 1.06 0zM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM6 10a4 4 0 1 1 8 0 4 4 0 0 1-8 0zM1 10a.75.75 0 0 1 .75-.75H3a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 10zm14 0a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 15 10zm-9.25 4.19a.75.75 0 0 1 0 1.06l-.7.7a.75.75 0 0 1-1.06-1.06l.7-.7a.75.75 0 0 1 1.06 0zm8.5 0a.75.75 0 0 1 1.06 0l.7.7a.75.75 0 0 1-1.06 1.06l-.7-.7a.75.75 0 0 1 0-1.06zM10 17a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 17z"/></svg>'
     };
 
     // ── Render ────────────────────────────────────────────────
@@ -308,6 +312,7 @@ self.onInit = function () {
         html += '<div class="ses-section-title">SITE OPERATIONAL SUMMARY</div>';
         html += renderHeader();
         html += renderCards();
+        html += renderIlluminationCards();
         container.innerHTML = html;
         bindEvents();
     }
@@ -443,6 +448,51 @@ self.onInit = function () {
         html += '<div class="ses-card-label">' + ICONS.savingPct + '<span class="ses-label-text">Saving %</span></div>';
         html += '<div class="ses-card-value">' + formatValue(avgSavingPct, 1) + '<span class="ses-card-unit">%</span></div>';
         html += '<div class="ses-card-sub">avg across devices</div>';
+        html += '</div>';
+
+        html += '</div>';
+        return html;
+    }
+
+    function renderIlluminationCards() {
+        var dimNowSum = 0, dimNowCount = 0;
+        var dimAvgSum = 0, dimAvgCount = 0;
+
+        devices.forEach(function (d) {
+            var raw = parseInt(d.telemetry.dim_value);
+            if (!isNaN(raw)) {
+                var clamped = Math.max(0, Math.min(100, raw));
+                dimNowSum += clamped;
+                dimNowCount++;
+            }
+            var avg = parseFloat(d.telemetry.dim_value_avg);
+            if (!isNaN(avg) && avg > 0) {
+                dimAvgSum += avg;
+                dimAvgCount++;
+            }
+        });
+
+        var currentDimAvg = dimNowCount > 0 ? dimNowSum / dimNowCount : 0;
+        var periodDimAvg = dimAvgCount > 0 ? dimAvgSum / dimAvgCount : 0;
+
+        var currentSub = devices.length === 1 ? 'now' : 'avg across ' + dimNowCount + ' devices';
+        if (dimNowCount === 0) currentSub = 'no data';
+
+        var html = '<div class="ses-section-title ses-section-title-illum">ILLUMINATION SUMMARY</div>';
+        html += '<div class="ses-cards ses-cards-illum">';
+
+        // Card: Current Dim Level
+        html += '<div class="ses-card ses-card-dim">';
+        html += '<div class="ses-card-label">' + ICONS.dimLevel + '<span class="ses-label-text">Current Dim Level</span></div>';
+        html += '<div class="ses-card-value">' + formatValue(currentDimAvg, 0) + '<span class="ses-card-unit">%</span></div>';
+        html += '<div class="ses-card-sub">' + esc(currentSub) + '</div>';
+        html += '</div>';
+
+        // Card: Avg Dim Level
+        html += '<div class="ses-card ses-card-dim">';
+        html += '<div class="ses-card-label">' + ICONS.dimLevel + '<span class="ses-label-text">Avg Dim Level</span></div>';
+        html += '<div class="ses-card-value">' + formatValue(periodDimAvg, 0) + '<span class="ses-card-unit">%</span></div>';
+        html += '<div class="ses-card-sub">' + esc(timeRangeLabel) + '</div>';
         html += '</div>';
 
         html += '</div>';

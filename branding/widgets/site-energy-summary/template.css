@@ -297,3 +297,27 @@
     font-size: 26px !important;
   }
 }
+
+/* ── Illumination Summary Section ──────────────────────────── */
+
+.ses-section-title-illum {
+  margin-top: 20px !important;
+  border-bottom: none !important;
+  border-top: 2px solid #E8A020 !important;
+  padding-top: 8px !important;
+  padding-bottom: 0 !important;
+}
+
+.ses-cards-illum {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.ses-card-dim::before {
+  background-color: #E8A020 !important;
+}
+
+@media (max-width: 380px) {
+  .ses-cards-illum {
+    grid-template-columns: 1fr !important;
+  }
+}
