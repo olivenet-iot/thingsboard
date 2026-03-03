@@ -390,9 +390,9 @@ self.renderCardsHTML = function(entityList, loading) {
         if (self.currentLevel === 'region') {
             var tier = self.tierCache[entity.id];
             if (tier === 'plus') {
-                tierBadgeHtml = '<span class="tier-badge tier-plus">Plus</span>';
+                tierBadgeHtml = '<span class="tier-badge tier-plus">SignConnect Plus</span>';
             } else if (tier === 'standard') {
-                tierBadgeHtml = '<span class="tier-badge tier-standard">Standard</span>';
+                tierBadgeHtml = '<span class="tier-badge tier-standard">SignConnect</span>';
             }
         }
 
