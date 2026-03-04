@@ -439,26 +439,16 @@ self.onInit = function () {
 
         html += '<div class="so-meta-grid">';
 
+        // Left column
+        html += '<div class="so-meta-col-left">';
+
         // Installation Info
         html += metaCard('Installation', 'bolt', [
             metaField('installation_name', 'Installation Name', siteAttrs.installation_name || ''),
             metaField('dali_name', 'DALI Name', siteAttrs.dali_name || ''),
         ]);
 
-        // LED & Driver Info
-        html += metaCard('LED & Driver', 'bulb', [
-            metaField('led_type', 'LED Type', siteAttrs.led_type || ''),
-            metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
-        ]);
-
-        // Site Contact (right column, below LED & Driver)
-        html += metaCard('Site Contact', 'user', [
-            metaField('contact_name', 'Contact Name', siteAttrs.contact_name || ''),
-            metaField('contact_email', 'Contact Email', siteAttrs.contact_email || ''),
-            metaField('contact_phone', 'Contact Phone', siteAttrs.contact_phone || ''),
-        ], 'so-meta-col2');
-
-        // Energy & Cost (full width)
+        // Energy & Cost
         html += metaCard('Energy & Cost', 'bolt', [
             metaField('co2_per_kwh', 'CO₂ Factor (kg/kWh)', siteAttrs.co2_per_kwh || '0.207'),
             metaField('energy_rate', 'Energy Rate (per kWh)', siteAttrs.energy_rate || ''),
@@ -468,12 +458,32 @@ self.onInit = function () {
                 { value: '€', label: '€ (EUR)' },
                 { value: '$', label: '$ (USD)' }
             ]),
-        ], 'so-meta-full');
-
-        // Location (independent save flow via Confirm button)
-        html += renderLocationSection();
+        ]);
 
         html += '</div>';
+
+        // Right column
+        html += '<div class="so-meta-col-right">';
+
+        // LED & Driver Info
+        html += metaCard('LED & Driver', 'bulb', [
+            metaField('led_type', 'LED Type', siteAttrs.led_type || ''),
+            metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
+        ]);
+
+        // Site Contact
+        html += metaCard('Site Contact', 'user', [
+            metaField('contact_name', 'Contact Name', siteAttrs.contact_name || ''),
+            metaField('contact_email', 'Contact Email', siteAttrs.contact_email || ''),
+            metaField('contact_phone', 'Contact Phone', siteAttrs.contact_phone || ''),
+        ]);
+
+        html += '</div>';
+
+        html += '</div>';
+
+        // Location (full width, independent save flow via Confirm button)
+        html += renderLocationSection();
 
         return html;
     }
@@ -537,7 +547,7 @@ self.onInit = function () {
             !isNaN(parseFloat(siteAttrs.latitude)) && !isNaN(parseFloat(siteAttrs.longitude));
         var showSearch = addressSearchExpanded || !hasLocation;
 
-        var html = '<div class="so-meta-card so-meta-full">' +
+        var html = '<div class="so-meta-card so-meta-full-row">' +
             '<div class="so-meta-card-title">' +
                 '<div class="so-meta-icon so-meta-icon-amber">' + META_ICONS.map + '</div>' +
                 'Location' +
