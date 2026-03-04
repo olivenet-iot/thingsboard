@@ -7,6 +7,8 @@
 
 var API_URL_DEFAULT = 'http://46.225.54.21:5001';
 var HISTORY_LIMIT = 20;
+var STORAGE_LIMIT = 50;
+var STORAGE_EXPIRY_MS = 86400000; // 24 hours
 
 // ── SVG icons ──────────────────────────────────────────────────────
 var ICON_CHAT = '<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>';
@@ -30,10 +32,12 @@ self.onInit = function () {
     // State
     var isOpen = false;
     var isLoading = false;
-    var messages = [];         // display list: {role, content}
+    var messages = [];         // display list: {role, content, ts}
     var chatHistory = [];      // sent to backend (capped at HISTORY_LIMIT)
     var suggestions = [];
     var hasOpened = false;      // track first open for welcome message
+    var lastUserMessage = '';
+    var consecutiveErrors = 0;
 
     // Build static DOM
     container.innerHTML = buildShell();
@@ -56,6 +60,9 @@ self.onInit = function () {
     });
     input.addEventListener('input', autoGrow);
 
+    // ── Restore history from localStorage ───────────────────────
+    loadHistory();
+
     // ── Toggle panel ────────────────────────────────────────────
     function togglePanel() {
         isOpen = !isOpen;
@@ -63,10 +70,14 @@ self.onInit = function () {
             panel.classList.add('sc-chat-open');
             if (!hasOpened) {
                 hasOpened = true;
-                addAssistantMessage(
-                    "Hello! I'm the **SignConnect Assistant**. Ask me anything about your smart lighting — device status, energy usage, alarms, and more.",
-                    ['Show me the site overview', 'Any active alarms?', 'How are the energy savings?']
-                );
+                // Only show welcome if no restored history
+                if (messages.length === 0) {
+                    var initSuggestions = getInitialSuggestions();
+                    addAssistantMessage(
+                        "Hello! I'm the **SignConnect Assistant**. Ask me anything about your smart lighting — device status, energy usage, alarms, and more.",
+                        initSuggestions
+                    );
+                }
             }
             setTimeout(function () { input.focus(); }, 250);
         } else {
@@ -80,19 +91,39 @@ self.onInit = function () {
         input.style.height = Math.min(input.scrollHeight, 80) + 'px';
     }
 
+    // ── Context-aware initial suggestions ───────────────────────
+    function getInitialSuggestions() {
+        var ctx = getEntityContext();
+        if (ctx.entity_type === 'DEVICE') {
+            return [
+                'What is the current power consumption?',
+                'Any alarms on this device?',
+                'Show energy savings for this device'
+            ];
+        }
+        return [
+            'What is the energy consumption at this site?',
+            'Are there any active faults?',
+            'What are the energy savings today?'
+        ];
+    }
+
     // ── Send a message ──────────────────────────────────────────
     function sendMessage(text) {
         var msg = (text || input.value || '').trim();
         if (!msg || isLoading) return;
+
+        lastUserMessage = msg;
 
         // Clear previous chips
         var oldChips = msgList.querySelector('.sc-chat-chips');
         if (oldChips) oldChips.remove();
 
         // Push user message
-        messages.push({ role: 'user', content: msg });
+        var ts = Date.now();
+        messages.push({ role: 'user', content: msg, ts: ts });
         chatHistory.push({ role: 'user', content: msg });
-        appendBubble('user', esc(msg));
+        appendBubble('user', esc(msg), ts);
         input.value = '';
         input.style.height = 'auto';
         scrollToBottom();
@@ -125,19 +156,21 @@ self.onInit = function () {
 
         promise.then(function (resp) {
             var data = resp.data || resp;
-            var text = data.response || 'No response received.';
+            var respText = data.response || 'No response received.';
             var chips = (data.metadata && data.metadata.suggestions) || [];
 
-            messages.push({ role: 'assistant', content: text });
-            chatHistory.push({ role: 'assistant', content: text });
+            var respTs = Date.now();
+            messages.push({ role: 'assistant', content: respText, ts: respTs });
+            chatHistory.push({ role: 'assistant', content: respText });
             trimHistory();
 
-            addAssistantMessage(text, chips);
+            addAssistantMessage(respText, chips, respTs);
+            consecutiveErrors = 0;
+            saveHistory();
         }).catch(function (err) {
             console.error('[SC-CHAT] API error:', err);
-            var errMsg = 'Sorry, I could not reach the assistant. Please try again.';
-            messages.push({ role: 'assistant', content: errMsg });
-            appendBubble('error', esc(errMsg));
+            consecutiveErrors++;
+            appendErrorWithRetry('Sorry, I could not reach the assistant. Please try again.');
         }).finally(function () {
             if (typingEl && typingEl.parentNode) typingEl.remove();
             isLoading = false;
@@ -148,8 +181,8 @@ self.onInit = function () {
 
     // ── Helpers ─────────────────────────────────────────────────
 
-    function addAssistantMessage(text, chips) {
-        appendBubble('assistant', renderMarkdown(text));
+    function addAssistantMessage(text, chips, timestamp) {
+        appendBubble('assistant', renderMarkdown(text), timestamp);
         if (chips && chips.length) {
             suggestions = chips;
             appendChips(chips);
@@ -157,11 +190,55 @@ self.onInit = function () {
         scrollToBottom();
     }
 
-    function appendBubble(role, html) {
+    function appendBubble(role, html, timestamp) {
         var div = document.createElement('div');
         div.className = 'sc-chat-msg sc-chat-msg-' + role;
         div.innerHTML = html;
+        // Timestamp
+        var ts = document.createElement('span');
+        ts.className = 'sc-chat-msg-time';
+        var d = timestamp ? new Date(timestamp) : new Date();
+        ts.textContent = formatTime(d);
+        div.appendChild(ts);
         msgList.appendChild(div);
+    }
+
+    function formatTime(d) {
+        var now = new Date();
+        var h = d.getHours().toString().padStart(2, '0');
+        var m = d.getMinutes().toString().padStart(2, '0');
+        if (d.toDateString() === now.toDateString()) {
+            return h + ':' + m;
+        }
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return months[d.getMonth()] + ' ' + d.getDate() + ', ' + h + ':' + m;
+    }
+
+    function appendErrorWithRetry(errMsg) {
+        var div = document.createElement('div');
+        div.className = 'sc-chat-msg sc-chat-msg-error';
+        var msgSpan = document.createElement('span');
+        msgSpan.textContent = errMsg;
+        div.appendChild(msgSpan);
+
+        if (consecutiveErrors < 3 && lastUserMessage) {
+            var retryBtn = document.createElement('button');
+            retryBtn.className = 'sc-chat-chip sc-chat-retry-btn';
+            retryBtn.textContent = 'Try again';
+            retryBtn.addEventListener('click', function () {
+                div.remove();
+                consecutiveErrors = 0;
+                sendMessage(lastUserMessage);
+            });
+            div.appendChild(retryBtn);
+        } else if (consecutiveErrors >= 3) {
+            var svcMsg = document.createElement('span');
+            svcMsg.className = 'sc-chat-msg-time';
+            svcMsg.textContent = 'Service temporarily unavailable';
+            div.appendChild(svcMsg);
+        }
+        msgList.appendChild(div);
+        scrollToBottom();
     }
 
     function appendTyping() {
@@ -198,6 +275,48 @@ self.onInit = function () {
         while (chatHistory.length > HISTORY_LIMIT) {
             chatHistory.shift();
         }
+    }
+
+    // ── localStorage persistence ────────────────────────────────
+    function getStorageKey() {
+        var ctx = getEntityContext();
+        return 'sc_chat_' + (ctx.customer_id || 'anon') + '_' + (ctx.entity_id || 'global');
+    }
+
+    function saveHistory() {
+        try {
+            var key = getStorageKey();
+            var stored = messages.slice(-STORAGE_LIMIT);
+            var data = { messages: stored, ts: Date.now() };
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) { /* quota exceeded or unavailable — ignore */ }
+    }
+
+    function loadHistory() {
+        try {
+            var key = getStorageKey();
+            var raw = localStorage.getItem(key);
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            // Expire after 24 hours
+            if (Date.now() - data.ts > STORAGE_EXPIRY_MS) {
+                localStorage.removeItem(key);
+                return;
+            }
+            if (!data.messages || !data.messages.length) return;
+            data.messages.forEach(function (m) {
+                messages.push(m);
+                chatHistory.push({ role: m.role, content: m.content });
+                appendBubble(
+                    m.role === 'user' ? 'user' : 'assistant',
+                    m.role === 'user' ? esc(m.content) : renderMarkdown(m.content),
+                    m.ts
+                );
+            });
+            trimHistory();
+            hasOpened = true; // skip welcome message
+            scrollToBottom();
+        } catch (e) { /* parse error — ignore */ }
     }
 
     // ── Entity context (matches EntityContext Pydantic model) ────

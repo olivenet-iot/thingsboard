@@ -6,7 +6,9 @@ import asyncio
 import logging
 import time
 
+from cache import get_cached_entity, set_cached_entity
 from config import resolve_time_range
+from models import EntityContext
 from tb_client import TBClient
 
 logger = logging.getLogger(__name__)
@@ -32,8 +34,9 @@ TOOL_DEFINITIONS = [
         "name": "get_hierarchy",
         "description": (
             "Get the customer's asset hierarchy (estates, regions, sites) "
-            "and their devices. Returns the full tree structure. Use this "
-            "when user asks about their sites, locations, or overall structure."
+            "and their devices. Returns the full tree structure. Call this "
+            "FIRST if you need to resolve a site or device name to an ID. "
+            "Use when user asks about their sites, locations, or overall structure."
         ),
         "input_schema": {
             "type": "object",
@@ -109,7 +112,9 @@ TOOL_DEFINITIONS = [
                     "enum": ["NONE", "AVG", "SUM", "MIN", "MAX"],
                     "description": (
                         "Aggregation type for historical data. "
-                        "Use SUM for energy_wh, AVG for power_watts."
+                        "Use SUM for energy_wh, cost_currency, co2_grams. "
+                        "Use AVG for power_watts, saving_pct, dim_value. "
+                        "Use MAX for driver_temperature."
                     ),
                 },
             },
@@ -209,8 +214,11 @@ TOOL_DEFINITIONS = [
             "The MQTT bridge detects the dimLevel attribute change and sends a "
             "LoRaWAN downlink to the device. Accepts a device UUID or site "
             "asset UUID — if a site ID is given, the command is sent to ALL "
-            "devices at that site. IMPORTANT: Always confirm with the user "
-            "before sending commands."
+            "devices at that site.\n\n"
+            "TWO-STEP FLOW: First call with confirmed=false (default) to get "
+            "the device list and confirmation prompt. Present the device names "
+            "and dim value to the user and wait for their confirmation. Then "
+            "call again with confirmed=true to actually send the command."
         ),
         "input_schema": {
             "type": "object",
@@ -225,6 +233,13 @@ TOOL_DEFINITIONS = [
                     "maximum": 100,
                     "description": (
                         "Dim level percentage (0=off, 100=full brightness)"
+                    ),
+                },
+                "confirmed": {
+                    "type": "boolean",
+                    "description": (
+                        "Set to true only AFTER the user has explicitly "
+                        "confirmed the command. Default: false."
                     ),
                 },
             },
@@ -266,7 +281,10 @@ TOOL_DEFINITIONS = [
 # ---------------------------------------------------------------------------
 
 async def execute_tool(
-    tool_name: str, tool_input: dict, tb: TBClient
+    tool_name: str,
+    tool_input: dict,
+    tb: TBClient,
+    context: EntityContext | None = None,
 ) -> dict:
     """Dispatch a tool call and return the result as a dict."""
     executors = {
@@ -284,7 +302,7 @@ async def execute_tool(
         return {"error": f"Unknown tool: {tool_name}"}
 
     try:
-        return await executor(tool_input, tb)
+        return await executor(tool_input, tb, context)
     except Exception as exc:
         logger.exception("Tool %s failed", tool_name)
         return {"error": f"Tool {tool_name} failed: {exc}"}
@@ -294,7 +312,27 @@ async def execute_tool(
 # Individual tool executors
 # ---------------------------------------------------------------------------
 
-async def _get_hierarchy(inp: dict, tb: TBClient) -> dict:
+async def _cached_get_device(device_id: str, tb: TBClient) -> dict:
+    """Get device with entity cache."""
+    cached = get_cached_entity(device_id)
+    if cached is not None:
+        return cached
+    data = await tb.get_device(device_id)
+    set_cached_entity(device_id, data)
+    return data
+
+
+async def _cached_get_asset(asset_id: str, tb: TBClient) -> dict:
+    """Get asset with entity cache."""
+    cached = get_cached_entity(asset_id)
+    if cached is not None:
+        return cached
+    data = await tb.get_asset(asset_id)
+    set_cached_entity(asset_id, data)
+    return data
+
+
+async def _get_hierarchy(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Walk customer → estate → region → site → device."""
     customer_id = inp["customer_id"]
     customer = await tb.get_customer(customer_id)
@@ -316,7 +354,7 @@ async def _get_hierarchy(inp: dict, tb: TBClient) -> dict:
         for rel in rels:
             child = rel["to"]
             if child["entityType"] == "DEVICE":
-                dev = await tb.get_device(child["id"])
+                dev = await _cached_get_device(child["id"], tb)
                 devices.append({
                     "id": child["id"],
                     "name": dev.get("name", ""),
@@ -330,7 +368,7 @@ async def _get_hierarchy(inp: dict, tb: TBClient) -> dict:
         for rel in rels:
             child = rel["to"]
             if child["entityType"] == "ASSET":
-                asset = await tb.get_asset(child["id"])
+                asset = await _cached_get_asset(child["id"], tb)
                 if asset.get("type", "").lower() == "site":
                     site_nodes.append(await build_site(child["id"], asset["name"]))
         return {"id": region_id, "name": region_name, "sites": site_nodes}
@@ -344,7 +382,7 @@ async def _get_hierarchy(inp: dict, tb: TBClient) -> dict:
             for rel in rels:
                 child = rel["to"]
                 if child["entityType"] == "ASSET":
-                    asset = await tb.get_asset(child["id"])
+                    asset = await _cached_get_asset(child["id"], tb)
                     child_type = asset.get("type", "").lower()
                     if child_type == "region":
                         region_nodes.append(
@@ -378,20 +416,20 @@ async def _get_hierarchy(inp: dict, tb: TBClient) -> dict:
     return hierarchy
 
 
-async def _get_site_summary(inp: dict, tb: TBClient) -> dict:
+async def _get_site_summary(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Aggregate telemetry across all devices at a site."""
     site_id = inp["site_id"]
     time_range = inp.get("time_range", "today")
     start_ts, end_ts = resolve_time_range(time_range)
 
-    site = await tb.get_asset(site_id)
+    site = await _cached_get_asset(site_id, tb)
     rels = await tb.get_entity_relations(site_id, "ASSET")
 
     device_ids: list[tuple[str, str]] = []  # (id, name)
     for rel in rels:
         child = rel["to"]
         if child["entityType"] == "DEVICE":
-            dev = await tb.get_device(child["id"])
+            dev = await _cached_get_device(child["id"], tb)
             device_ids.append((child["id"], dev.get("name", "")))
 
     energy_keys = ["energy_wh", "co2_grams", "cost_currency"]
@@ -454,14 +492,14 @@ async def _get_site_summary(inp: dict, tb: TBClient) -> dict:
     }
 
 
-async def _get_device_telemetry(inp: dict, tb: TBClient) -> dict:
+async def _get_device_telemetry(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Fetch latest or historical telemetry for a device."""
     device_id = inp["device_id"]
     keys = inp["keys"]
     time_range = inp.get("time_range", "latest")
     agg = inp.get("aggregation", "SUM")
 
-    dev = await tb.get_device(device_id)
+    dev = await _cached_get_device(device_id, tb)
     result: dict = {"device_name": dev.get("name", ""), "device_id": device_id}
 
     if time_range == "latest":
@@ -487,7 +525,7 @@ async def _get_device_telemetry(inp: dict, tb: TBClient) -> dict:
     return result
 
 
-async def _get_energy_savings(inp: dict, tb: TBClient) -> dict:
+async def _get_energy_savings(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Get savings metrics for a device or all devices at a site."""
     entity_id = inp["entity_id"]
     entity_type = inp["entity_type"]
@@ -499,7 +537,7 @@ async def _get_energy_savings(inp: dict, tb: TBClient) -> dict:
     ]
 
     if entity_type == "DEVICE":
-        dev = await tb.get_device(entity_id)
+        dev = await _cached_get_device(entity_id, tb)
         hist = await tb.get_historical_telemetry(
             "DEVICE", entity_id, savings_keys, start_ts, end_ts, agg="SUM"
         )
@@ -524,7 +562,7 @@ async def _get_energy_savings(inp: dict, tb: TBClient) -> dict:
         }
 
     # ASSET (site) — aggregate across devices
-    site = await tb.get_asset(entity_id)
+    site = await _cached_get_asset(entity_id, tb)
     rels = await tb.get_entity_relations(entity_id, "ASSET")
 
     total_saving_wh = 0.0
@@ -537,7 +575,7 @@ async def _get_energy_savings(inp: dict, tb: TBClient) -> dict:
         child = rel["to"]
         if child["entityType"] != "DEVICE":
             continue
-        dev = await tb.get_device(child["id"])
+        dev = await _cached_get_device(child["id"], tb)
         hist = await tb.get_historical_telemetry(
             "DEVICE", child["id"], savings_keys, start_ts, end_ts, agg="SUM"
         )
@@ -577,7 +615,7 @@ async def _get_energy_savings(inp: dict, tb: TBClient) -> dict:
     }
 
 
-async def _get_alarms(inp: dict, tb: TBClient) -> dict:
+async def _get_alarms(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Fetch alarms for an entity or tenant-wide."""
     entity_id = inp.get("entity_id")
     entity_type = inp.get("entity_type")
@@ -608,12 +646,12 @@ async def _get_alarms(inp: dict, tb: TBClient) -> dict:
     }
 
 
-async def _get_device_attributes(inp: dict, tb: TBClient) -> dict:
+async def _get_device_attributes(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Fetch attributes for a device."""
     device_id = inp["device_id"]
     scope = inp.get("scope", "SERVER_SCOPE")
 
-    dev = await tb.get_device(device_id)
+    dev = await _cached_get_device(device_id, tb)
     attrs = await tb.get_attributes("DEVICE", device_id, scope)
 
     return {
@@ -628,7 +666,7 @@ async def _resolve_device_ids(entity_id: str, tb: TBClient) -> list[dict]:
     """If entity_id is a device, return it. If it's an asset (site), resolve child devices."""
     # Try as device first
     try:
-        dev = await tb.get_device(entity_id)
+        dev = await _cached_get_device(entity_id, tb)
         return [{"id": entity_id, "name": dev.get("name", "")}]
     except Exception:
         pass
@@ -639,7 +677,7 @@ async def _resolve_device_ids(entity_id: str, tb: TBClient) -> list[dict]:
         for rel in rels:
             child = rel["to"]
             if child["entityType"] == "DEVICE":
-                dev = await tb.get_device(child["id"])
+                dev = await _cached_get_device(child["id"], tb)
                 devices.append({"id": child["id"], "name": dev.get("name", "")})
         if devices:
             return devices
@@ -648,17 +686,41 @@ async def _resolve_device_ids(entity_id: str, tb: TBClient) -> list[dict]:
     return []
 
 
-async def _send_dim_command(inp: dict, tb: TBClient) -> dict:
+async def _send_dim_command(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Set dim level via shared attributes for a device or all devices at a site."""
     device_id = inp["device_id"]
     dim_value = inp["dim_value"]
+    confirmed = inp.get("confirmed", False)
+
+    # Server-side range validation
+    if not (0 <= dim_value <= 100):
+        return {"error": "Dim value must be between 0 and 100"}
 
     devices = await _resolve_device_ids(device_id, tb)
     if not devices:
         return {"error": f"No devices found for ID {device_id}"}
 
+    # Two-step confirmation flow
+    if not confirmed:
+        device_names = [d["name"] for d in devices]
+        return {
+            "requires_confirmation": True,
+            "message": (
+                f"Please confirm: set {len(devices)} device(s) to {dim_value}% — "
+                f"{', '.join(device_names)}"
+            ),
+            "devices": devices,
+            "dim_value": dim_value,
+        }
+
+    # Execute the command
+    customer_id = ctx.customer_id if ctx else "unknown"
     results = []
     for dev in devices:
+        logger.warning(
+            "DIM_COMMAND customer=%s device=%s value=%d",
+            customer_id, dev["id"], dim_value,
+        )
         await tb.update_shared_attributes(dev["id"], {"dimLevel": dim_value})
         results.append({
             "device_name": dev["name"],
@@ -678,7 +740,7 @@ async def _send_dim_command(inp: dict, tb: TBClient) -> dict:
     }
 
 
-async def _compare_sites(inp: dict, tb: TBClient) -> dict:
+async def _compare_sites(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
     """Fetch summaries for multiple sites in parallel for comparison."""
     site_ids = inp["site_ids"]
     time_range = inp.get("time_range", "today")

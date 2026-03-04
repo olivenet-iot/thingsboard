@@ -10,6 +10,9 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 import config
 from chat import process_chat
@@ -46,6 +49,12 @@ async def lifespan(app: FastAPI):
 
 
 # ---------------------------------------------------------------------------
+# Rate limiter
+# ---------------------------------------------------------------------------
+
+limiter = Limiter(key_func=get_remote_address)
+
+# ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
@@ -54,6 +63,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,11 +81,12 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+@limiter.limit(config.RATE_LIMIT_PER_IP)
+async def chat_endpoint(request: Request, body: ChatRequest):
     """Process a chat message and return the AI response."""
     tb: TBClient = app.state.tb_client
     ac: anthropic.AsyncAnthropic = app.state.anthropic_client
-    return await process_chat(request, tb, ac)
+    return await process_chat(body, tb, ac)
 
 
 @app.get("/api/health")
@@ -109,4 +122,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=config.SERVICE_PORT, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=config.SERVICE_PORT)

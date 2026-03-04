@@ -187,6 +187,31 @@
     margin-bottom: 3px !important;
 }
 
+/* ---------- Message timestamps ---------- */
+.sc-chat-msg-time {
+    display: block !important;
+    font-size: 10px !important;
+    color: #64748b !important;
+    margin-top: 4px !important;
+    text-align: right !important;
+    line-height: 1.2 !important;
+}
+.sc-chat-msg-error .sc-chat-msg-time {
+    color: #94a3b8 !important;
+}
+
+/* ---------- Retry button in error bubble ---------- */
+.sc-chat-retry-btn {
+    margin-top: 8px !important;
+    display: inline-block !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+.sc-chat-retry-btn:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+}
+
 /* ---------- Suggestion chips ---------- */
 .sc-chat-chips {
     display: flex !important;

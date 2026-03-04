@@ -4,10 +4,23 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 import anthropic
+import httpx
 
 import config
+from cache import (
+    get_cached_hierarchy,
+    get_hierarchy_entity_ids,
+    set_cached_hierarchy,
+)
+from guardrails import (
+    REJECTION_RESPONSE,
+    REJECTION_SUGGESTIONS,
+    is_on_topic,
+    sanitize_input,
+)
 from models import (
     ChatMetadata,
     ChatRequest,
@@ -27,6 +40,35 @@ DEFAULT_SUGGESTIONS = [
     "How are the energy savings?",
 ]
 
+# ---------------------------------------------------------------------------
+# Per-customer rate limiting (in-memory)
+# ---------------------------------------------------------------------------
+
+_customer_request_log: dict[str, list[float]] = {}
+
+
+def _check_customer_rate(customer_id: str) -> bool:
+    """Return True if the customer is within rate limits."""
+    now = time.time()
+    window = config.RATE_LIMIT_CUSTOMER_WINDOW
+    limit = config.RATE_LIMIT_PER_CUSTOMER
+
+    timestamps = _customer_request_log.get(customer_id, [])
+    # Prune old entries
+    timestamps = [t for t in timestamps if now - t < window]
+    _customer_request_log[customer_id] = timestamps
+
+    if len(timestamps) >= limit:
+        return False
+
+    timestamps.append(now)
+    return True
+
+
+RATE_LIMIT_RESPONSE = (
+    "Too many requests. Please wait a moment before sending another message."
+)
+
 
 async def process_chat(
     request: ChatRequest,
@@ -35,41 +77,89 @@ async def process_chat(
 ) -> ChatResponse:
     """Process a chat request through Claude with iterative tool use.
 
-    1. Build the system prompt with entity context.
-    2. Assemble messages (history + new user message).
-    3. Call Claude — if it returns tool_use blocks, execute them and loop.
-    4. Extract the final text response, suggestions, and metadata.
+    Pipeline:
+    1. Topic guard — reject off-topic messages (no Claude call).
+    2. Input sanitization — block prompt injection attempts.
+    3. Per-customer rate limit check.
+    4. Customer isolation — validate customer_id exists.
+    5. Hierarchy cache — fetch or use cached hierarchy.
+    6. Build system prompt + conversation messages.
+    7. Claude API loop with iterative tool use.
+    8. Return final response with suggestions + metadata.
     """
-    # Pre-fetch hierarchy on first message if customer_id available
-    hierarchy_data = None
-    if not request.chat_history and request.context and request.context.customer_id:
+    ctx = request.context
+
+    # -- 1. Topic guard ---------------------------------------------------
+    if not is_on_topic(request.message):
+        return ChatResponse(
+            response=REJECTION_RESPONSE,
+            metadata=ChatMetadata(suggestions=REJECTION_SUGGESTIONS),
+        )
+
+    # -- 2. Prompt injection protection -----------------------------------
+    is_safe, result = sanitize_input(request.message)
+    if not is_safe:
+        return ChatResponse(
+            response=result,
+            metadata=ChatMetadata(suggestions=REJECTION_SUGGESTIONS),
+        )
+    # Use the cleaned message from here on
+    user_message = result
+
+    # -- 3. Per-customer rate limit ---------------------------------------
+    customer_id = ctx.customer_id if ctx else None
+    if customer_id and not _check_customer_rate(customer_id):
+        return ChatResponse(
+            response=RATE_LIMIT_RESPONSE,
+            metadata=ChatMetadata(suggestions=[]),
+        )
+
+    # -- 4. Customer isolation — validate customer exists -----------------
+    if customer_id:
         try:
-            hierarchy_data = await execute_tool(
-                "get_hierarchy",
-                {"customer_id": request.context.customer_id},
-                tb_client,
+            await tb_client.get_customer(customer_id)
+        except httpx.HTTPStatusError:
+            return ChatResponse(
+                response="Unable to verify your account. Please refresh and try again.",
+                metadata=ChatMetadata(suggestions=[]),
             )
-            if "error" not in hierarchy_data:
-                logger.info("Pre-fetched hierarchy for customer %s", request.context.customer_id)
-            else:
-                logger.warning("Hierarchy pre-fetch returned error: %s", hierarchy_data.get("error"))
+
+    # -- 5. Hierarchy cache -----------------------------------------------
+    hierarchy_data = None
+    if customer_id:
+        hierarchy_data = get_cached_hierarchy(customer_id)
+        if hierarchy_data is None:
+            try:
+                hierarchy_data = await execute_tool(
+                    "get_hierarchy",
+                    {"customer_id": customer_id},
+                    tb_client,
+                    ctx,
+                )
+                if "error" not in hierarchy_data:
+                    set_cached_hierarchy(customer_id, hierarchy_data)
+                    logger.info("Fetched + cached hierarchy for customer %s", customer_id)
+                else:
+                    logger.warning("Hierarchy fetch returned error: %s", hierarchy_data.get("error"))
+                    hierarchy_data = None
+            except Exception:
+                logger.warning("Failed to fetch hierarchy", exc_info=True)
                 hierarchy_data = None
-        except Exception:
-            logger.warning("Failed to pre-fetch hierarchy", exc_info=True)
-            hierarchy_data = None
+        else:
+            logger.debug("Using cached hierarchy for customer %s", customer_id)
 
-    system_prompt = build_system_prompt(request.context, hierarchy_data=hierarchy_data)
+    # -- 6. Build system prompt + messages --------------------------------
+    system_prompt = build_system_prompt(ctx, hierarchy_data=hierarchy_data)
 
-    # Build conversation messages
     messages: list[dict] = []
     for msg in request.chat_history:
         messages.append({"role": msg.role, "content": msg.content})
-    messages.append({"role": "user", "content": request.message})
+    messages.append({"role": "user", "content": user_message})
 
     tools_used: list[str] = []
     entity_refs: list[EntityReference] = []
 
-    # -- Iterative tool-use loop ------------------------------------------
+    # -- 7. Iterative tool-use loop ---------------------------------------
     iterations = 0
     while iterations < config.MAX_TOOL_ITERATIONS:
         iterations += 1
@@ -84,13 +174,12 @@ async def process_chat(
         except anthropic.APIError as exc:
             logger.exception("Claude API error")
             return ChatResponse(
-                response=f"I'm having trouble connecting to the AI service. Please try again. (Error: {exc.message})",
+                response="I'm having trouble connecting right now. Please try again.",
                 metadata=ChatMetadata(suggestions=DEFAULT_SUGGESTIONS),
             )
 
         # Check if Claude wants to use tools
         if response.stop_reason != "tool_use":
-            # No more tool calls — extract final text
             break
 
         # Process each content block
@@ -104,16 +193,30 @@ async def process_chat(
                 tool_input = block.input
                 tools_used.append(tool_name)
 
+                # Entity-level ownership check for dim commands
+                if tool_name == "send_dim_command" and customer_id:
+                    allowed_ids = get_hierarchy_entity_ids(customer_id)
+                    target_id = tool_input.get("device_id", "")
+                    if allowed_ids and target_id not in allowed_ids:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps({
+                                "error": "Device not found in your account.",
+                            }),
+                        })
+                        continue
+
                 logger.info("Executing tool: %s(%s)", tool_name, json.dumps(tool_input)[:200])
-                result = await execute_tool(tool_name, tool_input, tb_client)
+                tool_result = await execute_tool(tool_name, tool_input, tb_client, ctx)
 
                 # Collect entity references from tool inputs
-                _collect_entity_refs(tool_name, tool_input, result, entity_refs)
+                _collect_entity_refs(tool_name, tool_input, tool_result, entity_refs)
 
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": block.id,
-                    "content": json.dumps(result),
+                    "content": json.dumps(tool_result),
                 })
 
         # Append assistant message with tool_use blocks
@@ -124,7 +227,7 @@ async def process_chat(
         # Append tool results
         messages.append({"role": "user", "content": tool_results})
 
-    # -- Extract final text -----------------------------------------------
+    # -- 8. Extract final text --------------------------------------------
     final_text = ""
     for block in response.content:
         if hasattr(block, "text"):
@@ -133,8 +236,7 @@ async def process_chat(
     if not final_text:
         final_text = "I processed your request but couldn't generate a text response. Please try rephrasing."
 
-    # -- Extract suggestions -----------------------------------------------
-    suggestions = _extract_suggestions(final_text, request.context)
+    suggestions = _extract_suggestions(final_text, ctx)
 
     return ChatResponse(
         response=final_text,

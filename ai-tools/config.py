@@ -31,6 +31,14 @@ SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "5001"))
 # -- Tool loop safety -----------------------------------------------------
 MAX_TOOL_ITERATIONS: int = 10
 
+# -- Guardrails -----------------------------------------------------------
+MAX_MESSAGE_LENGTH: int = 2000
+
+# -- Rate limiting --------------------------------------------------------
+RATE_LIMIT_PER_IP: str = "10/minute"
+RATE_LIMIT_PER_CUSTOMER: int = 20          # max requests per customer …
+RATE_LIMIT_CUSTOMER_WINDOW: int = 60       # … in this many seconds
+
 
 # -- Time-range helper ----------------------------------------------------
 
