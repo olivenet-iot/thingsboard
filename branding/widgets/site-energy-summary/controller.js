@@ -363,7 +363,7 @@ self.onInit = function () {
 
         var siteName = esc(entityName || siteAttrs.installation_name || 'Site');
         var tier = (siteAttrs.dashboard_tier || '').toLowerCase();
-        var tierLabel = tier === 'plus' ? 'Plus' : 'Standard';
+        var tierLabel = tier === 'plus' ? 'SignConnect Plus' : 'SignConnect';
         var tierClass = tier === 'plus' ? 'ses-tier-plus' : 'ses-tier-standard';
 
         var html = '<div class="ses-header">';

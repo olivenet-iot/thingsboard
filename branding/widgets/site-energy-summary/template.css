@@ -111,23 +111,27 @@
 .ses-tier-badge {
   display: inline-flex !important;
   align-items: center !important;
-  padding: 4px 10px !important;
-  border-radius: 9999px !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
+  padding: 1px 7px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
   white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  line-height: 1.5 !important;
 }
 
 .ses-tier-plus {
-  background-color: #fef3c7 !important;
-  color: #92400e !important;
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border: 1px solid #fcd34d !important;
 }
 
 .ses-tier-standard {
-  background-color: #f1f5f9 !important;
-  color: #475569 !important;
+  background: #f0f9ff !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
 }
 
 /* ── Header Right / Details Button ────────────────────────── */
