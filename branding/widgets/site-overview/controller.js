@@ -11,6 +11,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 var pollTimer = null; // outer scope — accessible by onDestroy
+var _addrDebounceTimer = null;
+var _addrOutsideClickFn = null;
 
 self.onInit = function () {
     'use strict';
@@ -42,29 +44,15 @@ self.onInit = function () {
     var schedTimeSlotCount = 0;
     var schedTasksLoaded = false;
 
-    var CITY_PRESETS = [
-        { label: 'London, UK', lat: 51.5074, lng: -0.1278, utc: 0 },
-        { label: 'Dublin, IE', lat: 53.3498, lng: -6.2603, utc: 0 },
-        { label: 'Amsterdam, NL', lat: 52.3676, lng: 4.9041, utc: 1 },
-        { label: 'Brussels, BE', lat: 50.8503, lng: 4.3517, utc: 1 },
-        { label: 'Paris, FR', lat: 48.8566, lng: 2.3522, utc: 1 },
-        { label: 'Berlin, DE', lat: 52.5200, lng: 13.4050, utc: 1 },
-        { label: 'Bern, CH', lat: 46.9480, lng: 7.4474, utc: 1 },
-        { label: 'Vienna, AT', lat: 48.2082, lng: 16.3738, utc: 1 },
-        { label: 'Rome, IT', lat: 41.9028, lng: 12.4964, utc: 1 },
-        { label: 'Madrid, ES', lat: 40.4168, lng: -3.7038, utc: 1 },
-        { label: 'Lisbon, PT', lat: 38.7223, lng: -9.1393, utc: 0 },
-        { label: 'Copenhagen, DK', lat: 55.6761, lng: 12.5683, utc: 1 },
-        { label: 'Stockholm, SE', lat: 59.3293, lng: 18.0686, utc: 1 },
-        { label: 'Oslo, NO', lat: 59.9139, lng: 10.7522, utc: 1 },
-        { label: 'Helsinki, FI', lat: 60.1699, lng: 24.9384, utc: 2 },
-        { label: 'Warsaw, PL', lat: 52.2297, lng: 21.0122, utc: 1 },
-        { label: 'Prague, CZ', lat: 50.0755, lng: 14.4378, utc: 1 },
-        { label: 'Budapest, HU', lat: 47.4979, lng: 19.0402, utc: 1 },
-        { label: 'Bucharest, RO', lat: 44.4268, lng: 26.1025, utc: 2 },
-        { label: 'Athens, GR', lat: 37.9838, lng: 23.7275, utc: 2 },
-        { label: 'Custom', lat: null, lng: null, utc: null }
-    ];
+    // Address autocomplete state
+    var addressSearchExpanded = false;
+    var addressSearchResults = [];
+    var addressSelected = null;    // {lat, lon, display_name, address}
+    var addressTimezone = null;
+    var addressTimezoneEstimated = false;
+    var addressFetching = false;
+    var addressTzFetching = false;
+    var addressDebounceTimer = null;
 
     // ── Resolve Site Asset ID ─────────────────────────────────
 
@@ -475,14 +463,8 @@ self.onInit = function () {
             ]),
         ]);
 
-        // Location
-        html += metaCard('Location', 'map', [
-            cityPresetRow(),
-            metaField('address', 'Address', siteAttrs.address || ''),
-            metaField('latitude', 'Latitude', siteAttrs.latitude || ''),
-            metaField('longitude', 'Longitude', siteAttrs.longitude || ''),
-            metaField('timezone_offset', 'Timezone Offset (UTC+)', siteAttrs.timezone_offset || ''),
-        ]);
+        // Location (independent save flow via Confirm button)
+        html += renderLocationSection();
 
         // Contact
         html += metaCard('Site Contact', 'user', [
@@ -560,33 +542,379 @@ self.onInit = function () {
         '</div>';
     }
 
-    function detectCity(lat, lng) {
-        var la = parseFloat(lat), lo = parseFloat(lng);
-        if (isNaN(la) || isNaN(lo)) return 'Custom';
-        for (var i = 0; i < CITY_PRESETS.length - 1; i++) {
-            var c = CITY_PRESETS[i];
-            if (Math.abs(la - c.lat) < 0.01 && Math.abs(lo - c.lng) < 0.01) return c.label;
+    // ── Address Autocomplete (Nominatim + timeapi.io) ─────────
+
+    function renderLocationSection() {
+        var hasLocation = siteAttrs.latitude && siteAttrs.longitude &&
+            !isNaN(parseFloat(siteAttrs.latitude)) && !isNaN(parseFloat(siteAttrs.longitude));
+        var showSearch = addressSearchExpanded || !hasLocation;
+
+        var html = '<div class="so-meta-card so-meta-full">' +
+            '<div class="so-meta-card-title">' +
+                '<div class="so-meta-icon so-meta-icon-amber">' + META_ICONS.map + '</div>' +
+                'Location' +
+            '</div>';
+
+        // Current location display
+        if (hasLocation) {
+            var addr = siteAttrs.address || siteAttrs.site_address || '';
+            var city = siteAttrs.site_city || '';
+            var country = siteAttrs.site_country || '';
+            var displayAddr = addr || [city, country].filter(Boolean).join(', ') || 'Coordinates set';
+            html += '<div class="sc-address-current">' +
+                '<div class="sc-address-current-addr">' + esc(displayAddr) + '</div>' +
+                '<div class="sc-address-current-coords">' +
+                    esc(parseFloat(siteAttrs.latitude).toFixed(4)) + ', ' +
+                    esc(parseFloat(siteAttrs.longitude).toFixed(4)) +
+                    (siteAttrs.timezone_offset !== undefined && siteAttrs.timezone_offset !== ''
+                        ? ' &middot; UTC' + (parseFloat(siteAttrs.timezone_offset) >= 0 ? '+' : '') + siteAttrs.timezone_offset
+                        : '') +
+                '</div>' +
+                '<button class="sc-address-change-btn" data-action="addr-toggle-search">' +
+                    (showSearch ? 'Cancel' : 'Change Location') +
+                '</button>' +
+            '</div>';
         }
-        return 'Custom';
+
+        // Search UI
+        if (showSearch) {
+            html += '<div class="sc-address-search-wrap">' +
+                '<div class="sc-address-input-wrap">' +
+                    '<input type="text" class="sc-address-input" data-action="addr-search-input"' +
+                        ' placeholder="Search address or city\u2026" autocomplete="off" />' +
+                    (addressFetching ? '<div class="sc-address-spinner"></div>' : '') +
+                '</div>';
+
+            // Dropdown
+            if (addressSearchResults.length > 0 && !addressSelected) {
+                html += '<div class="sc-address-dropdown">';
+                addressSearchResults.forEach(function (r, i) {
+                    html += '<div class="sc-address-option' + (i === 0 ? ' sc-address-option-active' : '') +
+                        '" data-action="addr-select" data-addr-idx="' + i + '">' +
+                        esc(r.display_name) + '</div>';
+                });
+                html += '</div>';
+            }
+
+            // No results message
+            if (addressSearchResults.length === 0 && !addressFetching && !addressSelected &&
+                container.querySelector && container.querySelector('[data-action="addr-search-input"]') &&
+                container.querySelector('[data-action="addr-search-input"]').value.length >= 4) {
+                // Will be shown via DOM after search returns empty
+            }
+
+            // Preview card
+            if (addressSelected) {
+                var sel = addressSelected;
+                var tzDisplay = addressTimezone !== null
+                    ? 'UTC' + (addressTimezone >= 0 ? '+' : '') + addressTimezone + (addressTimezoneEstimated ? ' (estimated)' : '')
+                    : (addressTzFetching ? 'Loading timezone\u2026' : '');
+                html += '<div class="sc-address-preview">' +
+                    '<div class="sc-address-preview-name">' + esc(sel.display_name) + '</div>' +
+                    '<div class="sc-address-preview-coords">' +
+                        parseFloat(sel.lat).toFixed(4) + ', ' + parseFloat(sel.lon).toFixed(4) +
+                        (tzDisplay ? ' &middot; ' + esc(tzDisplay) : '') +
+                    '</div>' +
+                '</div>';
+                html += '<div class="sc-address-actions">' +
+                    '<button class="sc-address-clear-btn" data-action="addr-clear">Clear</button>' +
+                    '<button class="sc-address-confirm-btn" data-action="addr-confirm"' +
+                        (addressTzFetching ? ' disabled' : '') + '>Confirm Location</button>' +
+                '</div>';
+            }
+
+            html += '</div>'; // close sc-address-search-wrap
+        }
+
+        html += '</div>'; // close so-meta-card
+        return html;
     }
 
-    function cityPresetRow() {
-        var current = detectCity(siteAttrs.latitude, siteAttrs.longitude);
-        if (isEditing) {
-            var html = '<div class="so-meta-row">' +
-                '<span class="so-meta-label">City Preset</span>' +
-                '<select class="so-meta-input" data-city-preset>';
-            CITY_PRESETS.forEach(function (c) {
-                html += '<option value="' + esc(c.label) + '"' +
-                    (current === c.label ? ' selected' : '') + '>' + esc(c.label) + '</option>';
-            });
-            html += '</select></div>';
-            return html;
+    function fetchAddressSuggestions(query) {
+        addressFetching = true;
+        addressSearchResults = [];
+        addressSelected = null;
+        addressTimezone = null;
+        rerenderLocationOnly();
+
+        var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+            '&format=json&limit=6&addressdetails=1';
+
+        fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (resp) { return resp.json(); })
+        .then(function (results) {
+            addressFetching = false;
+            addressSearchResults = results || [];
+            rerenderLocationOnly();
+            // Show no-results message if empty
+            if (addressSearchResults.length === 0) {
+                var wrap = container.querySelector('.sc-address-search-wrap');
+                if (wrap && !wrap.querySelector('.sc-address-no-results')) {
+                    var msg = document.createElement('div');
+                    msg.className = 'sc-address-no-results';
+                    msg.textContent = 'No results found. Try a different search.';
+                    wrap.appendChild(msg);
+                }
+            }
+        })
+        .catch(function (err) {
+            console.error('[SITE] Nominatim fetch error:', err);
+            addressFetching = false;
+            addressSearchResults = [];
+            rerenderLocationOnly();
+            var wrap = container.querySelector('.sc-address-search-wrap');
+            if (wrap && !wrap.querySelector('.sc-address-error')) {
+                var errEl = document.createElement('div');
+                errEl.className = 'sc-address-error';
+                errEl.textContent = 'Search failed. Please try again.';
+                wrap.appendChild(errEl);
+            }
+        });
+    }
+
+    function fetchTimezone(lat, lon) {
+        addressTzFetching = true;
+        addressTimezone = null;
+        addressTimezoneEstimated = false;
+        rerenderLocationOnly();
+
+        var url = 'https://timeapi.io/api/timezone/coordinate?latitude=' +
+            encodeURIComponent(lat) + '&longitude=' + encodeURIComponent(lon);
+
+        fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (resp) {
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return resp.json();
+        })
+        .then(function (data) {
+            addressTzFetching = false;
+            if (data && data.currentUtcOffset && data.currentUtcOffset.seconds !== undefined) {
+                addressTimezone = data.currentUtcOffset.seconds / 3600;
+            } else if (data && data.standardUtcOffset && data.standardUtcOffset.seconds !== undefined) {
+                addressTimezone = data.standardUtcOffset.seconds / 3600;
+            } else {
+                // Fallback: rough estimate from longitude
+                addressTimezone = Math.round(parseFloat(lon) / 15);
+                addressTimezoneEstimated = true;
+            }
+            rerenderLocationOnly();
+        })
+        .catch(function (err) {
+            console.error('[SITE] Timezone fetch error:', err);
+            addressTzFetching = false;
+            // Fallback: estimate from longitude
+            addressTimezone = Math.round(parseFloat(lon) / 15);
+            addressTimezoneEstimated = true;
+            rerenderLocationOnly();
+        });
+    }
+
+    function rerenderLocationOnly() {
+        var locCard = container.querySelector('.so-meta-full .sc-address-search-wrap, .so-meta-full .sc-address-current');
+        if (!locCard) {
+            // Full re-render if we can't find the section (e.g. first time)
+            if (activeTab === 'site-info') render();
+            return;
         }
-        return '<div class="so-meta-row">' +
-            '<span class="so-meta-label">City Preset</span>' +
-            '<span class="so-meta-value">' + esc(current) + '</span>' +
-        '</div>';
+        // Find the location card (parent .so-meta-card.so-meta-full that contains location)
+        var cards = container.querySelectorAll('.so-meta-card.so-meta-full');
+        var locParent = null;
+        for (var i = 0; i < cards.length; i++) {
+            if (cards[i].querySelector('.sc-address-search-wrap') ||
+                cards[i].querySelector('.sc-address-current') ||
+                cards[i].querySelector('.sc-address-change-btn')) {
+                locParent = cards[i];
+                break;
+            }
+        }
+        if (locParent) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = renderLocationSection();
+            var newCard = tempDiv.firstChild;
+            locParent.parentNode.replaceChild(newCard, locParent);
+            bindAddressEvents();
+        } else {
+            if (activeTab === 'site-info') render();
+        }
+    }
+
+    function resetAddressState() {
+        addressSearchExpanded = false;
+        addressSearchResults = [];
+        addressSelected = null;
+        addressTimezone = null;
+        addressTimezoneEstimated = false;
+        addressFetching = false;
+        addressTzFetching = false;
+        if (addressDebounceTimer) {
+            clearTimeout(addressDebounceTimer);
+            addressDebounceTimer = null;
+        }
+    }
+
+    function bindAddressEvents() {
+        // Search input: debounced keyup
+        var searchInput = container.querySelector('[data-action="addr-search-input"]');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function (e) {
+                var val = searchInput.value.trim();
+                // Handle keyboard nav
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape') {
+                    handleDropdownKeyboard(e);
+                    return;
+                }
+                if (addressDebounceTimer) clearTimeout(addressDebounceTimer);
+                _addrDebounceTimer = null;
+                if (val.length < 4) {
+                    addressSearchResults = [];
+                    addressSelected = null;
+                    var dd = container.querySelector('.sc-address-dropdown');
+                    if (dd) dd.remove();
+                    var nr = container.querySelector('.sc-address-no-results');
+                    if (nr) nr.remove();
+                    var errEl = container.querySelector('.sc-address-error');
+                    if (errEl) errEl.remove();
+                    return;
+                }
+                addressDebounceTimer = setTimeout(function () {
+                    fetchAddressSuggestions(val);
+                }, 350);
+                _addrDebounceTimer = addressDebounceTimer;
+            });
+            // Focus the input if search is expanded
+            setTimeout(function () { searchInput.focus({ preventScroll: true }); }, 50);
+        }
+
+        // Dropdown item clicks
+        container.querySelectorAll('[data-action="addr-select"]').forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                var idx = parseInt(opt.getAttribute('data-addr-idx'));
+                if (addressSearchResults[idx]) {
+                    addressSelected = addressSearchResults[idx];
+                    addressSearchResults = [];
+                    fetchTimezone(addressSelected.lat, addressSelected.lon);
+                }
+            });
+        });
+
+        // Change Location / Cancel button
+        container.querySelectorAll('[data-action="addr-toggle-search"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (addressSearchExpanded) {
+                    resetAddressState();
+                } else {
+                    addressSearchExpanded = true;
+                }
+                rerenderLocationOnly();
+            });
+        });
+
+        // Clear button
+        container.querySelectorAll('[data-action="addr-clear"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                addressSelected = null;
+                addressTimezone = null;
+                addressTimezoneEstimated = false;
+                addressSearchResults = [];
+                rerenderLocationOnly();
+            });
+        });
+
+        // Confirm button
+        container.querySelectorAll('[data-action="addr-confirm"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!addressSelected || addressTzFetching) return;
+                var sel = addressSelected;
+                var addrParts = sel.address || {};
+                var attrs = {
+                    latitude: String(sel.lat),
+                    longitude: String(sel.lon),
+                    timezone_offset: String(addressTimezone !== null ? addressTimezone : ''),
+                    address: sel.display_name || '',
+                    site_address: [addrParts.road, addrParts.house_number].filter(Boolean).join(' ') || '',
+                    site_city: addrParts.city || addrParts.town || addrParts.village || addrParts.municipality || '',
+                    site_postcode: addrParts.postcode || '',
+                    site_country: addrParts.country || ''
+                };
+                btn.disabled = true;
+                btn.textContent = 'Saving\u2026';
+                saveSiteAttributes(attrs).then(function () {
+                    Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
+                    resetAddressState();
+                    rerenderLocationOnly();
+                    // Show location confirm dialog if devices exist
+                    if (devices.length > 0) {
+                        showLocConfirm();
+                    }
+                }).catch(function (err) {
+                    console.error('[SITE] Failed to save location:', err);
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Location';
+                });
+            });
+        });
+
+        // Outside click closes dropdown
+        if (_addrOutsideClickFn) {
+            document.removeEventListener('click', _addrOutsideClickFn);
+        }
+        _addrOutsideClickFn = handleOutsideClick;
+        document.addEventListener('click', handleOutsideClick);
+    }
+
+    function handleOutsideClick(e) {
+        if (!container.querySelector('.sc-address-dropdown')) return;
+        var wrap = container.querySelector('.sc-address-search-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            addressSearchResults = [];
+            var dd = container.querySelector('.sc-address-dropdown');
+            if (dd) dd.remove();
+        }
+    }
+
+    function handleDropdownKeyboard(e) {
+        var dd = container.querySelector('.sc-address-dropdown');
+        if (!dd) {
+            if (e.key === 'Escape') {
+                var searchInput = container.querySelector('[data-action="addr-search-input"]');
+                if (searchInput) searchInput.blur();
+            }
+            return;
+        }
+        var items = dd.querySelectorAll('.sc-address-option');
+        if (items.length === 0) return;
+        var activeIdx = -1;
+        items.forEach(function (it, i) {
+            if (it.classList.contains('sc-address-option-active')) activeIdx = i;
+        });
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            var next = activeIdx < items.length - 1 ? activeIdx + 1 : 0;
+            items.forEach(function (it) { it.classList.remove('sc-address-option-active'); });
+            items[next].classList.add('sc-address-option-active');
+            items[next].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            var prev = activeIdx > 0 ? activeIdx - 1 : items.length - 1;
+            items.forEach(function (it) { it.classList.remove('sc-address-option-active'); });
+            items[prev].classList.add('sc-address-option-active');
+            items[prev].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIdx >= 0 && addressSearchResults[activeIdx]) {
+                addressSelected = addressSearchResults[activeIdx];
+                addressSearchResults = [];
+                fetchTimezone(addressSelected.lat, addressSelected.lon);
+            }
+        } else if (e.key === 'Escape') {
+            addressSearchResults = [];
+            dd.remove();
+        }
     }
 
     // ── Alarm Settings Tab ────────────────────────────────────
@@ -734,10 +1062,28 @@ self.onInit = function () {
         if (!overlay) return;
         var resultEl = document.getElementById('so-loc-confirm-result');
         var actionsEl = document.getElementById('so-loc-confirm-actions');
+        var textEl = document.getElementById('so-loc-confirm-text');
+        var detailsEl = document.getElementById('so-loc-confirm-details');
         if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; resultEl.className = ''; }
         if (actionsEl) {
-            actionsEl.innerHTML = '<button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Skip</button>' +
+            actionsEl.innerHTML = '<button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Cancel</button>' +
                 '<button class="sched-btn sched-btn-primary" data-action="loc-confirm-send">Send Now</button>';
+        }
+        // Populate location details
+        var siteName = siteAttrs.installation_name || siteAttrs.siteName || 'this site';
+        if (textEl) {
+            textEl.textContent = 'Send new location to all ' + devices.length + ' device(s) at ' + siteName + '?';
+        }
+        if (detailsEl) {
+            var addr = siteAttrs.address || '';
+            var lat = siteAttrs.latitude || '';
+            var lon = siteAttrs.longitude || '';
+            var tz = siteAttrs.timezone_offset || '';
+            detailsEl.innerHTML = (addr ? '<div class="so-loc-confirm-addr">' + esc(addr) + '</div>' : '') +
+                '<div class="so-loc-confirm-coords">' +
+                    esc(lat) + ', ' + esc(lon) +
+                    (tz !== '' ? ' &middot; UTC' + (parseFloat(tz) >= 0 ? '+' : '') + esc(tz) : '') +
+                '</div>';
         }
         overlay.style.display = 'flex';
         bindLocConfirmEvents();
@@ -1582,42 +1928,21 @@ self.onInit = function () {
             });
         });
 
-        // City preset auto-fill
-        container.querySelectorAll('[data-city-preset]').forEach(function (sel) {
-            sel.addEventListener('change', function () {
-                var picked = sel.value;
-                for (var i = 0; i < CITY_PRESETS.length; i++) {
-                    if (CITY_PRESETS[i].label === picked && CITY_PRESETS[i].lat !== null) {
-                        var c = CITY_PRESETS[i];
-                        var latInp = container.querySelector('[data-attr="latitude"]');
-                        var lngInp = container.querySelector('[data-attr="longitude"]');
-                        var tzInp  = container.querySelector('[data-attr="timezone_offset"]');
-                        var addrInp = container.querySelector('[data-attr="address"]');
-                        if (latInp) latInp.value = c.lat;
-                        if (lngInp) lngInp.value = c.lng;
-                        if (tzInp)  tzInp.value = c.utc;
-                        if (addrInp) addrInp.value = c.label;
-                        break;
-                    }
-                }
-            });
-        });
+        // Address autocomplete bindings
+        bindAddressEvents();
 
         // Edit toggle
         container.querySelectorAll('[data-action="toggle-edit"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 if (isEditing) {
-                    // Snapshot old location values before save
-                    var oldLat = siteAttrs.latitude || '';
-                    var oldLng = siteAttrs.longitude || '';
-                    var oldTz  = siteAttrs.timezone_offset || '';
-
-                    // Save
+                    // Save — exclude location fields (they have their own Confirm flow)
+                    var LOCATION_KEYS = { latitude: 1, longitude: 1, timezone_offset: 1, address: 1,
+                        site_address: 1, site_city: 1, site_postcode: 1, site_country: 1 };
                     var inputs = container.querySelectorAll('[data-attr]');
                     var attrs = {};
                     inputs.forEach(function (inp) {
                         var key = inp.getAttribute('data-attr');
-                        attrs[key] = inp.value || '';
+                        if (!LOCATION_KEYS[key]) attrs[key] = inp.value || '';
                     });
                     // Propagate co2_per_kwh to all child devices (rule chain reads this)
                     if (attrs.co2_per_kwh !== undefined && attrs.co2_per_kwh !== '') {
@@ -1662,13 +1987,6 @@ self.onInit = function () {
                         Object.keys(attrs).forEach(function (k) { siteAttrs[k] = attrs[k]; });
                         isEditing = false;
                         render();
-
-                        // Check if location fields changed
-                        var locChanged = (attrs.latitude !== oldLat) || (attrs.longitude !== oldLng) || (attrs.timezone_offset !== oldTz);
-                        var locValid = !isNaN(parseFloat(attrs.latitude)) && !isNaN(parseFloat(attrs.longitude)) && !isNaN(parseFloat(attrs.timezone_offset));
-                        if (locChanged && locValid && devices.length > 0) {
-                            showLocConfirm();
-                        }
                     }).catch(function (err) {
                         console.error('[SITE] Failed to save attributes:', err);
                     });
@@ -1779,6 +2097,14 @@ self.onDestroy = function () {
     if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
+    }
+    if (_addrDebounceTimer) {
+        clearTimeout(_addrDebounceTimer);
+        _addrDebounceTimer = null;
+    }
+    if (_addrOutsideClickFn) {
+        document.removeEventListener('click', _addrOutsideClickFn);
+        _addrOutsideClickFn = null;
     }
     delete window.SCHED;
 };

@@ -135,13 +135,14 @@
 <div id="so-loc-confirm-overlay" class="sched-overlay" style="display:none;">
     <div class="sched-overlay-backdrop" data-action="loc-confirm-skip"></div>
     <div class="sched-modal-panel">
-        <div class="sched-form-header"><h2>Location Updated</h2></div>
+        <div class="sched-form-header"><h2>Send Location to Devices</h2></div>
         <div class="sched-form-body">
-            <p>Location coordinates updated. Send new location to all devices?</p>
+            <p id="so-loc-confirm-text">Send new location to all devices at this site?</p>
+            <div id="so-loc-confirm-details" class="so-loc-confirm-details"></div>
             <p class="so-loc-confirm-hint">Required for sunrise/sunset scheduling.</p>
             <div id="so-loc-confirm-result" style="display:none;"></div>
             <div class="sched-form-actions" id="so-loc-confirm-actions">
-                <button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Skip</button>
+                <button class="sched-btn sched-btn-secondary" data-action="loc-confirm-skip">Cancel</button>
                 <button class="sched-btn sched-btn-primary" data-action="loc-confirm-send">Send Now</button>
             </div>
         </div>
