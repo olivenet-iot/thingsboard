@@ -451,7 +451,14 @@ self.onInit = function () {
             metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
         ]);
 
-        // Energy & Cost
+        // Site Contact (right column, below LED & Driver)
+        html += metaCard('Site Contact', 'user', [
+            metaField('contact_name', 'Contact Name', siteAttrs.contact_name || ''),
+            metaField('contact_email', 'Contact Email', siteAttrs.contact_email || ''),
+            metaField('contact_phone', 'Contact Phone', siteAttrs.contact_phone || ''),
+        ], 'so-meta-col2');
+
+        // Energy & Cost (full width)
         html += metaCard('Energy & Cost', 'bolt', [
             metaField('co2_per_kwh', 'CO₂ Factor (kg/kWh)', siteAttrs.co2_per_kwh || '0.207'),
             metaField('energy_rate', 'Energy Rate (per kWh)', siteAttrs.energy_rate || ''),
@@ -461,31 +468,12 @@ self.onInit = function () {
                 { value: '€', label: '€ (EUR)' },
                 { value: '$', label: '$ (USD)' }
             ]),
-        ]);
+        ], 'so-meta-full');
 
         // Location (independent save flow via Confirm button)
         html += renderLocationSection();
 
-        // Contact
-        html += metaCard('Site Contact', 'user', [
-            metaField('contact_name', 'Contact Name', siteAttrs.contact_name || ''),
-            metaField('contact_email', 'Contact Email', siteAttrs.contact_email || ''),
-            metaField('contact_phone', 'Contact Phone', siteAttrs.contact_phone || ''),
-        ]);
-
         html += '</div>';
-
-        // Notes (full width)
-        html += '<div class="so-meta-card so-meta-full">' +
-            '<div class="so-meta-card-title">' +
-                '<div class="so-meta-icon so-meta-icon-amber"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>' +
-                'Notes' +
-            '</div>' +
-            (isEditing
-                ? '<textarea class="so-meta-textarea" data-attr="notes" rows="3">' + esc(siteAttrs.notes || '') + '</textarea>'
-                : '<div class="so-meta-notes-text">' + esc(siteAttrs.notes || 'No notes.') + '</div>'
-            ) +
-        '</div>';
 
         return html;
     }
@@ -497,8 +485,8 @@ self.onInit = function () {
         user: '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>'
     };
 
-    function metaCard(title, icon, fields) {
-        return '<div class="so-meta-card">' +
+    function metaCard(title, icon, fields, extraClass) {
+        return '<div class="so-meta-card' + (extraClass ? ' ' + extraClass : '') + '">' +
             '<div class="so-meta-card-title">' +
                 '<div class="so-meta-icon so-meta-icon-amber">' + META_ICONS[icon] + '</div>' +
                 title +

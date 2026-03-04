@@ -7,7 +7,7 @@
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     color: #1e293b;
     padding: 12px 16px;
-    min-height: 100%;
+    height: 100%;
     box-sizing: border-box;
     width: 100%;
     overflow-y: auto;
@@ -535,11 +535,7 @@ input.so-meta-input {
     background: #fff;
 }
 
-.so-meta-notes-text {
-    font-size: 13px;
-    color: #475569;
-    line-height: 1.6;
-}
+.so-meta-col2 { grid-column: 2; }
 
 .so-meta-hint {
     font-size: 11px;
