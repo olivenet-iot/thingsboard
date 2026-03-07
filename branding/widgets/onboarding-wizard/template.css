@@ -316,6 +316,17 @@
     background: #fff;
 }
 
+/* Checkbox cell in table */
+.ow-table .ow-checkbox-cell {
+    text-align: center;
+}
+
+.ow-table .ow-checkbox-cell input[type="checkbox"] {
+    accent-color: #f59e0b;
+    width: 15px;
+    height: 15px;
+}
+
 /* Inline table input */
 .ow-table-input {
     width: 100%;

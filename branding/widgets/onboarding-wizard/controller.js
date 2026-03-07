@@ -2,9 +2,9 @@
 // SignConnect — Onboarding Wizard Widget (controller.js)
 // =====================================================================
 // 5-step wizard to onboard a new SignConnect customer:
-//   Step 1: Customer details (company, email, country, CO2, user)
+//   Step 1: Customer details (company, email, country, user accounts)
 //   Step 2: Site structure (estate/region/site hierarchy)
-//   Step 3: Devices (per-site, profile, access tokens)
+//   Step 3: Devices (per-site, profile)
 //   Step 4: Review summary
 //   Step 5: Provisioning execution
 // =====================================================================
@@ -32,14 +32,7 @@ self.onInit = function () {
         contactEmail: '',
         contactPhone: '',
         country: 'NL',
-        currency: 'EUR',
-        currencySymbol: '\u20ac',
-        co2Factor: 0.328,
-        energyRate: 0.25,
-        userEmail: '',
-        userFirstName: '',
-        userLastName: '',
-        sendActivation: true
+        users: [{ email: '', firstName: '', lastName: '', sendActivation: true }]
     };
 
     var sites = [];      // [{estate, region, site, tier, address, lat, lon, co2Override, rateOverride, expanded, tzOffset, city, postcode, siteCountry}]
@@ -83,6 +76,10 @@ self.onInit = function () {
         IE: { co2: 0.296, currency: 'EUR', symbol: '\u20ac', name: 'Ireland' },
         PT: { co2: 0.180, currency: 'EUR', symbol: '\u20ac', name: 'Portugal' }
     };
+
+    function getCountryInfo() {
+        return CO2_FACTORS[customer.country] || CO2_FACTORS.NL;
+    }
 
     // ── API Helpers ─────────────────────────────────────────────
 
@@ -184,11 +181,15 @@ self.onInit = function () {
         if (!customer.companyName.trim()) errors.push('Company name is required');
         if (!customer.contactEmail.trim()) errors.push('Contact email is required');
         else if (!validateEmail(customer.contactEmail)) errors.push('Contact email is not valid');
-        if (!customer.userEmail.trim()) errors.push('User email is required');
-        else if (!validateEmail(customer.userEmail)) errors.push('User email is not valid');
-        if (!customer.userFirstName.trim()) errors.push('User first name is required');
-        if (!customer.userLastName.trim()) errors.push('User last name is required');
-        if (isNaN(parseFloat(customer.co2Factor)) || parseFloat(customer.co2Factor) <= 0) errors.push('CO2 factor must be a positive number');
+        if (customer.users.length === 0) errors.push('At least one user is required');
+        for (var u = 0; u < customer.users.length; u++) {
+            var usr = customer.users[u];
+            var n = u + 1;
+            if (!usr.email.trim()) errors.push('User ' + n + ': email is required');
+            else if (!validateEmail(usr.email)) errors.push('User ' + n + ': email is not valid');
+            if (!usr.firstName.trim()) errors.push('User ' + n + ': first name is required');
+            if (!usr.lastName.trim()) errors.push('User ' + n + ': last name is required');
+        }
         return { valid: errors.length === 0, errors: errors };
     }
 
@@ -255,17 +256,13 @@ self.onInit = function () {
     function renderStep1() {
         var html = '<div class="ow-card">';
         html += '<div class="ow-card-title">Customer Details</div>';
-        html += '<div class="ow-card-subtitle">Company information and energy settings</div>';
+        html += '<div class="ow-card-subtitle">Company information and user accounts</div>';
 
-        // Company row
+        // Company row (now includes Country)
         html += '<div class="ow-form-row">';
         html += formGroup('Company Name *', '<input class="ow-input" data-field="companyName" value="' + esc(customer.companyName) + '" placeholder="e.g. Acme Lighting Ltd">');
         html += formGroup('Contact Email *', '<input class="ow-input" type="email" data-field="contactEmail" value="' + esc(customer.contactEmail) + '" placeholder="info@company.com">');
         html += formGroup('Phone', '<input class="ow-input" data-field="contactPhone" value="' + esc(customer.contactPhone) + '" placeholder="+31 6 1234 5678">');
-        html += '</div>';
-
-        // Country / Energy row
-        html += '<div class="ow-form-row">';
         var countryOpts = '';
         var keys = Object.keys(CO2_FACTORS);
         for (var i = 0; i < keys.length; i++) {
@@ -273,23 +270,31 @@ self.onInit = function () {
             countryOpts += '<option value="' + k + '"' + (customer.country === k ? ' selected' : '') + '>' + CO2_FACTORS[k].name + ' (' + k + ')</option>';
         }
         html += formGroup('Country', '<select class="ow-select" data-field="country" data-action="country-change">' + countryOpts + '</select>');
-        html += formGroup('Currency', '<input class="ow-input" data-field="currencySymbol" value="' + esc(customer.currencySymbol) + '" readonly>');
-        html += formGroup('CO\u2082 Factor (kg/kWh)', '<input class="ow-input" type="number" step="0.001" data-field="co2Factor" value="' + customer.co2Factor + '">');
-        html += formGroup('Energy Rate (per kWh)', '<input class="ow-input" type="number" step="0.01" data-field="energyRate" value="' + customer.energyRate + '">');
         html += '</div>';
 
-        // User Account section
-        html += '<div class="ow-divider">User Account</div>';
-        html += '<div class="ow-form-row">';
-        html += formGroup('User Email *', '<input class="ow-input" type="email" data-field="userEmail" value="' + esc(customer.userEmail) + '" placeholder="user@company.com">');
-        html += formGroup('First Name *', '<input class="ow-input" data-field="userFirstName" value="' + esc(customer.userFirstName) + '">');
-        html += formGroup('Last Name *', '<input class="ow-input" data-field="userLastName" value="' + esc(customer.userLastName) + '">');
+        // User Accounts section
+        html += '<div class="ow-divider">User Accounts</div>';
+        html += '<div class="ow-table-wrap"><table class="ow-table">';
+        html += '<thead><tr><th>Email *</th><th>First Name *</th><th>Last Name *</th><th style="width:80px" class="ow-checkbox-cell">Activation</th><th style="width:40px"></th></tr></thead>';
+        html += '<tbody>';
+        for (var u = 0; u < customer.users.length; u++) {
+            var usr = customer.users[u];
+            html += '<tr>';
+            html += '<td><input class="ow-table-input" type="email" data-user-field="email" data-user-idx="' + u + '" value="' + esc(usr.email) + '" placeholder="user@company.com"></td>';
+            html += '<td><input class="ow-table-input" data-user-field="firstName" data-user-idx="' + u + '" value="' + esc(usr.firstName) + '" placeholder="First name"></td>';
+            html += '<td><input class="ow-table-input" data-user-field="lastName" data-user-idx="' + u + '" value="' + esc(usr.lastName) + '" placeholder="Last name"></td>';
+            html += '<td class="ow-checkbox-cell"><input type="checkbox" data-user-field="sendActivation" data-user-idx="' + u + '"' + (usr.sendActivation ? ' checked' : '') + '></td>';
+            if (customer.users.length > 1) {
+                html += '<td><button class="ow-btn-icon" data-action="remove-user" data-user-idx="' + u + '" title="Remove">\u2715</button></td>';
+            } else {
+                html += '<td></td>';
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table></div>';
+        html += '<div class="ow-table-actions">';
+        html += '<button class="ow-btn ow-btn-sm ow-btn-primary" data-action="add-user">+ Add User</button>';
         html += '</div>';
-
-        html += '<div class="ow-checkbox-row">' +
-            '<input type="checkbox" id="ow-send-activation" data-field="sendActivation"' + (customer.sendActivation ? ' checked' : '') + '>' +
-            '<label for="ow-send-activation">Send activation email to user</label>' +
-            '</div>';
 
         html += '</div>';
         return html;
@@ -401,7 +406,7 @@ self.onInit = function () {
         }
 
         html += '<div class="ow-table-wrap"><table class="ow-table">';
-        html += '<thead><tr><th>Site</th><th>Device Name</th><th>Profile</th><th>Access Token</th><th style="width:40px"></th></tr></thead>';
+        html += '<thead><tr><th>Site</th><th>Device Name</th><th>Profile</th><th style="width:40px"></th></tr></thead>';
         html += '<tbody>';
 
         var profileNames = Object.keys(deviceProfiles);
@@ -426,16 +431,6 @@ self.onInit = function () {
             }
             profSel += '</select>';
 
-            // Token field
-            var tokenHtml = '';
-            if (d.tokenMode === 'auto') {
-                tokenHtml = '<span style="font-size:11px;color:#94a3b8;font-style:italic">auto-generated</span> ' +
-                    '<button class="ow-btn-icon" data-action="toggle-token" data-idx="' + i + '" title="Set manual token" style="font-size:11px;color:#64748b">edit</button>';
-            } else {
-                tokenHtml = '<input class="ow-table-input" data-dev-field="token" data-idx="' + i + '" value="' + esc(d.token) + '" placeholder="Access token" style="font-family:monospace;font-size:11px">' +
-                    ' <button class="ow-btn-icon" data-action="toggle-token" data-idx="' + i + '" title="Use auto token" style="font-size:11px;color:#64748b">auto</button>';
-            }
-
             // Tier mismatch warning
             var warn = '';
             if (d.siteName) {
@@ -452,7 +447,6 @@ self.onInit = function () {
             html += '<td>' + siteSel + '</td>';
             html += '<td><input class="ow-table-input" data-dev-field="deviceName" data-idx="' + i + '" value="' + esc(d.deviceName) + '" placeholder="Device name">' + warn + '</td>';
             html += '<td>' + profSel + '</td>';
-            html += '<td style="min-width:180px">' + tokenHtml + '</td>';
             html += '<td><button class="ow-btn-icon" data-action="remove-device" data-idx="' + i + '" title="Remove">\u2715</button></td>';
             html += '</tr>';
         }
@@ -484,17 +478,25 @@ self.onInit = function () {
         html += '<div class="ow-card-subtitle">Verify all details before provisioning</div>';
 
         // Customer info
+        var info = getCountryInfo();
         html += '<div class="ow-review-section"><h3>Customer</h3>';
         html += '<div class="ow-review-info">';
         html += reviewField('Company', customer.companyName);
         html += reviewField('Contact', customer.contactEmail);
-        html += reviewField('Country', (CO2_FACTORS[customer.country] || {}).name || customer.country);
-        html += reviewField('Currency', customer.currencySymbol + ' (' + customer.currency + ')');
-        html += reviewField('CO\u2082 Factor', customer.co2Factor + ' kg/kWh');
-        html += reviewField('Energy Rate', customer.currencySymbol + customer.energyRate + '/kWh');
-        html += reviewField('User', customer.userEmail);
-        html += reviewField('Activation', customer.sendActivation ? 'Email will be sent' : 'Manual activation');
-        html += '</div></div>';
+        html += reviewField('Country', info.name || customer.country);
+        html += reviewField('Currency', info.symbol + ' (' + info.currency + ')');
+        html += reviewField('CO\u2082 Default', info.co2 + ' kg/kWh');
+        html += reviewField('Users', customer.users.length + ' account(s)');
+        html += '</div>';
+        for (var u = 0; u < customer.users.length; u++) {
+            var usr = customer.users[u];
+            html += '<div class="ow-review-info" style="margin-top:4px">';
+            html += reviewField('User ' + (u + 1), usr.email);
+            html += reviewField('Name', usr.firstName + ' ' + usr.lastName);
+            html += reviewField('Activation', usr.sendActivation ? 'Email will be sent' : 'Manual');
+            html += '</div>';
+        }
+        html += '</div>';
 
         // Hierarchy tree
         html += '<div class="ow-review-section"><h3>Hierarchy</h3>';
@@ -525,11 +527,12 @@ self.onInit = function () {
         var regCount = uniqueValues(sites, 'region').length;
         var siteCount = sites.length;
         var devCount = devices.length;
-        // 1 preflight + 1 customer + 1 user + 3 dashboard assigns + E estates + 2R regions (asset+relation) + 3S sites (asset+relation+attrs) + 3D devices (device+relation+attrs)
-        var apiCalls = 1 + 1 + 1 + 3 + estCount + (2 * regCount) + (3 * siteCount) + (3 * devCount);
+        var userCount = customer.users.length;
+        // 1 customer + U users + 3 dashboard assigns + E estates + 2R regions (asset+relation) + 3S sites (asset+relation+attrs) + 3D devices (device+relation+attrs)
+        var apiCalls = 1 + userCount + 3 + estCount + (2 * regCount) + (3 * siteCount) + (3 * devCount);
         html += '<div class="ow-estimate">';
         html += 'This will make approximately <b>' + apiCalls + '</b> API calls: ';
-        html += '1 customer, 1 user, 3 dashboard assignments, ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s), ' + devCount + ' device(s).';
+        html += '1 customer, ' + userCount + ' user(s), 3 dashboard assignments, ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s), ' + devCount + ' device(s).';
         html += '</div>';
 
         // Provision button
@@ -692,31 +695,35 @@ self.onInit = function () {
             }
         });
 
-        // 2. Create user
-        plan.push({
-            phase: 'user', label: 'Create user: ' + customer.userEmail,
-            fn: function () {
-                var key = 'USER:' + customer.userEmail;
-                if (provisionState.createdIds[key]) return Promise.resolve();
-                var defaultDash = fleetId || '';
-                return apiPost('/user?sendActivationMail=' + (customer.sendActivation ? 'true' : 'false'), {
-                    email: customer.userEmail,
-                    firstName: customer.userFirstName,
-                    lastName: customer.userLastName,
-                    authority: 'CUSTOMER_USER',
-                    customerId: { id: provisionState.customerId, entityType: 'CUSTOMER' },
-                    additionalInfo: {
-                        defaultDashboardId: defaultDash,
-                        defaultDashboardFullscreen: true,
-                        homeDashboardId: defaultDash,
-                        homeDashboardHideToolbar: true
+        // 2. Create users
+        for (var ui = 0; ui < customer.users.length; ui++) {
+            (function (usr, idx) {
+                plan.push({
+                    phase: 'user', label: 'Create user: ' + usr.email,
+                    fn: function () {
+                        var key = 'USER:' + usr.email;
+                        if (provisionState.createdIds[key]) return Promise.resolve();
+                        var defaultDash = fleetId || '';
+                        return apiPost('/user?sendActivationMail=' + (usr.sendActivation ? 'true' : 'false'), {
+                            email: usr.email,
+                            firstName: usr.firstName,
+                            lastName: usr.lastName,
+                            authority: 'CUSTOMER_USER',
+                            customerId: { id: provisionState.customerId, entityType: 'CUSTOMER' },
+                            additionalInfo: {
+                                defaultDashboardId: defaultDash,
+                                defaultDashboardFullscreen: true,
+                                homeDashboardId: defaultDash,
+                                homeDashboardHideToolbar: true
+                            }
+                        }).then(function (u) {
+                            if (idx === 0) provisionState.userId = u.id.id;
+                            provisionState.createdIds[key] = u.id.id;
+                        });
                     }
-                }).then(function (u) {
-                    provisionState.userId = u.id.id;
-                    provisionState.createdIds[key] = u.id.id;
                 });
-            }
-        });
+            })(customer.users[ui], ui);
+        }
 
         // 3. Assign dashboards
         var dashIds = [];
@@ -827,13 +834,14 @@ self.onInit = function () {
                     phase: 'attributes', label: 'Set attributes: ' + siteData.site,
                     fn: function () {
                         var siteId = provisionState.createdIds['SITE:' + siteData.site];
-                        var co2 = siteData.co2Override || customer.co2Factor;
-                        var rate = siteData.rateOverride || customer.energyRate;
+                        var cInfo = getCountryInfo();
+                        var co2 = siteData.co2Override || cInfo.co2;
+                        var rate = siteData.rateOverride || 0;
                         var attrs = {
                             dashboard_tier: siteData.tier,
                             co2_per_kwh: parseFloat(co2) || 0,
                             energy_rate: parseFloat(rate) || 0,
-                            currency_symbol: customer.currencySymbol || '\u20ac',
+                            currency_symbol: cInfo.symbol,
                             latitude: parseFloat(siteData.lat) || 0,
                             longitude: parseFloat(siteData.lon) || 0
                         };
@@ -896,20 +904,21 @@ self.onInit = function () {
                     phase: 'attributes', label: 'Set device attributes: ' + devData.deviceName,
                     fn: function () {
                         var deviceId = provisionState.createdIds['DEVICE:' + devData.deviceName];
+                        var dInfo = getCountryInfo();
                         // Find the site for this device to get its CO2/rate values
-                        var siteCo2 = customer.co2Factor;
-                        var siteRate = customer.energyRate;
+                        var siteCo2 = dInfo.co2;
+                        var siteRate = 0;
                         for (var x = 0; x < sites.length; x++) {
                             if (sites[x].site === devData.siteName) {
-                                siteCo2 = sites[x].co2Override || customer.co2Factor;
-                                siteRate = sites[x].rateOverride || customer.energyRate;
+                                siteCo2 = sites[x].co2Override || dInfo.co2;
+                                siteRate = sites[x].rateOverride || 0;
                                 break;
                             }
                         }
                         return apiPost('/plugins/telemetry/DEVICE/' + deviceId + '/attributes/SERVER_SCOPE', {
                             co2_per_kwh: parseFloat(siteCo2) || 0,
                             energy_rate: parseFloat(siteRate) || 0,
-                            currency_symbol: customer.currencySymbol || '\u20ac'
+                            currency_symbol: dInfo.symbol
                         });
                     }
                 });
@@ -1083,7 +1092,7 @@ self.onInit = function () {
                     site: parts[2] || '',
                     tier: (parts[3] || 'standard').toLowerCase() === 'plus' ? 'plus' : 'standard',
                     address: parts[4] || '',
-                    lat: '', lon: '', co2Override: '', rateOverride: '',
+                    lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: '',
                     expanded: false, tzOffset: null,
                     city: '', postcode: '', siteCountry: '',
                     _addrResults: [], _addrFetching: false
@@ -1154,13 +1163,24 @@ self.onInit = function () {
             } else if (action === 'country-change') {
                 el.addEventListener('change', function () {
                     var code = el.value;
-                    var info = CO2_FACTORS[code];
-                    if (info) {
+                    if (CO2_FACTORS[code]) {
                         customer.country = code;
-                        customer.co2Factor = info.co2;
-                        customer.currency = info.currency;
-                        customer.currencySymbol = info.symbol;
                         captureStepState();
+                        render();
+                    }
+                });
+            } else if (action === 'add-user') {
+                el.addEventListener('click', function () {
+                    captureStepState();
+                    customer.users.push({ email: '', firstName: '', lastName: '', sendActivation: true });
+                    render();
+                });
+            } else if (action === 'remove-user') {
+                el.addEventListener('click', function () {
+                    var idx = parseInt(el.getAttribute('data-user-idx'));
+                    if (customer.users.length > 1) {
+                        captureStepState();
+                        customer.users.splice(idx, 1);
                         render();
                     }
                 });
@@ -1171,7 +1191,7 @@ self.onInit = function () {
                         estate: sites.length > 0 ? sites[sites.length - 1].estate : '',
                         region: sites.length > 0 ? sites[sites.length - 1].region : '',
                         site: '', tier: 'standard', address: '',
-                        lat: '', lon: '', co2Override: '', rateOverride: '',
+                        lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: '',
                         expanded: false, tzOffset: null,
                         city: '', postcode: '', siteCountry: '',
                         _addrResults: [], _addrFetching: false
@@ -1234,19 +1254,6 @@ self.onInit = function () {
                     var idx = parseInt(el.getAttribute('data-idx'));
                     captureStepState();
                     devices.splice(idx, 1);
-                    render();
-                });
-            } else if (action === 'toggle-token') {
-                el.addEventListener('click', function () {
-                    var idx = parseInt(el.getAttribute('data-idx'));
-                    captureStepState();
-                    if (devices[idx].tokenMode === 'auto') {
-                        devices[idx].tokenMode = 'manual';
-                        devices[idx].token = '';
-                    } else {
-                        devices[idx].tokenMode = 'auto';
-                        devices[idx].token = generateToken();
-                    }
                     render();
                 });
             } else if (action === 'auto-generate-devices') {
@@ -1353,10 +1360,8 @@ self.onInit = function () {
                 el.addEventListener('click', function () {
                     customer = {
                         companyName: '', contactEmail: '', contactPhone: '',
-                        country: 'NL', currency: 'EUR', currencySymbol: '\u20ac',
-                        co2Factor: 0.328, energyRate: 0.25,
-                        userEmail: '', userFirstName: '', userLastName: '',
-                        sendActivation: true
+                        country: 'NL',
+                        users: [{ email: '', firstName: '', lastName: '', sendActivation: true }]
                     };
                     sites = [];
                     devices = [];
@@ -1376,12 +1381,34 @@ self.onInit = function () {
         container.querySelectorAll('[data-field]').forEach(function (inp) {
             inp.addEventListener('input', function () {
                 var field = inp.getAttribute('data-field');
-                if (field === 'sendActivation') {
-                    customer[field] = inp.checked;
-                } else if (field === 'renameValue') {
+                if (field === 'renameValue') {
                     provisionState.renameValue = inp.value;
                 } else if (customer.hasOwnProperty(field)) {
                     customer[field] = inp.value;
+                }
+            });
+        });
+
+        // Input change capture for user fields
+        container.querySelectorAll('[data-user-field]').forEach(function (inp) {
+            var field = inp.getAttribute('data-user-field');
+            var idx = parseInt(inp.getAttribute('data-user-idx'));
+            inp.addEventListener('input', function () {
+                if (idx >= 0 && idx < customer.users.length) {
+                    if (field === 'sendActivation') {
+                        customer.users[idx][field] = inp.checked;
+                    } else {
+                        customer.users[idx][field] = inp.value;
+                    }
+                }
+            });
+            inp.addEventListener('change', function () {
+                if (idx >= 0 && idx < customer.users.length) {
+                    if (field === 'sendActivation') {
+                        customer.users[idx][field] = inp.checked;
+                    } else {
+                        customer.users[idx][field] = inp.value;
+                    }
                 }
             });
         });
@@ -1468,10 +1495,19 @@ self.onInit = function () {
         if (currentStep === 1) {
             container.querySelectorAll('[data-field]').forEach(function (inp) {
                 var field = inp.getAttribute('data-field');
-                if (field === 'sendActivation') {
-                    customer[field] = inp.checked;
-                } else if (customer.hasOwnProperty(field)) {
+                if (customer.hasOwnProperty(field)) {
                     customer[field] = inp.value;
+                }
+            });
+            container.querySelectorAll('[data-user-field]').forEach(function (inp) {
+                var field = inp.getAttribute('data-user-field');
+                var idx = parseInt(inp.getAttribute('data-user-idx'));
+                if (idx >= 0 && idx < customer.users.length) {
+                    if (field === 'sendActivation') {
+                        customer.users[idx][field] = inp.checked;
+                    } else {
+                        customer.users[idx][field] = inp.value;
+                    }
                 }
             });
         }
