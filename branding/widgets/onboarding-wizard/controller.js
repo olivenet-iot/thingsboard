@@ -605,17 +605,7 @@ self.onInit = function () {
             html += '<h2>Provisioning Complete</h2>';
             html += '<p>Successfully onboarded <b>' + esc(customer.companyName) + '</b> with ' + sites.length + ' site(s) and ' + devices.length + ' device(s).</p>';
 
-            // Token table
-            if (devices.length > 0) {
-                html += '<table class="ow-table ow-token-table"><thead><tr><th>Device</th><th>Access Token</th></tr></thead><tbody>';
-                for (var i = 0; i < devices.length; i++) {
-                    html += '<tr><td>' + esc(devices[i].deviceName) + '</td><td class="ow-token-val">' + esc(devices[i].token) + '</td></tr>';
-                }
-                html += '</tbody></table>';
-            }
-
             html += '<div class="ow-complete-actions">';
-            html += '<button class="ow-btn ow-btn-secondary" data-action="copy-tokens">Copy Tokens</button>';
             if (settings.fleetDashboardId) {
                 html += '<button class="ow-btn ow-btn-primary" data-action="goto-fleet">Go to Fleet Dashboard</button>';
             }
@@ -1381,19 +1371,6 @@ self.onInit = function () {
                     provisionState.renameValue = '';
                     render();
                     runProvisionPlan();
-                });
-            } else if (action === 'copy-tokens') {
-                el.addEventListener('click', function () {
-                    var text = '';
-                    for (var i = 0; i < devices.length; i++) {
-                        text += devices[i].deviceName + '\t' + devices[i].token + '\n';
-                    }
-                    if (navigator.clipboard) {
-                        navigator.clipboard.writeText(text).then(function () {
-                            el.textContent = 'Copied!';
-                            setTimeout(function () { el.textContent = 'Copy Tokens'; }, 2000);
-                        });
-                    }
                 });
             } else if (action === 'goto-fleet') {
                 el.addEventListener('click', function () {

@@ -44,7 +44,7 @@ self.onInit = function () {
 
     // Add Device tab state
     var deviceProfiles = {};
-    var addDeviceForm = { name: '', profileId: '', profileName: '', token: '' };
+    var addDeviceForm = { name: '', profileId: '', profileName: '' };
     var addDeviceStatus = '';
     var addDeviceError = '';
 
@@ -172,13 +172,6 @@ self.onInit = function () {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function generateToken() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-    }
-
     function timeSince(ts) {
         var diff = Date.now() - ts;
         if (diff < 60000) return 'Just now';
@@ -304,7 +297,7 @@ self.onInit = function () {
     function renderDetailsTab() {
         var html = '';
 
-        // Edit toolbar with delete button
+        // Action toolbar
         html += '<div class="sm-meta-toolbar">';
         if (deleteState !== 'idle') {
             html += renderDeleteDialog();
@@ -318,51 +311,38 @@ self.onInit = function () {
         html += '<button class="sm-delete-btn" data-action="delete-site">Delete Site</button>';
         html += '</div>';
 
-        html += '<div class="sm-meta-grid">';
+        // Single flat card with all site metadata
+        html += '<div class="sm-card">';
+        html += metaField('name', 'Site Name', siteEntity ? siteEntity.name : '');
+        html += metaField('dashboard_tier', 'Tier', siteAttrs.dashboard_tier || '');
+        html += metaField('site_address', 'Address', siteAttrs.site_address || siteAttrs.address || '');
+        html += metaField('site_city', 'City', siteAttrs.site_city || '');
+        html += metaField('site_country', 'Country', siteAttrs.site_country || '');
+        html += metaField('latitude', 'Latitude', siteAttrs.latitude || '');
+        html += metaField('longitude', 'Longitude', siteAttrs.longitude || '');
 
-        // Left column
-        html += '<div class="sm-meta-col-left">';
+        // Timezone display
+        var tzVal = siteAttrs.tzOffset;
+        var tzDisplay = tzVal ? ((parseFloat(tzVal) >= 0 ? '+' : '') + tzVal) : '';
+        html += metaField('tzOffset', 'Timezone', tzDisplay);
 
-        // Site Info card
-        html += metaCard('Site Information', 'bolt', [
-            metaField('installation_name', 'Installation Name', siteAttrs.installation_name || ''),
-            metaField('dashboard_tier', 'Tier', siteAttrs.dashboard_tier || ''),
-            metaField('site_address', 'Address', siteAttrs.site_address || siteAttrs.address || ''),
-            metaField('site_city', 'City', siteAttrs.site_city || ''),
-            metaField('site_country', 'Country', siteAttrs.site_country || '')
+        // CO2 Factor display
+        var co2Val = siteAttrs.co2_per_kwh || '';
+        var co2Display = co2Val ? (co2Val + ' kg/kWh') : '';
+        html += metaField('co2_per_kwh', 'CO2 Factor', isEditing ? (siteAttrs.co2_per_kwh || '') : co2Display);
+
+        // Energy Rate display
+        var rateVal = siteAttrs.energy_rate || '';
+        var currSym = siteAttrs.currency_symbol || '';
+        var rateDisplay = rateVal ? (currSym + rateVal + '/kWh') : '';
+        html += metaField('energy_rate', 'Energy Rate', isEditing ? (siteAttrs.energy_rate || '') : rateDisplay);
+
+        html += metaSelect('currency_symbol', 'Currency', siteAttrs.currency_symbol || '', [
+            { value: '\u00a3', label: '\u00a3 (GBP)' },
+            { value: '\u20ac', label: '\u20ac (EUR)' },
+            { value: '$', label: '$ (USD)' },
+            { value: '\u20ba', label: '\u20ba (TRY)' }
         ]);
-
-        // GPS card
-        html += metaCard('GPS Location', 'map', [
-            metaField('latitude', 'Latitude', siteAttrs.latitude || ''),
-            metaField('longitude', 'Longitude', siteAttrs.longitude || '')
-        ]);
-
-        html += '</div>';
-
-        // Right column
-        html += '<div class="sm-meta-col-right">';
-
-        // Energy & Cost card
-        html += metaCard('Energy & Cost', 'bolt', [
-            metaField('co2_per_kwh', 'CO2 Factor (kg/kWh)', siteAttrs.co2_per_kwh || ''),
-            metaField('energy_rate', 'Energy Rate (per kWh)', siteAttrs.energy_rate || ''),
-            metaSelect('currency_symbol', 'Currency', siteAttrs.currency_symbol || '', [
-                { value: '\u00a3', label: '\u00a3 (GBP)' },
-                { value: '\u20ac', label: '\u20ac (EUR)' },
-                { value: '$', label: '$ (USD)' },
-                { value: '\u20ba', label: '\u20ba (TRY)' }
-            ])
-        ]);
-
-        // Contact card
-        html += metaCard('Site Contact', 'user', [
-            metaField('contact_name', 'Contact Name', siteAttrs.contact_name || ''),
-            metaField('contact_email', 'Contact Email', siteAttrs.contact_email || ''),
-            metaField('contact_phone', 'Contact Phone', siteAttrs.contact_phone || '')
-        ]);
-
-        html += '</div>';
         html += '</div>';
 
         // Address autocomplete section (full-width)
@@ -735,16 +715,6 @@ self.onInit = function () {
         });
         html += '</select></div>';
 
-        // Access token
-        if (!addDeviceForm.token) addDeviceForm.token = generateToken();
-        html += '<div class="sm-form-group">' +
-            '<label>Access Token</label>' +
-            '<div class="sm-token-wrap">' +
-                '<div class="sm-token-value">' + esc(addDeviceForm.token) + '</div>' +
-                '<button class="sm-token-btn" data-action="regenerate-token">Regenerate</button>' +
-            '</div>' +
-        '</div>';
-
         // Create button
         var canCreate = addDeviceForm.name.trim() && addDeviceForm.profileName;
         var btnDisabled = !canCreate || addDeviceStatus === 'saving' ? ' disabled' : '';
@@ -775,7 +745,6 @@ self.onInit = function () {
         var name = addDeviceForm.name.trim();
         var profileName = addDeviceForm.profileName;
         var profileId = deviceProfiles[profileName];
-        var token = addDeviceForm.token;
 
         if (!name || !profileId) {
             addDeviceStatus = 'error';
@@ -805,10 +774,9 @@ self.onInit = function () {
             body.customerId = { id: customerId, entityType: 'CUSTOMER' };
         }
 
-        var qp = '?accessToken=' + encodeURIComponent(token);
         var newDeviceId = null;
 
-        apiPost('/device' + qp, body)
+        apiPost('/device', body)
         .then(function (dev) {
             newDeviceId = dev.id.id;
             // Create relation: site Contains device
@@ -832,7 +800,7 @@ self.onInit = function () {
         })
         .then(function () {
             addDeviceStatus = 'done';
-            addDeviceForm = { name: '', profileId: '', profileName: '', token: generateToken() };
+            addDeviceForm = { name: '', profileId: '', profileName: '' };
             // Refresh devices list
             return fetchDevices();
         })
@@ -917,7 +885,8 @@ self.onInit = function () {
                     render();
 
                     // Save name change to asset entity if changed
-                    var nameAttr = attrs.installation_name || '';
+                    var nameAttr = attrs.name || '';
+                    delete attrs.name; // name is on the entity, not a server attribute
                     var saveEntityPromise = Promise.resolve();
                     if (siteEntity && nameAttr && nameAttr !== siteEntity.name) {
                         siteEntity.name = nameAttr;
@@ -1114,14 +1083,6 @@ self.onInit = function () {
             });
         }
 
-        // Regenerate token
-        container.querySelectorAll('[data-action="regenerate-token"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                addDeviceForm.token = generateToken();
-                render();
-            });
-        });
-
         // Create device button
         container.querySelectorAll('[data-action="create-device"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1167,6 +1128,18 @@ self.onInit = function () {
         if (results[1] && Array.isArray(results[1])) {
             results[1].forEach(function (a) { siteAttrs[a.key] = a.value; });
         }
+        // Fetch customer name and prepend to breadcrumb
+        if (siteEntity && siteEntity.customerId && siteEntity.customerId.id &&
+            siteEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+            return apiGet('/customer/' + siteEntity.customerId.id).then(function (c) {
+                if (c && c.title) {
+                    parentBreadcrumb = parentBreadcrumb
+                        ? (c.title + ' > ' + parentBreadcrumb)
+                        : c.title;
+                }
+            }).catch(function () {});
+        }
+    }).then(function () {
         render();
     }).catch(function (err) {
         console.error('[SM] Init error:', err);
