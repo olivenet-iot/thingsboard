@@ -55,27 +55,56 @@ self.onInit = function () {
         renameValue: ''
     };
 
+    var _activeAddrIdx = -1;
+    var _activeAddrCursor = 0;
+    var _owAddrOutsideClickFn = null;
+
     // ── CO2 Factors by Country ──────────────────────────────────
 
     var CO2_FACTORS = {
-        NL: { co2: 0.328, currency: 'EUR', symbol: '\u20ac', name: 'Netherlands' },
-        GB: { co2: 0.207, currency: 'GBP', symbol: '\u00a3', name: 'United Kingdom' },
-        DE: { co2: 0.366, currency: 'EUR', symbol: '\u20ac', name: 'Germany' },
-        FR: { co2: 0.052, currency: 'EUR', symbol: '\u20ac', name: 'France' },
-        BE: { co2: 0.150, currency: 'EUR', symbol: '\u20ac', name: 'Belgium' },
-        TR: { co2: 0.440, currency: 'TRY', symbol: '\u20ba', name: 'Turkey' },
-        US: { co2: 0.390, currency: 'USD', symbol: '$', name: 'United States' },
-        ES: { co2: 0.210, currency: 'EUR', symbol: '\u20ac', name: 'Spain' },
-        IT: { co2: 0.233, currency: 'EUR', symbol: '\u20ac', name: 'Italy' },
-        PL: { co2: 0.635, currency: 'PLN', symbol: 'z\u0142', name: 'Poland' },
-        SE: { co2: 0.008, currency: 'SEK', symbol: 'kr', name: 'Sweden' },
-        NO: { co2: 0.007, currency: 'NOK', symbol: 'kr', name: 'Norway' },
-        DK: { co2: 0.112, currency: 'DKK', symbol: 'kr', name: 'Denmark' },
-        AT: { co2: 0.090, currency: 'EUR', symbol: '\u20ac', name: 'Austria' },
-        CH: { co2: 0.015, currency: 'CHF', symbol: 'Fr', name: 'Switzerland' },
-        IE: { co2: 0.296, currency: 'EUR', symbol: '\u20ac', name: 'Ireland' },
-        PT: { co2: 0.180, currency: 'EUR', symbol: '\u20ac', name: 'Portugal' }
+        // Primary Markets
+        NL: { co2: 0.269, rate: 0.29, currency: 'EUR', symbol: '\u20ac', name: 'Netherlands' },
+        GB: { co2: 0.207, rate: 0.30, currency: 'GBP', symbol: '\u00a3', name: 'United Kingdom' },
+        DE: { co2: 0.371, rate: 0.38, currency: 'EUR', symbol: '\u20ac', name: 'Germany' },
+        FR: { co2: 0.056, rate: 0.27, currency: 'EUR', symbol: '\u20ac', name: 'France' },
+        BE: { co2: 0.144, rate: 0.36, currency: 'EUR', symbol: '\u20ac', name: 'Belgium' },
+        TR: { co2: 0.440, rate: 4.20, currency: 'TRY', symbol: '\u20ba', name: 'Turkey' },
+        // Europe
+        AT: { co2: 0.105, rate: 0.29, currency: 'EUR', symbol: '\u20ac', name: 'Austria' },
+        CH: { co2: 0.025, rate: 0.27, currency: 'CHF', symbol: 'Fr', name: 'Switzerland' },
+        CZ: { co2: 0.450, rate: 0.31, currency: 'CZK', symbol: 'K\u010d', name: 'Czechia' },
+        DK: { co2: 0.140, rate: 0.35, currency: 'DKK', symbol: 'kr', name: 'Denmark' },
+        ES: { co2: 0.150, rate: 0.26, currency: 'EUR', symbol: '\u20ac', name: 'Spain' },
+        FI: { co2: 0.070, rate: 0.19, currency: 'EUR', symbol: '\u20ac', name: 'Finland' },
+        GR: { co2: 0.270, rate: 0.20, currency: 'EUR', symbol: '\u20ac', name: 'Greece' },
+        IE: { co2: 0.296, rate: 0.37, currency: 'EUR', symbol: '\u20ac', name: 'Ireland' },
+        IT: { co2: 0.315, rate: 0.33, currency: 'EUR', symbol: '\u20ac', name: 'Italy' },
+        LU: { co2: 0.080, rate: 0.26, currency: 'EUR', symbol: '\u20ac', name: 'Luxembourg' },
+        NO: { co2: 0.030, rate: 0.22, currency: 'NOK', symbol: 'kr', name: 'Norway' },
+        PL: { co2: 0.662, rate: 0.30, currency: 'PLN', symbol: 'z\u0142', name: 'Poland' },
+        PT: { co2: 0.120, rate: 0.22, currency: 'EUR', symbol: '\u20ac', name: 'Portugal' },
+        SE: { co2: 0.041, rate: 0.25, currency: 'SEK', symbol: 'kr', name: 'Sweden' },
+        // Rest of World
+        AE: { co2: 0.410, rate: 0.08, currency: 'AED', symbol: 'AED', name: 'United Arab Emirates' },
+        AU: { co2: 0.530, rate: 0.30, currency: 'AUD', symbol: 'A$', name: 'Australia' },
+        BR: { co2: 0.080, rate: 0.70, currency: 'BRL', symbol: 'R$', name: 'Brazil' },
+        CA: { co2: 0.120, rate: 0.14, currency: 'CAD', symbol: 'C$', name: 'Canada' },
+        CN: { co2: 0.540, rate: 0.54, currency: 'CNY', symbol: '\u00a5', name: 'China' },
+        IN: { co2: 0.713, rate: 6.50, currency: 'INR', symbol: '\u20b9', name: 'India' },
+        JP: { co2: 0.460, rate: 0.27, currency: 'JPY', symbol: '\u00a5', name: 'Japan' },
+        KR: { co2: 0.410, rate: 0.11, currency: 'KRW', symbol: '\u20a9', name: 'South Korea' },
+        MX: { co2: 0.410, rate: 3.20, currency: 'MXN', symbol: 'MX$', name: 'Mexico' },
+        SA: { co2: 0.560, rate: 0.05, currency: 'SAR', symbol: 'SAR', name: 'Saudi Arabia' },
+        SG: { co2: 0.370, rate: 0.27, currency: 'SGD', symbol: 'S$', name: 'Singapore' },
+        US: { co2: 0.390, rate: 0.17, currency: 'USD', symbol: '$', name: 'United States' },
+        ZA: { co2: 0.710, rate: 2.50, currency: 'ZAR', symbol: 'R', name: 'South Africa' }
     };
+
+    var COUNTRY_GROUPS = [
+        { label: 'Primary Markets', codes: ['NL', 'GB', 'DE', 'FR', 'BE', 'TR'] },
+        { label: 'Europe', codes: ['AT', 'CH', 'CZ', 'DK', 'ES', 'FI', 'GR', 'IE', 'IT', 'LU', 'NO', 'PL', 'PT', 'SE'] },
+        { label: 'Rest of World', codes: ['AE', 'AU', 'BR', 'CA', 'CN', 'IN', 'JP', 'KR', 'MX', 'SA', 'SG', 'US', 'ZA'] }
+    ];
 
     function getCountryInfo() {
         return CO2_FACTORS[customer.country] || CO2_FACTORS.NL;
@@ -264,10 +293,14 @@ self.onInit = function () {
         html += formGroup('Contact Email *', '<input class="ow-input" type="email" data-field="contactEmail" value="' + esc(customer.contactEmail) + '" placeholder="info@company.com">');
         html += formGroup('Phone', '<input class="ow-input" data-field="contactPhone" value="' + esc(customer.contactPhone) + '" placeholder="+31 6 1234 5678">');
         var countryOpts = '';
-        var keys = Object.keys(CO2_FACTORS);
-        for (var i = 0; i < keys.length; i++) {
-            var k = keys[i];
-            countryOpts += '<option value="' + k + '"' + (customer.country === k ? ' selected' : '') + '>' + CO2_FACTORS[k].name + ' (' + k + ')</option>';
+        for (var g = 0; g < COUNTRY_GROUPS.length; g++) {
+            var grp = COUNTRY_GROUPS[g];
+            countryOpts += '<optgroup label="' + esc(grp.label) + '">';
+            for (var ci = 0; ci < grp.codes.length; ci++) {
+                var k = grp.codes[ci];
+                countryOpts += '<option value="' + k + '"' + (customer.country === k ? ' selected' : '') + '>' + CO2_FACTORS[k].name + ' (' + k + ')</option>';
+            }
+            countryOpts += '</optgroup>';
         }
         html += formGroup('Country', '<select class="ow-select" data-field="country" data-action="country-change">' + countryOpts + '</select>');
         html += '</div>';
@@ -335,14 +368,10 @@ self.onInit = function () {
 
             if (s.expanded) {
                 html += '<tr class="ow-expand-row"><td colspan="5"><div class="ow-expand-inner">';
-                html += formGroupSm('Address', '<input class="ow-table-input" data-site-field="address" data-idx="' + i + '" value="' + esc(s.address) + '" placeholder="Search address..." data-action="address-search">');
-                html += formGroupSm('Latitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lat" data-idx="' + i + '" value="' + (s.lat || '') + '">');
-                html += formGroupSm('Longitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lon" data-idx="' + i + '" value="' + (s.lon || '') + '">');
-                html += formGroupSm('CO\u2082 Override', '<input class="ow-table-input" type="number" step="0.001" data-site-field="co2Override" data-idx="' + i + '" value="' + (s.co2Override || '') + '" placeholder="Use customer default">');
-                html += formGroupSm('Rate Override', '<input class="ow-table-input" type="number" step="0.01" data-site-field="rateOverride" data-idx="' + i + '" value="' + (s.rateOverride || '') + '" placeholder="Use customer default">');
-                html += formGroupSm('Timezone (UTC offset)', '<input class="ow-table-input" type="number" step="0.5" data-site-field="tzOffset" data-idx="' + i + '" value="' + (s.tzOffset != null ? s.tzOffset : '') + '" placeholder="Auto-detect">');
-                html += '</div>';
-                // Address suggestion dropdown
+                // Address input + dropdown wrapped together in .ow-suggest-wrap
+                html += '<div class="ow-form-group ow-suggest-wrap">';
+                html += '<label>Address</label>';
+                html += '<input class="ow-table-input" data-site-field="address" data-idx="' + i + '" value="' + esc(s.address) + '" placeholder="Search address..." data-action="address-search">';
                 if (s._addrResults && s._addrResults.length > 0) {
                     html += '<div class="ow-suggest-list" data-addr-suggest="' + i + '">';
                     for (var a = 0; a < s._addrResults.length; a++) {
@@ -351,8 +380,15 @@ self.onInit = function () {
                     html += '</div>';
                 }
                 if (s._addrFetching) {
-                    html += '<div class="ow-suggest-empty">Searching...</div>';
+                    html += '<div class="ow-suggest-list" data-addr-suggest="' + i + '"><div class="ow-suggest-empty">Searching...</div></div>';
                 }
+                html += '</div>';
+                html += formGroupSm('Latitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lat" data-idx="' + i + '" value="' + (s.lat || '') + '">');
+                html += formGroupSm('Longitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lon" data-idx="' + i + '" value="' + (s.lon || '') + '">');
+                html += formGroupSm('CO\u2082 Override', '<input class="ow-table-input" type="number" step="0.001" data-site-field="co2Override" data-idx="' + i + '" value="' + (s.co2Override || '') + '" placeholder="Use customer default">');
+                html += formGroupSm('Rate Override', '<input class="ow-table-input" type="number" step="0.01" data-site-field="rateOverride" data-idx="' + i + '" value="' + (s.rateOverride || '') + '" placeholder="Use customer default">');
+                html += formGroupSm('Timezone (UTC offset)', '<input class="ow-table-input" type="number" step="0.5" data-site-field="tzOffset" data-idx="' + i + '" value="' + (s.tzOffset != null ? s.tzOffset : '') + '" placeholder="Auto-detect">');
+                html += '</div>';
                 html += '</td></tr>';
             }
         }
@@ -486,6 +522,7 @@ self.onInit = function () {
         html += reviewField('Country', info.name || customer.country);
         html += reviewField('Currency', info.symbol + ' (' + info.currency + ')');
         html += reviewField('CO\u2082 Default', info.co2 + ' kg/kWh');
+        html += reviewField('Energy Rate', info.symbol + ' ' + (info.rate || 0) + '/kWh');
         html += reviewField('Users', customer.users.length + ' account(s)');
         html += '</div>';
         for (var u = 0; u < customer.users.length; u++) {
@@ -836,7 +873,7 @@ self.onInit = function () {
                         var siteId = provisionState.createdIds['SITE:' + siteData.site];
                         var cInfo = getCountryInfo();
                         var co2 = siteData.co2Override || cInfo.co2;
-                        var rate = siteData.rateOverride || 0;
+                        var rate = siteData.rateOverride || cInfo.rate || 0;
                         var attrs = {
                             dashboard_tier: siteData.tier,
                             co2_per_kwh: parseFloat(co2) || 0,
@@ -907,11 +944,11 @@ self.onInit = function () {
                         var dInfo = getCountryInfo();
                         // Find the site for this device to get its CO2/rate values
                         var siteCo2 = dInfo.co2;
-                        var siteRate = 0;
+                        var siteRate = dInfo.rate || 0;
                         for (var x = 0; x < sites.length; x++) {
                             if (sites[x].site === devData.siteName) {
                                 siteCo2 = sites[x].co2Override || dInfo.co2;
-                                siteRate = sites[x].rateOverride || 0;
+                                siteRate = sites[x].rateOverride || dInfo.rate || 0;
                                 break;
                             }
                         }
@@ -1009,12 +1046,15 @@ self.onInit = function () {
         if (!query || query.length < 3) {
             sites[idx]._addrResults = [];
             sites[idx]._addrFetching = false;
+            _activeAddrIdx = -1;
             render();
             return;
         }
 
         sites[idx]._addrFetching = true;
         sites[idx]._addrResults = [];
+        _activeAddrIdx = idx;
+        _activeAddrCursor = query.length;
         render();
 
         var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
@@ -1024,11 +1064,13 @@ self.onInit = function () {
             .then(function (results) {
                 sites[idx]._addrFetching = false;
                 sites[idx]._addrResults = results || [];
+                _activeAddrIdx = (results && results.length > 0) ? idx : -1;
                 render();
             })
             .catch(function () {
                 sites[idx]._addrFetching = false;
                 sites[idx]._addrResults = [];
+                _activeAddrIdx = -1;
                 render();
             });
     }
@@ -1041,6 +1083,7 @@ self.onInit = function () {
         sites[siteIdx].lat = result.lat || '';
         sites[siteIdx].lon = result.lon || '';
         sites[siteIdx]._addrResults = [];
+        _activeAddrIdx = -1;
 
         // Extract address components
         var addr = result.address || {};
@@ -1092,7 +1135,7 @@ self.onInit = function () {
                     site: parts[2] || '',
                     tier: (parts[3] || 'standard').toLowerCase() === 'plus' ? 'plus' : 'standard',
                     address: parts[4] || '',
-                    lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: '',
+                    lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: getCountryInfo().rate,
                     expanded: false, tzOffset: null,
                     city: '', postcode: '', siteCountry: '',
                     _addrResults: [], _addrFetching: false
@@ -1142,6 +1185,17 @@ self.onInit = function () {
 
         container.innerHTML = html;
         bindEvents();
+
+        // Restore focus to address input after re-render (searchAddress triggers render)
+        if (_activeAddrIdx >= 0) {
+            var addrInp = container.querySelector('[data-site-field="address"][data-idx="' + _activeAddrIdx + '"]');
+            if (addrInp) {
+                addrInp.focus();
+                if (_activeAddrCursor > 0 && _activeAddrCursor <= addrInp.value.length) {
+                    addrInp.setSelectionRange(_activeAddrCursor, _activeAddrCursor);
+                }
+            }
+        }
     }
 
     // ── Event Binding ───────────────────────────────────────────
@@ -1191,7 +1245,7 @@ self.onInit = function () {
                         estate: sites.length > 0 ? sites[sites.length - 1].estate : '',
                         region: sites.length > 0 ? sites[sites.length - 1].region : '',
                         site: '', tier: 'standard', address: '',
-                        lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: '',
+                        lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: getCountryInfo().rate,
                         expanded: false, tzOffset: null,
                         city: '', postcode: '', siteCountry: '',
                         _addrResults: [], _addrFetching: false
@@ -1459,6 +1513,27 @@ self.onInit = function () {
                 }
             });
         });
+
+        // Click-outside dismissal for address suggestion dropdowns
+        if (_owAddrOutsideClickFn) {
+            document.removeEventListener('click', _owAddrOutsideClickFn, true);
+        }
+        _owAddrOutsideClickFn = function (e) {
+            var wraps = container.querySelectorAll('.ow-suggest-wrap');
+            for (var w = 0; w < wraps.length; w++) {
+                var list = wraps[w].querySelector('.ow-suggest-list[data-addr-suggest]');
+                if (list && !wraps[w].contains(e.target)) {
+                    var idx = parseInt(list.getAttribute('data-addr-suggest'));
+                    if (idx >= 0 && idx < sites.length && sites[idx]._addrResults && sites[idx]._addrResults.length > 0) {
+                        sites[idx]._addrResults = [];
+                        _activeAddrIdx = -1;
+                        render();
+                        return;
+                    }
+                }
+            }
+        };
+        document.addEventListener('click', _owAddrOutsideClickFn, true);
     }
 
     // ── Navigation ──────────────────────────────────────────────
@@ -1550,4 +1625,9 @@ self.onDestroy = function () {
         clearTimeout(_owDebounceTimers[keys[i]]);
     }
     _owDebounceTimers = {};
+    // Remove click-outside listener for address suggestions
+    if (_owAddrOutsideClickFn) {
+        document.removeEventListener('click', _owAddrOutsideClickFn, true);
+        _owAddrOutsideClickFn = null;
+    }
 };

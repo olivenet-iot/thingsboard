@@ -403,6 +403,11 @@
     min-width: 160px;
 }
 
+.ow-expand-inner .ow-suggest-wrap {
+    flex: 0 0 calc(33.333% - 8px);
+    min-width: 160px;
+}
+
 /* -- Buttons ------------------------------------------------------------- */
 
 .ow-btn {
@@ -870,7 +875,8 @@
     .ow-step-label {
         display: none;
     }
-    .ow-expand-inner .ow-form-group {
+    .ow-expand-inner .ow-form-group,
+    .ow-expand-inner .ow-suggest-wrap {
         flex: 0 0 calc(50% - 6px);
     }
 }
@@ -880,7 +886,8 @@
         flex-direction: column;
         gap: 10px;
     }
-    .ow-expand-inner .ow-form-group {
+    .ow-expand-inner .ow-form-group,
+    .ow-expand-inner .ow-suggest-wrap {
         flex: 1 1 100%;
     }
     .ow-review-info {
