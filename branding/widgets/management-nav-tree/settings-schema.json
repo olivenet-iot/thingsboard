@@ -1,0 +1,52 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Management Nav Tree Settings",
+    "properties": {
+      "brandName": {
+        "type": "string",
+        "title": "Brand Name",
+        "default": "SIGNCONNECT"
+      },
+      "showSearch": {
+        "type": "boolean",
+        "title": "Show Search Bar",
+        "default": true
+      },
+      "showStatusIndicators": {
+        "type": "boolean",
+        "title": "Show Status Indicators",
+        "default": true
+      },
+      "showFooterSummary": {
+        "type": "boolean",
+        "title": "Show Footer Summary",
+        "default": true
+      },
+      "onlineThresholdMinutes": {
+        "type": "number",
+        "title": "Online Threshold (minutes)",
+        "default": 10
+      },
+      "pollIntervalSeconds": {
+        "type": "number",
+        "title": "Device Status Poll Interval (seconds)",
+        "default": 60
+      }
+    }
+  },
+  "form": [
+    "brandName",
+    "showSearch",
+    "showStatusIndicators",
+    "showFooterSummary",
+    {
+      "key": "onlineThresholdMinutes",
+      "type": "number"
+    },
+    {
+      "key": "pollIntervalSeconds",
+      "type": "number"
+    }
+  ]
+}

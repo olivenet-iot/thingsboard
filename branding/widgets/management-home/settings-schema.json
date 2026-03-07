@@ -1,0 +1,8 @@
+{
+  "schema": {
+    "type": "object",
+    "title": "Management Home Settings",
+    "properties": {}
+  },
+  "form": []
+}

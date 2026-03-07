@@ -1,0 +1,544 @@
+/* SignConnect Management Nav Tree Widget — Light Sidebar Theme */
+
+.mnt-root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+
+.mnt-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 12px 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.mnt-brand {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #f59e0b;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.mnt-brand:hover {
+    opacity: 0.7;
+}
+
+.mnt-subtitle {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+/* ── Search ────────────────────────────────────────────── */
+
+.mnt-search {
+    padding: 6px 12px 8px 12px;
+    flex-shrink: 0;
+}
+
+.mnt-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #0f172a;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.mnt-search-input::placeholder {
+    color: #94a3b8;
+}
+
+.mnt-search-input:focus {
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* ── Nav Links ─────────────────────────────────────────── */
+
+.mnt-nav-links {
+    flex-shrink: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mnt-nav-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 8px;
+}
+
+.mnt-nav-row:hover {
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.mnt-nav-row:hover .mnt-nav-label {
+    color: #d97706;
+}
+
+.mnt-nav-row.mnt-nav-active {
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
+}
+
+.mnt-nav-row.mnt-nav-active .mnt-nav-label {
+    color: #92400e;
+    font-weight: 600;
+}
+
+.mnt-nav-row.mnt-nav-active .mnt-nav-icon {
+    color: #f59e0b;
+}
+
+.mnt-nav-icon {
+    flex-shrink: 0;
+    color: #94a3b8;
+    transition: color 0.15s;
+}
+
+.mnt-nav-row:hover .mnt-nav-icon {
+    color: #f59e0b;
+}
+
+.mnt-nav-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    flex: 1;
+    transition: color 0.15s;
+}
+
+.mnt-new-customer-row .mnt-nav-icon {
+    color: #059669;
+}
+
+.mnt-new-customer-row:hover .mnt-nav-icon {
+    color: #047857;
+}
+
+.mnt-new-customer-row .mnt-nav-label {
+    color: #059669;
+    font-weight: 600;
+}
+
+.mnt-new-customer-row:hover .mnt-nav-label {
+    color: #047857;
+}
+
+/* ── Clients Section Label ────────────────────────────── */
+
+.mnt-clients-label {
+    flex-shrink: 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mnt-clients-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 8px;
+}
+
+.mnt-clients-row:hover {
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.mnt-clients-row:hover .mnt-clients-text {
+    color: #d97706;
+}
+
+.mnt-clients-icon {
+    flex-shrink: 0;
+    color: #f59e0b;
+}
+
+.mnt-clients-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    flex: 1;
+    transition: color 0.15s;
+}
+
+.mnt-clients-chevron {
+    font-size: 10px;
+    color: #cbd5e1;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, color 0.15s;
+}
+
+.mnt-clients-chevron.mnt-clients-collapsed {
+    transform: rotate(-90deg);
+}
+
+.mnt-clients-row:hover .mnt-clients-chevron {
+    color: #f59e0b;
+}
+
+/* ── Tree Container ────────────────────────────────────── */
+
+.mnt-tree-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+}
+
+.mnt-tree-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.mnt-tree-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.mnt-tree-container::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+
+.mnt-tree-container::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* ── Tree Nodes ────────────────────────────────────────── */
+
+.mnt-tree {
+    padding: 4px 0;
+}
+
+.mnt-node-row {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: background 0.12s, color 0.12s;
+    border-left: 3px solid transparent;
+    min-height: 38px;
+}
+
+.mnt-node-row:hover {
+    background: #f8fafc;
+}
+
+.mnt-node-row.mnt-node-active {
+    border-left-color: #f59e0b;
+    background: #fef3c7;
+}
+
+.mnt-node-row.mnt-node-active .mnt-label {
+    color: #92400e;
+    font-weight: 600;
+}
+
+/* ── Level-specific font sizes ─────────────────────────── */
+
+.mnt-level-0 .mnt-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.mnt-level-1 .mnt-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+}
+
+.mnt-level-2 .mnt-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+}
+
+.mnt-level-3 .mnt-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: #64748b;
+}
+
+.mnt-level-4 .mnt-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: #94a3b8;
+}
+
+/* ── Chevron ───────────────────────────────────────────── */
+
+.mnt-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, color 0.15s, background 0.15s;
+    border-radius: 4px;
+}
+
+.mnt-chevron-expanded {
+    transform: rotate(90deg);
+}
+
+.mnt-chevron-spacer {
+    display: inline-block;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+/* ── Click Zones ───────────────────────────────────────── */
+
+.mnt-chevron-zone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    min-height: 38px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.mnt-chevron-zone:hover .mnt-chevron {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+.mnt-label-zone {
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0 8px 0 0;
+    cursor: pointer;
+    gap: 6px;
+}
+
+.mnt-label-zone:hover .mnt-label {
+    color: #f59e0b;
+}
+
+.mnt-label-zone .mnt-icon {
+    margin-right: 0;
+}
+
+/* ── Node Icon ─────────────────────────────────────────── */
+
+.mnt-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+/* ── Node Label ────────────────────────────────────────── */
+
+.mnt-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    transition: color 0.12s;
+}
+
+/* ── Badge (child count) ───────────────────────────────── */
+
+.mnt-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 6px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+/* ── Status Indicator ──────────────────────────────────── */
+
+.mnt-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    font-size: 11px;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.mnt-status-dot-online {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #059669;
+    flex-shrink: 0;
+}
+
+.mnt-status-dot-offline {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.mnt-status-dot-fault {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    flex-shrink: 0;
+    animation: mnt-pulse 2s ease-in-out infinite;
+}
+
+.mnt-status-dot-partial {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+}
+
+@keyframes mnt-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.mnt-device-dot {
+    margin-left: auto;
+    margin-right: 4px;
+}
+
+/* ── Children Container ────────────────────────────────── */
+
+.mnt-children {
+    /* animated via jQuery slideUp/slideDown */
+}
+
+/* ── Loading / Empty States ────────────────────────────── */
+
+.mnt-loading {
+    padding: 16px 12px;
+}
+
+.mnt-skeleton {
+    height: 12px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: mnt-shimmer 1.5s ease-in-out infinite;
+}
+
+.mnt-skeleton-short {
+    width: 65%;
+    margin-left: 20px;
+}
+
+@keyframes mnt-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.mnt-empty {
+    display: none;
+    padding: 32px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.mnt-node-loading {
+    padding: 6px 12px 6px 44px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.mnt-node-empty {
+    padding: 6px 12px 6px 44px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* ── Footer ────────────────────────────────────────────── */
+
+.mnt-footer {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.mnt-footer-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mnt-footer-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.mnt-footer-total {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.mnt-footer-text {
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* ── Remove card/widget chrome ─────────────────────────── */
+
+:host {
+    box-shadow: none !important;
+    border: none !important;
+}
