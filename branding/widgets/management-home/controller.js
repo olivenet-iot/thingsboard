@@ -18,6 +18,7 @@ self.onInit = function() {
         try {
             var sc = self.ctx.stateController;
             if (sc && sc.openState) {
+                sc.resetState();
                 sc.openState('onboarding', {});
                 return;
             }
@@ -135,6 +136,7 @@ self.renderTable = function() {
         try {
             var sc = self.ctx.stateController;
             if (sc && sc.openState) {
+                sc.resetState();
                 sc.openState('customer', {
                     entityId: { id: id, entityType: 'CUSTOMER' },
                     entityName: name

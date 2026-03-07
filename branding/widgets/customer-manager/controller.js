@@ -188,7 +188,13 @@ self.onInit = function () {
 
     function openState(stateId, params) {
         try {
-            self.ctx.stateController.openState(stateId, params);
+            var sc = self.ctx.stateController;
+            if (stateId === 'default') {
+                sc.resetState();
+            } else {
+                sc.resetState();
+                sc.openState(stateId, params);
+            }
         } catch (e) {
             console.error('[CM] Navigate failed:', e);
         }

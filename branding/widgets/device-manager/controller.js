@@ -171,8 +171,11 @@ self.onInit = function () {
     // ── Navigation ──────────────────────────────────────────────
 
     function openState(stateId, params) {
-        try { self.ctx.stateController.openState(stateId, params); }
-        catch (e) { console.error('[DM] Navigate failed:', e); }
+        try {
+            var sc = self.ctx.stateController;
+            sc.resetState();
+            sc.openState(stateId, params);
+        } catch (e) { console.error('[DM] Navigate failed:', e); }
     }
 
     // ── Fetch Parent Site ───────────────────────────────────────

@@ -597,6 +597,7 @@ self.navigateToOnboarding = function() {
     try {
         var sc = self.ctx.stateController;
         if (sc && sc.openState) {
+            sc.resetState();
             sc.openState('onboarding', {});
             self.updateNavHighlight();
             return;
@@ -620,6 +621,7 @@ self.navigateToEntity = function(entityId, entityName, entityType, nodeType) {
     try {
         var sc = self.ctx.stateController;
         if (sc && sc.openState) {
+            sc.resetState();
             sc.openState(stateId, {
                 entityId: { id: entityId, entityType: entityType },
                 entityName: entityName

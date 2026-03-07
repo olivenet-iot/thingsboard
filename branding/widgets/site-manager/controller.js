@@ -915,8 +915,8 @@ self.onInit = function () {
             btn.addEventListener('click', function () {
                 try {
                     var sc = self.ctx.stateController;
-                    if (sc && sc.openState) {
-                        sc.openState('default', {});
+                    if (sc && sc.resetState) {
+                        sc.resetState();
                         return;
                     }
                 } catch (e) {}
@@ -932,7 +932,9 @@ self.onInit = function () {
                 var devId = card.getAttribute('data-device-id');
                 var devName = card.getAttribute('data-device-name');
                 try {
-                    self.ctx.stateController.openState('device', {
+                    var sc = self.ctx.stateController;
+                    sc.resetState();
+                    sc.openState('device', {
                         entityId: { id: devId, entityType: 'DEVICE' },
                         entityName: devName
                     });
