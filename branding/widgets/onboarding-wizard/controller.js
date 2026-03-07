@@ -2,7 +2,7 @@
 // SignConnect — Onboarding Wizard Widget (controller.js)
 // =====================================================================
 // 5-step wizard to onboard a new SignConnect customer:
-//   Step 1: Customer details (company, email, country, user accounts)
+//   Step 1: Customer details (company, email, user accounts)
 //   Step 2: Site structure (estate/region/site hierarchy)
 //   Step 3: Devices (per-site, profile)
 //   Step 4: Review summary
@@ -31,11 +31,10 @@ self.onInit = function () {
         companyName: '',
         contactEmail: '',
         contactPhone: '',
-        country: 'NL',
         users: [{ email: '', firstName: '', lastName: '', sendActivation: true }]
     };
 
-    var sites = [];      // [{estate, region, site, tier, address, lat, lon, co2Override, rateOverride, expanded, tzOffset, city, postcode, siteCountry}]
+    var sites = [];      // [{estate, region, site, tier, address, lat, lon, co2Override, rateOverride, countryCode, currencySymbol, currencyCode, expanded, tzOffset, city, postcode, siteCountry}]
     var devices = [];    // [{siteName, deviceName, profile, token, tokenMode}]
     var deviceProfiles = {};  // name -> id map
     var profilesFetched = false;
@@ -99,16 +98,6 @@ self.onInit = function () {
         US: { co2: 0.390, rate: 0.17, currency: 'USD', symbol: '$', name: 'United States' },
         ZA: { co2: 0.710, rate: 2.50, currency: 'ZAR', symbol: 'R', name: 'South Africa' }
     };
-
-    var COUNTRY_GROUPS = [
-        { label: 'Primary Markets', codes: ['NL', 'GB', 'DE', 'FR', 'BE', 'TR'] },
-        { label: 'Europe', codes: ['AT', 'CH', 'CZ', 'DK', 'ES', 'FI', 'GR', 'IE', 'IT', 'LU', 'NO', 'PL', 'PT', 'SE'] },
-        { label: 'Rest of World', codes: ['AE', 'AU', 'BR', 'CA', 'CN', 'IN', 'JP', 'KR', 'MX', 'SA', 'SG', 'US', 'ZA'] }
-    ];
-
-    function getCountryInfo() {
-        return CO2_FACTORS[customer.country] || CO2_FACTORS.NL;
-    }
 
     // ── API Helpers ─────────────────────────────────────────────
 
@@ -287,22 +276,11 @@ self.onInit = function () {
         html += '<div class="ow-card-title">Customer Details</div>';
         html += '<div class="ow-card-subtitle">Company information and user accounts</div>';
 
-        // Company row (now includes Country)
+        // Company details
         html += '<div class="ow-form-row">';
         html += formGroup('Company Name *', '<input class="ow-input" data-field="companyName" value="' + esc(customer.companyName) + '" placeholder="e.g. Acme Lighting Ltd">');
         html += formGroup('Contact Email *', '<input class="ow-input" type="email" data-field="contactEmail" value="' + esc(customer.contactEmail) + '" placeholder="info@company.com">');
         html += formGroup('Phone', '<input class="ow-input" data-field="contactPhone" value="' + esc(customer.contactPhone) + '" placeholder="+31 6 1234 5678">');
-        var countryOpts = '';
-        for (var g = 0; g < COUNTRY_GROUPS.length; g++) {
-            var grp = COUNTRY_GROUPS[g];
-            countryOpts += '<optgroup label="' + esc(grp.label) + '">';
-            for (var ci = 0; ci < grp.codes.length; ci++) {
-                var k = grp.codes[ci];
-                countryOpts += '<option value="' + k + '"' + (customer.country === k ? ' selected' : '') + '>' + CO2_FACTORS[k].name + ' (' + k + ')</option>';
-            }
-            countryOpts += '</optgroup>';
-        }
-        html += formGroup('Country', '<select class="ow-select" data-field="country" data-action="country-change">' + countryOpts + '</select>');
         html += '</div>';
 
         // User Accounts section
@@ -385,8 +363,14 @@ self.onInit = function () {
                 html += '</div>';
                 html += formGroupSm('Latitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lat" data-idx="' + i + '" value="' + (s.lat || '') + '">');
                 html += formGroupSm('Longitude', '<input class="ow-table-input" type="number" step="any" data-site-field="lon" data-idx="' + i + '" value="' + (s.lon || '') + '">');
-                html += formGroupSm('CO\u2082 Override', '<input class="ow-table-input" type="number" step="0.001" data-site-field="co2Override" data-idx="' + i + '" value="' + (s.co2Override || '') + '" placeholder="Use customer default">');
-                html += formGroupSm('Rate Override', '<input class="ow-table-input" type="number" step="0.01" data-site-field="rateOverride" data-idx="' + i + '" value="' + (s.rateOverride || '') + '" placeholder="Use customer default">');
+                html += formGroupSm('CO\u2082 (kg/kWh)' + (s.countryCode ? ' \u2014 ' + ((CO2_FACTORS[s.countryCode] || {}).name || s.countryCode) : ''),
+                    '<input class="ow-table-input" type="number" step="0.001" data-site-field="co2Override" data-idx="' + i + '" value="' + (s.co2Override || '') + '" placeholder="Select address to auto-fill">');
+                html += formGroupSm('Rate (' + (s.currencySymbol || '-') + '/kWh)',
+                    '<input class="ow-table-input" type="number" step="0.01" data-site-field="rateOverride" data-idx="' + i + '" value="' + (s.rateOverride || '') + '" placeholder="Select address to auto-fill">');
+                if (s.countryCode) {
+                    html += formGroupSm('Currency', '<input class="ow-table-input" readonly value="' +
+                        esc((s.currencySymbol || '') + ' (' + (s.currencyCode || '') + ')') + '">');
+                }
                 html += formGroupSm('Timezone (UTC offset)', '<input class="ow-table-input" type="number" step="0.5" data-site-field="tzOffset" data-idx="' + i + '" value="' + (s.tzOffset != null ? s.tzOffset : '') + '" placeholder="Auto-detect">');
                 html += '</div>';
                 html += '</td></tr>';
@@ -514,15 +498,10 @@ self.onInit = function () {
         html += '<div class="ow-card-subtitle">Verify all details before provisioning</div>';
 
         // Customer info
-        var info = getCountryInfo();
         html += '<div class="ow-review-section"><h3>Customer</h3>';
         html += '<div class="ow-review-info">';
         html += reviewField('Company', customer.companyName);
         html += reviewField('Contact', customer.contactEmail);
-        html += reviewField('Country', info.name || customer.country);
-        html += reviewField('Currency', info.symbol + ' (' + info.currency + ')');
-        html += reviewField('CO\u2082 Default', info.co2 + ' kg/kWh');
-        html += reviewField('Energy Rate', info.symbol + ' ' + (info.rate || 0) + '/kWh');
         html += reviewField('Users', customer.users.length + ' account(s)');
         html += '</div>';
         for (var u = 0; u < customer.users.length; u++) {
@@ -548,7 +527,9 @@ self.onInit = function () {
                 for (var si = 0; si < region.sites.length; si++) {
                     var site = region.sites[si];
                     html += '<div class="ow-tree-site"><span class="ow-tree-icon">\uD83D\uDCCD</span>' + esc(site.name) +
-                        ' <span class="ow-tier ow-tier-' + site.tier + '">' + site.tier + '</span></div>';
+                        ' <span class="ow-tier ow-tier-' + site.tier + '">' + site.tier + '</span>' +
+                        (site.countryCode ? ' <span style="color:#94a3b8;font-size:12px">(' + esc(site.countryCode) + ')</span>' : '') +
+                        '</div>';
                     var siteDevs = getDevicesForSite(site.name);
                     for (var di = 0; di < siteDevs.length; di++) {
                         html += '<div class="ow-tree-device"><span class="ow-tree-icon">\u2B24</span>' + esc(siteDevs[di].deviceName) +
@@ -599,7 +580,7 @@ self.onInit = function () {
                 est.regionMap[s.region] = { name: s.region, sites: [] };
                 est.regions.push(est.regionMap[s.region]);
             }
-            est.regionMap[s.region].sites.push({ name: s.site, tier: s.tier });
+            est.regionMap[s.region].sites.push({ name: s.site, tier: s.tier, countryCode: s.countryCode || '' });
         }
         return tree;
     }
@@ -721,7 +702,6 @@ self.onInit = function () {
                     title: customer.companyName,
                     email: customer.contactEmail,
                     phone: customer.contactPhone || '',
-                    country: (CO2_FACTORS[customer.country] || {}).name || customer.country,
                     additionalInfo: {
                         description: 'Onboarded via SignConnect wizard'
                     }
@@ -871,17 +851,20 @@ self.onInit = function () {
                     phase: 'attributes', label: 'Set attributes: ' + siteData.site,
                     fn: function () {
                         var siteId = provisionState.createdIds['SITE:' + siteData.site];
-                        var cInfo = getCountryInfo();
-                        var co2 = siteData.co2Override || cInfo.co2;
+                        var siteCC = siteData.countryCode || '';
+                        var cInfo = CO2_FACTORS[siteCC] || {};
+                        var co2 = siteData.co2Override || cInfo.co2 || 0;
                         var rate = siteData.rateOverride || cInfo.rate || 0;
                         var attrs = {
                             dashboard_tier: siteData.tier,
                             co2_per_kwh: parseFloat(co2) || 0,
                             energy_rate: parseFloat(rate) || 0,
-                            currency_symbol: cInfo.symbol,
+                            currency_symbol: siteData.currencySymbol || cInfo.symbol || '',
                             latitude: parseFloat(siteData.lat) || 0,
                             longitude: parseFloat(siteData.lon) || 0
                         };
+                        if (siteCC) attrs.country_code = siteCC;
+                        if (siteData.currencyCode || cInfo.currency) attrs.currency_code = siteData.currencyCode || cInfo.currency;
                         if (siteData.address) attrs.address = siteData.address;
                         if (siteData.city) attrs.site_city = siteData.city;
                         if (siteData.postcode) attrs.site_postcode = siteData.postcode;
@@ -941,21 +924,23 @@ self.onInit = function () {
                     phase: 'attributes', label: 'Set device attributes: ' + devData.deviceName,
                     fn: function () {
                         var deviceId = provisionState.createdIds['DEVICE:' + devData.deviceName];
-                        var dInfo = getCountryInfo();
                         // Find the site for this device to get its CO2/rate values
-                        var siteCo2 = dInfo.co2;
-                        var siteRate = dInfo.rate || 0;
+                        var siteCo2 = 0;
+                        var siteRate = 0;
+                        var devCurrencySymbol = '';
                         for (var x = 0; x < sites.length; x++) {
                             if (sites[x].site === devData.siteName) {
-                                siteCo2 = sites[x].co2Override || dInfo.co2;
-                                siteRate = sites[x].rateOverride || dInfo.rate || 0;
+                                var sInfo = CO2_FACTORS[sites[x].countryCode] || {};
+                                siteCo2 = sites[x].co2Override || sInfo.co2 || 0;
+                                siteRate = sites[x].rateOverride || sInfo.rate || 0;
+                                devCurrencySymbol = sites[x].currencySymbol || sInfo.symbol || '';
                                 break;
                             }
                         }
                         return apiPost('/plugins/telemetry/DEVICE/' + deviceId + '/attributes/SERVER_SCOPE', {
                             co2_per_kwh: parseFloat(siteCo2) || 0,
                             energy_rate: parseFloat(siteRate) || 0,
-                            currency_symbol: dInfo.symbol
+                            currency_symbol: devCurrencySymbol
                         });
                     }
                 });
@@ -1091,6 +1076,20 @@ self.onInit = function () {
         sites[siteIdx].postcode = addr.postcode || '';
         sites[siteIdx].siteCountry = addr.country || '';
 
+        // Derive country and auto-fill CO2/rate
+        var cc = (addr.country_code || '').toUpperCase();
+        sites[siteIdx].countryCode = cc;
+        var countryInfo = CO2_FACTORS[cc];
+        if (countryInfo) {
+            sites[siteIdx].co2Override = countryInfo.co2;
+            sites[siteIdx].rateOverride = countryInfo.rate;
+            sites[siteIdx].currencySymbol = countryInfo.symbol;
+            sites[siteIdx].currencyCode = countryInfo.currency;
+        } else {
+            sites[siteIdx].currencySymbol = '';
+            sites[siteIdx].currencyCode = '';
+        }
+
         // Fetch timezone
         if (result.lat && result.lon) {
             fetchTimezoneForSite(siteIdx, result.lat, result.lon);
@@ -1135,7 +1134,8 @@ self.onInit = function () {
                     site: parts[2] || '',
                     tier: (parts[3] || 'standard').toLowerCase() === 'plus' ? 'plus' : 'standard',
                     address: parts[4] || '',
-                    lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: getCountryInfo().rate,
+                    lat: '', lon: '', co2Override: '', rateOverride: '',
+                    countryCode: '', currencySymbol: '', currencyCode: '',
                     expanded: false, tzOffset: null,
                     city: '', postcode: '', siteCountry: '',
                     _addrResults: [], _addrFetching: false
@@ -1214,15 +1214,6 @@ self.onInit = function () {
                     var step = parseInt(el.getAttribute('data-step'));
                     if (step < currentStep) goToStep(step);
                 });
-            } else if (action === 'country-change') {
-                el.addEventListener('change', function () {
-                    var code = el.value;
-                    if (CO2_FACTORS[code]) {
-                        customer.country = code;
-                        captureStepState();
-                        render();
-                    }
-                });
             } else if (action === 'add-user') {
                 el.addEventListener('click', function () {
                     captureStepState();
@@ -1245,7 +1236,8 @@ self.onInit = function () {
                         estate: sites.length > 0 ? sites[sites.length - 1].estate : '',
                         region: sites.length > 0 ? sites[sites.length - 1].region : '',
                         site: '', tier: 'standard', address: '',
-                        lat: '', lon: '', co2Override: getCountryInfo().co2, rateOverride: getCountryInfo().rate,
+                        lat: '', lon: '', co2Override: '', rateOverride: '',
+                        countryCode: '', currencySymbol: '', currencyCode: '',
                         expanded: false, tzOffset: null,
                         city: '', postcode: '', siteCountry: '',
                         _addrResults: [], _addrFetching: false
@@ -1414,7 +1406,6 @@ self.onInit = function () {
                 el.addEventListener('click', function () {
                     customer = {
                         companyName: '', contactEmail: '', contactPhone: '',
-                        country: 'NL',
                         users: [{ email: '', firstName: '', lastName: '', sendActivation: true }]
                     };
                     sites = [];
