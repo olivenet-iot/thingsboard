@@ -3,23 +3,18 @@
 // ===================================================================
 // SITE state widget for the Management Dashboard. Shows:
 //   Tab 1: Details (site metadata, address with Nominatim, edit mode)
-//   Tab 2: Devices (live telemetry cards, banner stats)
+//   Tab 2: Devices (table view with status)
 //   Tab 3: Add Device (quick provisioning form)
 //
 // Receives site ASSET ID from dashboard state params.
-// Queries relations to find child devices, polls telemetry.
+// Queries relations to find child devices.
 // ===================================================================
 
-var pollTimer = null;
 var _addrDebounceTimer = null;
 var _addrOutsideClickFn = null;
 
 self.onInit = function () {
     'use strict';
-
-    var POLL_INTERVAL = 15000;
-    var FRESHNESS_ONLINE = 600000;   // 10 min
-    var FRESHNESS_STALE  = 3600000;  // 60 min
 
     var $root = self.ctx.$container[0];
     var container = $root.querySelector('.sm-root');
@@ -52,6 +47,11 @@ self.onInit = function () {
     var addDeviceForm = { name: '', profileId: '', profileName: '', token: '' };
     var addDeviceStatus = '';
     var addDeviceError = '';
+
+    // Delete state
+    var deleteState = 'idle';
+    var deleteLog = [];
+    var deleteError = '';
 
     // ── CO2 Factors ────────────────────────────────────────────
 
@@ -90,36 +90,6 @@ self.onInit = function () {
         US: { co2: 0.390, rate: 0.17, currency: 'USD', symbol: '$', name: 'United States' },
         ZA: { co2: 0.710, rate: 2.50, currency: 'ZAR', symbol: 'R', name: 'South Africa' }
     };
-
-    // ── Telemetry Keys ─────────────────────────────────────────
-
-    var TELEMETRY_KEYS = [
-        'dim_value', 'power_watts', 'energy_wh', 'co2_grams',
-        'status_light_src_on', 'status_driver_ok', 'status_ready',
-        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
-        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
-        'fault_light_src_failure', 'fault_light_src_short_circuit',
-        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
-        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
-        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
-        'status_control_gear_failure', 'status_lamp_failure',
-        'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
-    ].join(',');
-
-    var FAULT_COUNT_KEYS = [
-        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
-        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
-        'fault_light_src_failure', 'fault_light_src_short_circuit',
-        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
-        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
-        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
-        'status_control_gear_failure', 'status_lamp_failure'
-    ];
-
-    function isFault(val) {
-        if (val === undefined || val === null) return false;
-        return val === 'true' || val === true || val === '1' || val === 1;
-    }
 
     // ── Entity Resolution ──────────────────────────────────────
 
@@ -228,70 +198,38 @@ self.onInit = function () {
                 if (deviceRels.length === 0) { devices = []; return; }
                 var promises = deviceRels.map(function (r) {
                     return apiGet('/device/' + r.to.id).then(function (dev) {
+                        var lastAct = 0;
+                        if (dev.additionalInfo && dev.additionalInfo.lastActivityTime) {
+                            lastAct = dev.additionalInfo.lastActivityTime;
+                        }
                         return {
                             id: dev.id.id,
                             name: dev.name || 'Unknown',
                             type: dev.type || '',
-                            label: dev.label || '',
-                            telemetry: {},
-                            faultCount: 0,
-                            lastActivity: 0,
-                            connectionStatus: 'offline'
+                            profileId: dev.deviceProfileId ? dev.deviceProfileId.id : '',
+                            profileName: '',
+                            lastActivity: lastAct,
+                            online: lastAct > 0 && (Date.now() - lastAct) < 600000
                         };
                     });
                 });
-                return Promise.all(promises).then(function (devs) { devices = devs; });
+                return Promise.all(promises).then(function (devs) {
+                    devices = devs;
+                    // Resolve profile names
+                    var profileIds = {};
+                    devs.forEach(function (d) { if (d.profileId) profileIds[d.profileId] = true; });
+                    var profilePromises = Object.keys(profileIds).map(function (pid) {
+                        return apiGet('/deviceProfile/' + pid).then(function (p) {
+                            return { id: pid, name: p.name };
+                        }).catch(function () { return { id: pid, name: 'Unknown' }; });
+                    });
+                    return Promise.all(profilePromises).then(function (profiles) {
+                        var profileMap = {};
+                        profiles.forEach(function (p) { profileMap[p.id] = p.name; });
+                        devices.forEach(function (d) { d.profileName = profileMap[d.profileId] || d.type || ''; });
+                    });
+                });
             });
-    }
-
-    function pollAllDevices() {
-        if (devices.length === 0) return Promise.resolve();
-        var now = Date.now();
-        var promises = devices.map(function (dev) {
-            return apiGet('/plugins/telemetry/DEVICE/' + dev.id + '/values/timeseries?keys=' + TELEMETRY_KEYS)
-                .then(function (data) {
-                    var ts = {};
-                    Object.keys(data).forEach(function (key) {
-                        if (data[key] && data[key].length > 0) {
-                            ts[key] = data[key][0].value;
-                            var t = parseInt(data[key][0].ts);
-                            if (t > dev.lastActivity) dev.lastActivity = t;
-                        }
-                    });
-                    dev.telemetry = ts;
-                    var age = now - dev.lastActivity;
-                    if (age < FRESHNESS_ONLINE) dev.connectionStatus = 'online';
-                    else if (age < FRESHNESS_STALE) dev.connectionStatus = 'stale';
-                    else dev.connectionStatus = 'offline';
-                    var faults = 0;
-                    FAULT_COUNT_KEYS.forEach(function (fk) {
-                        if (isFault(ts[fk])) faults++;
-                    });
-                    dev.faultCount = faults;
-                });
-        });
-        return Promise.all(promises);
-    }
-
-    function fetchTodayEnergy() {
-        if (devices.length === 0) return Promise.resolve();
-        var startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        var startTs = startOfDay.getTime();
-        var endTs = Date.now();
-        var promises = devices.map(function (dev) {
-            return apiGet('/plugins/telemetry/DEVICE/' + dev.id +
-                '/values/timeseries?keys=energy_wh&startTs=' + startTs +
-                '&endTs=' + endTs + '&agg=SUM&interval=' + (endTs - startTs))
-                .then(function (data) {
-                    if (data.energy_wh && data.energy_wh.length > 0) {
-                        dev.telemetry.energy_today_wh = parseFloat(data.energy_wh[0].value) || 0;
-                    } else {
-                        dev.telemetry.energy_today_wh = 0;
-                    }
-                });
-        });
-        return Promise.all(promises);
     }
 
     function fetchBreadcrumb() {
@@ -317,16 +255,6 @@ self.onInit = function () {
 
     function saveSiteAttributes(attrs) {
         return apiPost('/plugins/telemetry/ASSET/' + siteId + '/attributes/SERVER_SCOPE', attrs);
-    }
-
-    // ── Polling ────────────────────────────────────────────────
-
-    function startPolling() {
-        pollTimer = setInterval(function () {
-            pollAllDevices().then(function () { return fetchTodayEnergy(); }).then(function () {
-                if (activeTab === 'devices') render();
-            });
-        }, POLL_INTERVAL);
     }
 
     // ═══ RENDER ════════════════════════════════════════════════
@@ -376,15 +304,19 @@ self.onInit = function () {
     function renderDetailsTab() {
         var html = '';
 
-        // Edit toolbar
-        html += '<div class="sm-meta-toolbar">' +
-            '<button class="sm-edit-btn" data-action="toggle-edit">' +
+        // Edit toolbar with delete button
+        html += '<div class="sm-meta-toolbar">';
+        if (deleteState !== 'idle') {
+            html += renderDeleteDialog();
+        }
+        html += '<button class="sm-edit-btn" data-action="toggle-edit">' +
                 (isEditing
                     ? '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Save Changes'
                     : '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit'
                 ) +
-            '</button>' +
-        '</div>';
+            '</button>';
+        html += '<button class="sm-delete-btn" data-action="delete-site">Delete Site</button>';
+        html += '</div>';
 
         html += '<div class="sm-meta-grid">';
 
@@ -643,23 +575,6 @@ self.onInit = function () {
     function renderDevicesTab() {
         var html = '';
 
-        // Banner stats
-        var online = 0, faulted = 0, totalPower = 0, totalEnergy = 0;
-        devices.forEach(function (d) {
-            if (d.connectionStatus === 'online') online++;
-            if (d.faultCount > 0) faulted++;
-            totalPower += parseFloat(d.telemetry.power_watts) || 0;
-            totalEnergy += (d.telemetry.energy_today_wh || 0) / 1000;
-        });
-
-        html += '<div class="sm-banner">' +
-            statBox('Total Devices', devices.length, '') +
-            statBox('Online', online, 'green') +
-            (faulted > 0 ? statBox('Faults', faulted, 'red') : '') +
-            statBox('Power', Math.round(totalPower) + '<span class="sm-stat-unit">W</span>', '') +
-            statBox('Energy Today', totalEnergy.toFixed(1) + '<span class="sm-stat-unit">kWh</span>', '') +
-        '</div>';
-
         if (devices.length === 0) {
             html += '<div class="sm-empty">' +
                 '<div class="sm-empty-icon">&#128225;</div>' +
@@ -669,72 +584,117 @@ self.onInit = function () {
             return html;
         }
 
-        var cols = devices.length <= 4 ? 'sm-device-grid' : 'sm-device-grid sm-grid-3';
-        html += '<div class="' + cols + '">';
+        html += '<div class="sm-table-wrap">';
+        html += '<table class="sm-table">';
+        html += '<thead><tr>' +
+            '<th>Device Name</th>' +
+            '<th>Profile</th>' +
+            '<th>Status</th>' +
+            '<th>Last Seen</th>' +
+        '</tr></thead>';
+        html += '<tbody>';
         devices.forEach(function (dev) {
-            html += renderDeviceCard(dev);
+            var statusCls = dev.online ? 'sm-status-online' : 'sm-status-offline';
+            var statusLabel = dev.online ? 'Online' : 'Offline';
+            var dotCls = dev.online ? 'sm-dot-online' : 'sm-dot-offline';
+            var lastSeen = dev.lastActivity > 0 ? timeSince(dev.lastActivity) : 'Never';
+            html += '<tr class="sm-device-row-click" data-action="open-device" data-device-id="' + dev.id + '" data-device-name="' + esc(dev.name) + '">';
+            html += '<td><strong>' + esc(dev.name) + '</strong></td>';
+            html += '<td>' + esc(dev.profileName) + '</td>';
+            html += '<td><span class="sm-status-badge ' + statusCls + '"><span class="sm-dot ' + dotCls + '"></span>' + statusLabel + '</span></td>';
+            html += '<td style="color:#94a3b8;font-size:12px">' + lastSeen + '</td>';
+            html += '</tr>';
         });
-        html += '</div>';
+        html += '</tbody></table></div>';
         return html;
     }
 
-    function statBox(label, value, color) {
-        var cls = color === 'green' ? ' sm-stat-green' : color === 'red' ? ' sm-stat-red' : '';
-        return '<div class="sm-stat-box">' +
-            '<div class="sm-stat-label">' + label + '</div>' +
-            '<div class="sm-stat-value' + cls + '">' + value + '</div>' +
-        '</div>';
+    // ── Delete Dialog ──────────────────────────────────────────
+
+    function renderDeleteDialog() {
+        var html = '<div class="sm-dialog-overlay">';
+        html += '<div class="sm-dialog">';
+
+        if (deleteState === 'confirm') {
+            var name = siteEntity ? siteEntity.name : 'this site';
+            html += '<h3 class="sm-dialog-title">Delete ' + esc(name) + '?</h3>';
+            html += '<p class="sm-dialog-message">This will delete ' + devices.length + ' device' + (devices.length !== 1 ? 's' : '') + ' and this site asset. This cannot be undone.</p>';
+            html += '<div class="sm-dialog-actions">';
+            html += '<button class="sm-btn sm-btn-secondary" data-action="cancel-delete-site">Cancel</button>';
+            html += '<button class="sm-btn sm-btn-danger" data-action="confirm-delete-site">Delete</button>';
+            html += '</div>';
+        } else if (deleteState === 'deleting') {
+            html += '<h3 class="sm-dialog-title">Deleting...</h3>';
+            html += '<div style="max-height:200px;overflow-y:auto;margin-top:12px">';
+            deleteLog.forEach(function (entry) {
+                html += '<div class="sm-log-entry ' + (entry.status || '') + '">' + esc(entry.text) + '</div>';
+            });
+            html += '</div>';
+        } else if (deleteState === 'done') {
+            html += '<h3 class="sm-dialog-title">Site Deleted</h3>';
+            html += '<p class="sm-dialog-message">All entities have been removed.</p>';
+            html += '<div class="sm-dialog-actions">';
+            html += '<button class="sm-btn sm-btn-primary" data-action="go-back">Go Back</button>';
+            html += '</div>';
+        } else if (deleteState === 'error') {
+            html += '<h3 class="sm-dialog-title">Delete Failed</h3>';
+            html += '<p class="sm-dialog-message" style="color:#ef4444">' + esc(deleteError) + '</p>';
+            html += '<div class="sm-dialog-actions">';
+            html += '<button class="sm-btn sm-btn-secondary" data-action="cancel-delete-site">Close</button>';
+            html += '</div>';
+        }
+
+        html += '</div></div>';
+        return html;
     }
 
-    function renderDeviceCard(dev) {
-        var dim = parseInt(dev.telemetry.dim_value) || 0;
-        var power = parseFloat(dev.telemetry.power_watts) || 0;
-        var energyKwh = ((dev.telemetry.energy_today_wh || 0) / 1000).toFixed(2);
-        var lampOn = dev.telemetry.status_light_src_on === 'true' || dev.telemetry.status_light_src_on === '1';
-        var hasFault = dev.faultCount > 0;
-        var status = hasFault ? 'fault' : dev.connectionStatus;
+    function startDeleteSite() {
+        deleteState = 'confirm';
+        deleteLog = [];
+        deleteError = '';
+        render();
+    }
 
-        var statusLabel = status === 'online' ? 'Online' : status === 'fault' ? 'Fault' : status === 'stale' ? 'Stale' : 'Offline';
-        var lastSeenText = dev.lastActivity > 0 ? timeSince(dev.lastActivity) : 'No data';
+    function executeDeleteSite() {
+        deleteState = 'deleting';
+        deleteLog = [];
+        render();
 
-        return '<div class="sm-device-card sm-device-card-' + status + '" data-action="open-device" data-device-id="' + dev.id + '" data-device-name="' + esc(dev.name) + '">' +
-            '<div class="sm-card-header">' +
-                '<div>' +
-                    '<div class="sm-card-name">' + esc(dev.name) + '</div>' +
-                    '<div class="sm-card-type">' + esc(dev.type) + '</div>' +
-                '</div>' +
-                '<div class="sm-status-badge sm-status-' + status + '">' +
-                    '<span class="sm-dot sm-dot-' + status + '"></span>' +
-                    statusLabel +
-                '</div>' +
-            '</div>' +
-            '<div class="sm-dim-bar-wrap">' +
-                '<div class="sm-dim-bar-track">' +
-                    '<div class="sm-dim-bar-fill' + (lampOn ? ' sm-dim-on' : '') + '" style="width:' + dim + '%"></div>' +
-                '</div>' +
-                '<span class="sm-dim-value' + (lampOn ? ' sm-dim-on-text' : '') + '">' + dim + '%</span>' +
-            '</div>' +
-            '<div class="sm-card-metrics">' +
-                '<div class="sm-card-metric">' +
-                    '<div class="sm-metric-label">Power</div>' +
-                    '<div class="sm-metric-value">' + Math.round(power) + '<span class="sm-metric-unit">W</span></div>' +
-                '</div>' +
-                '<div class="sm-card-metric">' +
-                    '<div class="sm-metric-label">Today</div>' +
-                    '<div class="sm-metric-value">' + energyKwh + '<span class="sm-metric-unit">kWh</span></div>' +
-                '</div>' +
-            '</div>' +
-            '<div class="sm-card-footer">' +
-                '<span class="sm-last-seen">' + lastSeenText + '</span>' +
-                (hasFault
-                    ? '<span class="sm-fault-pill">' +
-                        '<svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg> ' +
-                        dev.faultCount + ' fault' + (dev.faultCount > 1 ? 's' : '') +
-                      '</span>'
-                    : '<span class="sm-view-link">View <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></span>'
-                ) +
-            '</div>' +
-        '</div>';
+        function log(text, status) {
+            deleteLog.push({ text: text, status: status || 'run' });
+            render();
+        }
+
+        // Delete devices first
+        var chain = Promise.resolve();
+        devices.forEach(function (dev) {
+            chain = chain.then(function () {
+                log('Deleting device ' + dev.name + '...', 'run');
+                return apiDelete('/device/' + dev.id).then(function () {
+                    deleteLog[deleteLog.length - 1].status = 'ok';
+                    deleteLog[deleteLog.length - 1].text += ' - done';
+                }).catch(function () {
+                    deleteLog[deleteLog.length - 1].status = 'fail';
+                    deleteLog[deleteLog.length - 1].text += ' - failed';
+                });
+            });
+        });
+
+        // Then delete the site asset
+        chain.then(function () {
+            log('Deleting site asset...', 'run');
+            return apiDelete('/asset/' + siteId).then(function () {
+                deleteLog[deleteLog.length - 1].status = 'ok';
+                deleteLog[deleteLog.length - 1].text += ' - done';
+            });
+        }).then(function () {
+            deleteState = 'done';
+            render();
+        }).catch(function () {
+            deleteState = 'error';
+            deleteError = 'Deletion failed. Some entities may have been removed.';
+            render();
+        });
     }
 
     // ═══ TAB 3: ADD DEVICE ═════════════════════════════════════
@@ -874,9 +834,7 @@ self.onInit = function () {
             addDeviceStatus = 'done';
             addDeviceForm = { name: '', profileId: '', profileName: '', token: generateToken() };
             // Refresh devices list
-            return fetchDevices().then(function () {
-                return pollAllDevices().then(function () { return fetchTodayEnergy(); });
-            });
+            return fetchDevices();
         })
         .then(function () {
             render();
@@ -926,7 +884,7 @@ self.onInit = function () {
             });
         });
 
-        // Device card clicks
+        // Device row clicks
         container.querySelectorAll('[data-action="open-device"]').forEach(function (card) {
             card.addEventListener('click', function () {
                 var devId = card.getAttribute('data-device-id');
@@ -984,6 +942,26 @@ self.onInit = function () {
                     isEditing = true;
                     render();
                 }
+            });
+        });
+
+        // Delete site actions
+        container.querySelectorAll('[data-action="delete-site"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                startDeleteSite();
+            });
+        });
+
+        container.querySelectorAll('[data-action="confirm-delete-site"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                executeDeleteSite();
+            });
+        });
+
+        container.querySelectorAll('[data-action="cancel-delete-site"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                deleteState = 'idle';
+                render();
             });
         });
 
@@ -1185,15 +1163,11 @@ self.onInit = function () {
         fetchDeviceProfiles()
     ]).then(function (results) {
         siteEntity = results[0];
-        // Parse attributes
         siteAttrs = {};
         if (results[1] && Array.isArray(results[1])) {
             results[1].forEach(function (a) { siteAttrs[a.key] = a.value; });
         }
-        return pollAllDevices().then(function () { return fetchTodayEnergy(); });
-    }).then(function () {
         render();
-        startPolling();
     }).catch(function (err) {
         console.error('[SM] Init error:', err);
         showError('Failed to load site data. Check console for details.');
@@ -1207,10 +1181,6 @@ self.onDataUpdated = function () {};
 self.onResize = function () {};
 
 self.onDestroy = function () {
-    if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-    }
     if (_addrDebounceTimer) {
         clearTimeout(_addrDebounceTimer);
         _addrDebounceTimer = null;

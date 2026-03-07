@@ -46,6 +46,12 @@ self.onInit = function () {
     var addUserSaving = false;
     var deleteUserId = null;
 
+    // Delete Customer state
+    var deleteCustomerState = 'idle';
+    var deleteCounts = {};
+    var deleteLog = [];
+    var deleteError = '';
+
     // Add Site tab
     var addSiteForm = {
         estate: '', estateNew: '',
@@ -255,9 +261,17 @@ self.onInit = function () {
         html += '<div style="display:flex;align-items:center;justify-content:space-between">';
         html += '<h2 class="cm-card-title">Customer Details</h2>';
         if (!isEditing) {
+            html += '<div style="display:flex;gap:8px">';
             html += '<button class="cm-btn cm-btn-outline cm-btn-sm" data-action="edit-details">Edit</button>';
+            html += '<button class="cm-btn cm-btn-danger cm-btn-sm" data-action="delete-customer">Delete</button>';
+            html += '</div>';
         }
         html += '</div>';
+
+        // Delete customer dialog overlay
+        if (deleteCustomerState !== 'idle') {
+            html += renderDeleteCustomerDialog();
+        }
 
         if (isEditing) {
             html += '<div class="cm-form-row">';
@@ -777,6 +791,18 @@ self.onInit = function () {
             activeTab = 'hierarchy';
             hierarchyLoaded = false;
             loadHierarchy();
+        } else if (action === 'delete-customer') {
+            startDeleteCustomer();
+        } else if (action === 'confirm-delete-customer') {
+            executeDeleteCustomer();
+        } else if (action === 'cancel-delete-customer') {
+            deleteCustomerState = 'idle';
+            deleteCounts = {};
+            deleteLog = [];
+            deleteError = '';
+            render();
+        } else if (action === 'delete-customer-home') {
+            openState('default', {});
         }
     }
 
@@ -787,6 +813,8 @@ self.onInit = function () {
         if (field === 'estate') {
             // Update regions for selected estate
             updateRegionsForEstate();
+            render();
+        } else if (field === 'region') {
             render();
         } else if (field === 'address') {
             addressSelected = null;
@@ -807,6 +835,189 @@ self.onInit = function () {
                 addSiteForm.currency = info.symbol;
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DELETE CUSTOMER (CASCADE)
+    // ═══════════════════════════════════════════════════════════
+
+    function renderDeleteCustomerDialog() {
+        var html = '<div class="cm-dialog-overlay">';
+        html += '<div class="cm-dialog" style="max-width:500px">';
+
+        if (deleteCustomerState === 'counting') {
+            html += '<h3 class="cm-dialog-title">Scanning Customer Data...</h3>';
+            html += '<div class="cm-progress-bar"><div class="cm-progress-fill" style="width:50%"></div></div>';
+            html += '<p class="cm-dialog-message">Counting devices, assets, and users...</p>';
+        } else if (deleteCustomerState === 'confirm') {
+            var name = customerEntity ? customerEntity.title : 'this customer';
+            html += '<h3 class="cm-dialog-title">Delete ' + esc(name) + '?</h3>';
+            html += '<p class="cm-dialog-message">This will permanently delete the following:</p>';
+            html += '<div style="margin-bottom:16px;font-size:14px;line-height:1.8">';
+            if (deleteCounts.devices > 0) html += '<div><strong>' + deleteCounts.devices + '</strong> device' + (deleteCounts.devices !== 1 ? 's' : '') + '</div>';
+            if (deleteCounts.sites > 0) html += '<div><strong>' + deleteCounts.sites + '</strong> site' + (deleteCounts.sites !== 1 ? 's' : '') + '</div>';
+            if (deleteCounts.regions > 0) html += '<div><strong>' + deleteCounts.regions + '</strong> region' + (deleteCounts.regions !== 1 ? 's' : '') + '</div>';
+            if (deleteCounts.estates > 0) html += '<div><strong>' + deleteCounts.estates + '</strong> estate' + (deleteCounts.estates !== 1 ? 's' : '') + '</div>';
+            if (deleteCounts.users > 0) html += '<div><strong>' + deleteCounts.users + '</strong> user' + (deleteCounts.users !== 1 ? 's' : '') + '</div>';
+            if (deleteCounts.devices === 0 && deleteCounts.sites === 0 && deleteCounts.regions === 0 && deleteCounts.estates === 0 && deleteCounts.users === 0) {
+                html += '<div>No child entities found.</div>';
+            }
+            html += '</div>';
+            html += '<p class="cm-dialog-message" style="color:#ef4444;font-weight:600">This action cannot be undone.</p>';
+            html += '<div class="cm-dialog-actions">';
+            html += '<button class="cm-btn cm-btn-secondary" data-action="cancel-delete-customer">Cancel</button>';
+            html += '<button class="cm-btn cm-btn-danger" data-action="confirm-delete-customer">Delete Everything</button>';
+            html += '</div>';
+        } else if (deleteCustomerState === 'deleting') {
+            html += '<h3 class="cm-dialog-title">Deleting...</h3>';
+            html += '<div class="cm-progress-bar"><div class="cm-progress-fill" style="width:' +
+                    (deleteLog.length > 0 ? Math.min(95, (deleteLog.length / Math.max(1, deleteCounts.devices + deleteCounts.sites + deleteCounts.regions + deleteCounts.estates + deleteCounts.users + 1)) * 100) : 5) +
+                    '%"></div></div>';
+            html += '<div style="max-height:200px;overflow-y:auto;margin-top:12px">';
+            deleteLog.forEach(function (entry) {
+                html += '<div class="cm-log-entry ' + (entry.status || '') + '">' + esc(entry.text) + '</div>';
+            });
+            html += '</div>';
+        } else if (deleteCustomerState === 'done') {
+            html += '<h3 class="cm-dialog-title">Customer Deleted</h3>';
+            html += '<div class="cm-progress-bar"><div class="cm-progress-fill done" style="width:100%"></div></div>';
+            html += '<p class="cm-dialog-message">All entities have been removed.</p>';
+            html += '<div style="max-height:150px;overflow-y:auto;margin-bottom:16px">';
+            deleteLog.forEach(function (entry) {
+                html += '<div class="cm-log-entry ' + (entry.status || '') + '">' + esc(entry.text) + '</div>';
+            });
+            html += '</div>';
+            html += '<div class="cm-dialog-actions">';
+            html += '<button class="cm-btn cm-btn-primary" data-action="delete-customer-home">Go Home</button>';
+            html += '</div>';
+        } else if (deleteCustomerState === 'error') {
+            html += '<h3 class="cm-dialog-title">Delete Failed</h3>';
+            html += '<div class="cm-progress-bar"><div class="cm-progress-fill error" style="width:100%"></div></div>';
+            html += '<p class="cm-dialog-message" style="color:#ef4444">' + esc(deleteError) + '</p>';
+            html += '<div style="max-height:150px;overflow-y:auto;margin-bottom:16px">';
+            deleteLog.forEach(function (entry) {
+                html += '<div class="cm-log-entry ' + (entry.status || '') + '">' + esc(entry.text) + '</div>';
+            });
+            html += '</div>';
+            html += '<div class="cm-dialog-actions">';
+            html += '<button class="cm-btn cm-btn-secondary" data-action="cancel-delete-customer">Close</button>';
+            html += '</div>';
+        }
+
+        html += '</div></div>';
+        return html;
+    }
+
+    function startDeleteCustomer() {
+        deleteCustomerState = 'counting';
+        deleteCounts = { devices: 0, estates: 0, regions: 0, sites: 0, users: 0, _devices: [], _assets: [], _users: [] };
+        deleteLog = [];
+        deleteError = '';
+        render();
+
+        Promise.all([
+            apiGet('/customer/' + customerId + '/devices?pageSize=1000&page=0'),
+            apiGet('/customer/' + customerId + '/assets?pageSize=1000&page=0'),
+            apiGet('/customer/' + customerId + '/users?pageSize=100&page=0')
+        ]).then(function (results) {
+            var devData = results[0] && results[0].data ? results[0].data : [];
+            var assetData = results[1] && results[1].data ? results[1].data : [];
+            var userData = results[2] && results[2].data ? results[2].data : [];
+
+            deleteCounts.devices = devData.length;
+            deleteCounts._devices = devData.map(function (d) { return d.id.id; });
+
+            deleteCounts.estates = 0;
+            deleteCounts.regions = 0;
+            deleteCounts.sites = 0;
+            deleteCounts._assets = [];
+            assetData.forEach(function (a) {
+                var t = (a.type || '').toLowerCase();
+                if (t === 'estate') deleteCounts.estates++;
+                else if (t === 'region') deleteCounts.regions++;
+                else if (t === 'site') deleteCounts.sites++;
+                deleteCounts._assets.push({ id: a.id.id, type: t });
+            });
+
+            deleteCounts.users = userData.length;
+            deleteCounts._users = userData.map(function (u) { return u.id.id; });
+
+            deleteCustomerState = 'confirm';
+            render();
+        }).catch(function (err) {
+            deleteCustomerState = 'error';
+            deleteError = 'Failed to count customer entities.';
+            render();
+        });
+    }
+
+    function executeDeleteCustomer() {
+        deleteCustomerState = 'deleting';
+        deleteLog = [];
+        render();
+
+        function log(text, status) {
+            deleteLog.push({ text: text, status: status || 'run' });
+            render();
+        }
+
+        function deleteSequential(items, labelFn, pathFn) {
+            var chain = Promise.resolve();
+            items.forEach(function (item) {
+                chain = chain.then(function () {
+                    log(labelFn(item), 'run');
+                    return apiDelete(pathFn(item)).then(function () {
+                        deleteLog[deleteLog.length - 1].status = 'ok';
+                        deleteLog[deleteLog.length - 1].text += ' - done';
+                    }).catch(function (err) {
+                        deleteLog[deleteLog.length - 1].status = 'fail';
+                        deleteLog[deleteLog.length - 1].text += ' - failed';
+                    });
+                });
+            });
+            return chain;
+        }
+
+        // 1. Delete devices
+        deleteSequential(
+            deleteCounts._devices,
+            function (id) { return 'Deleting device ' + id.substring(0, 8) + '...'; },
+            function (id) { return '/device/' + id; }
+        )
+        // 2. Delete assets in child-first order: sites, regions, estates
+        .then(function () {
+            var sites = deleteCounts._assets.filter(function (a) { return a.type === 'site'; });
+            return deleteSequential(sites, function (a) { return 'Deleting site ' + a.id.substring(0, 8) + '...'; }, function (a) { return '/asset/' + a.id; });
+        })
+        .then(function () {
+            var regions = deleteCounts._assets.filter(function (a) { return a.type === 'region'; });
+            return deleteSequential(regions, function (a) { return 'Deleting region ' + a.id.substring(0, 8) + '...'; }, function (a) { return '/asset/' + a.id; });
+        })
+        .then(function () {
+            var estates = deleteCounts._assets.filter(function (a) { return a.type === 'estate'; });
+            return deleteSequential(estates, function (a) { return 'Deleting estate ' + a.id.substring(0, 8) + '...'; }, function (a) { return '/asset/' + a.id; });
+        })
+        // 3. Delete users
+        .then(function () {
+            return deleteSequential(deleteCounts._users, function (id) { return 'Deleting user ' + id.substring(0, 8) + '...'; }, function (id) { return '/user/' + id; });
+        })
+        // 4. Delete customer
+        .then(function () {
+            log('Deleting customer...', 'run');
+            return apiDelete('/customer/' + customerId).then(function () {
+                deleteLog[deleteLog.length - 1].status = 'ok';
+                deleteLog[deleteLog.length - 1].text += ' - done';
+            });
+        })
+        .then(function () {
+            deleteCustomerState = 'done';
+            render();
+        })
+        .catch(function (err) {
+            deleteCustomerState = 'error';
+            deleteError = 'Deletion failed. Some entities may have been removed.';
+            render();
+        });
     }
 
     // ═══════════════════════════════════════════════════════════

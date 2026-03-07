@@ -350,184 +350,6 @@
     background: #ffffff;
 }
 
-/* ── Telemetry: Status Row ──────────────────────────────────── */
-
-.dm-status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.dm-last-seen {
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-/* ── Telemetry: Dim Bar ─────────────────────────────────────── */
-
-.dm-dim-section {
-    margin-bottom: 12px;
-}
-
-.dm-dim-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-
-.dm-dim-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.dm-dim-bar-track {
-    flex: 1;
-    height: 8px;
-    background: #f1f5f9;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.dm-dim-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: #cbd5e1;
-    transition: width 0.4s ease;
-}
-
-.dm-dim-bar-fill.dm-dim-on { background: #f59e0b; }
-
-.dm-dim-value {
-    font-size: 14px;
-    font-weight: 700;
-    color: #94a3b8;
-    min-width: 40px;
-    text-align: right;
-}
-
-.dm-dim-on-text { color: #f59e0b; }
-
-/* ── Telemetry: Inline Row ──────────────────────────────────── */
-
-.dm-inline-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 0;
-}
-
-.dm-inline-label {
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: 500;
-}
-
-.dm-inline-value {
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.dm-val-green { color: #059669; }
-.dm-val-muted { color: #94a3b8; }
-
-/* ── Telemetry: Grid ────────────────────────────────────────── */
-
-.dm-telemetry-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.dm-telem-cell {
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 12px 14px;
-}
-
-.dm-telem-label {
-    font-size: 11px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 4px;
-}
-
-.dm-telem-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: #0f172a;
-    letter-spacing: -0.3px;
-}
-
-.dm-telem-unit {
-    font-size: 12px;
-    font-weight: 500;
-    color: #94a3b8;
-    margin-left: 2px;
-}
-
-/* ── Fault List ─────────────────────────────────────────────── */
-
-.dm-fault-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.dm-fault-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    transition: background 0.15s;
-}
-
-.dm-fault-active {
-    background: #fef2f2;
-    color: #dc2626;
-    font-weight: 600;
-}
-
-.dm-fault-inactive {
-    color: #64748b;
-}
-
-.dm-fault-inactive:hover {
-    background: #f8fafc;
-}
-
-.dm-fault-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.dm-fault-dot-red {
-    background: #f87171;
-    box-shadow: 0 0 4px rgba(248, 113, 113, 0.4);
-}
-
-.dm-fault-dot-green {
-    background: #34d399;
-}
-
-.dm-fault-dot-amber {
-    background: #fbbf24;
-    box-shadow: 0 0 4px rgba(251, 191, 36, 0.4);
-}
-
-.dm-fault-name {
-    flex: 1;
-}
-
 /* ── Token Display ──────────────────────────────────────────── */
 
 .dm-token-display {
@@ -592,7 +414,7 @@
     gap: 8px;
 }
 
-/* ── Confirm Overlay (unused but available) ─────────────────── */
+/* ── Confirm Overlay ────────────────────────────────────────── */
 
 .dm-confirm-overlay {
     position: fixed;
@@ -623,10 +445,6 @@
 @media (max-width: 640px) {
     .dm-root {
         padding: 16px;
-    }
-
-    .dm-telemetry-grid {
-        grid-template-columns: 1fr;
     }
 
     .dm-header-row {

@@ -3,21 +3,13 @@
 // ═══════════════════════════════════════════════════════════════
 // DEVICE state widget. Shows:
 //   Tab 1: Details — device metadata, profile, parent site
-//   Tab 2: Telemetry — live dim/power/energy/faults
-//   Tab 3: Credentials — access token, copy, regenerate
+//   Tab 2: Credentials — access token, copy, regenerate
 //
 // Receives device ID from dashboard state params.
-// Polls telemetry every 15s.
 // ═══════════════════════════════════════════════════════════════
-
-var pollTimer = null;
 
 self.onInit = function () {
     'use strict';
-
-    var POLL_INTERVAL = 15000;
-    var FRESHNESS_ONLINE = 600000;   // 10 min
-    var FRESHNESS_STALE  = 3600000;  // 60 min
 
     var $root = self.ctx.$container[0];
     var container = $root.querySelector('.dm-root');
@@ -34,10 +26,6 @@ self.onInit = function () {
     var deviceProfile = null;
     var deviceCredentials = null;
     var parentSite = null;
-    var telemetry = {};
-    var lastActivity = 0;
-    var connectionStatus = 'offline';
-    var faultCount = 0;
     var activeTab = 'details';
     var isEditing = false;
     var isSaving = false;
@@ -45,35 +33,9 @@ self.onInit = function () {
     var isRegenerating = false;
     var copySuccess = false;
     var copyTimer = null;
-
-    // ── Telemetry Keys ──────────────────────────────────────────
-
-    var TELEMETRY_KEYS = [
-        'dim_value', 'power_watts', 'energy_wh', 'co2_grams',
-        'status_light_src_on', 'status_driver_ok', 'status_ready',
-        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
-        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
-        'fault_light_src_failure', 'fault_light_src_short_circuit',
-        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
-        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
-        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
-        'status_control_gear_failure', 'status_lamp_failure',
-        'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
-    ].join(',');
-
-    var FAULT_KEYS = [
-        'fault_overall_failure', 'fault_under_voltage', 'fault_over_voltage',
-        'fault_power_limit', 'fault_thermal_derating', 'fault_thermal_shutdown',
-        'fault_light_src_failure', 'fault_light_src_short_circuit',
-        'fault_light_src_thermal_derate', 'fault_light_src_thermal_shutdn',
-        'fault_input_power', 'fault_current_limited', 'fault_driver_failure',
-        'fault_external', 'fault_d4i_power_exceeded', 'fault_overcurrent',
-        'status_control_gear_failure', 'status_lamp_failure'
-    ];
-
-    var WARNING_KEYS = [
-        'status_limit_error', 'status_reset_state', 'status_missing_short_addr'
-    ];
+    var deviceLastActivity = 0;
+    var deviceOnline = false;
+    var deleteState = 'idle';
 
     // ── Resolve Device ID ───────────────────────────────────────
 
@@ -122,17 +84,23 @@ self.onInit = function () {
         });
     }
 
+    function apiDelete(path) {
+        var obs = http.delete('/api' + path);
+        if (obs && typeof obs.toPromise === 'function') {
+            return obs.toPromise();
+        }
+        return new Promise(function (resolve, reject) {
+            obs.subscribe(
+                function (data) { resolve(data); },
+                function (err) { reject(err); }
+            );
+        });
+    }
+
     function esc(text) {
         if (!text) return '';
         return text.replace(/&/g, '&amp;').replace(/</g, '&lt;')
                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    // ── Fault Check ─────────────────────────────────────────────
-
-    function isFault(val) {
-        if (val === undefined || val === null) return false;
-        return val === 'true' || val === true || val === '1' || val === 1;
     }
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -154,18 +122,6 @@ self.onInit = function () {
         var hours = Math.floor(minutes / 60);
         if (hours < 24) return hours + 'h ago';
         return Math.floor(hours / 24) + 'd ago';
-    }
-
-    function fmtNumber(val, decimals) {
-        if (val === undefined || val === null || val === '') return '-';
-        var n = parseFloat(val);
-        if (isNaN(n)) return '-';
-        return n.toFixed(decimals !== undefined ? decimals : 1);
-    }
-
-    function faultLabel(key) {
-        return key.replace(/^fault_|^status_/g, '').replace(/_/g, ' ')
-                   .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
     }
 
     // ── Navigation ──────────────────────────────────────────────
@@ -194,56 +150,6 @@ self.onInit = function () {
             }).catch(function () { parentSite = null; });
     }
 
-    // ── Telemetry Polling ───────────────────────────────────────
-
-    function pollTelemetry() {
-        return apiGet('/plugins/telemetry/DEVICE/' + deviceId +
-            '/values/timeseries?keys=' + TELEMETRY_KEYS)
-            .then(function (data) {
-                var now = Date.now();
-                Object.keys(data).forEach(function (key) {
-                    if (data[key] && data[key].length > 0) {
-                        telemetry[key] = data[key][0].value;
-                        var t = parseInt(data[key][0].ts);
-                        if (t > lastActivity) lastActivity = t;
-                    }
-                });
-                var age = now - lastActivity;
-                if (age < FRESHNESS_ONLINE) connectionStatus = 'online';
-                else if (age < FRESHNESS_STALE) connectionStatus = 'stale';
-                else connectionStatus = 'offline';
-
-                faultCount = 0;
-                FAULT_KEYS.forEach(function (fk) {
-                    if (isFault(telemetry[fk])) faultCount++;
-                });
-            }).catch(function () {});
-    }
-
-    function fetchTodayEnergy() {
-        var startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        var startTs = startOfDay.getTime();
-        var endTs = Date.now();
-        return apiGet('/plugins/telemetry/DEVICE/' + deviceId +
-            '/values/timeseries?keys=energy_wh&startTs=' + startTs +
-            '&endTs=' + endTs + '&agg=SUM&interval=' + (endTs - startTs))
-            .then(function (data) {
-                telemetry.energy_today_wh = (data.energy_wh && data.energy_wh.length > 0)
-                    ? parseFloat(data.energy_wh[0].value) || 0 : 0;
-            }).catch(function () { telemetry.energy_today_wh = 0; });
-    }
-
-    function startPolling() {
-        pollTimer = setInterval(function () {
-            pollTelemetry().then(function () {
-                return fetchTodayEnergy();
-            }).then(function () {
-                if (activeTab === 'telemetry') render();
-            });
-        }, POLL_INTERVAL);
-    }
-
     // ── Render: Header ──────────────────────────────────────────
 
     function renderHeader() {
@@ -269,14 +175,9 @@ self.onInit = function () {
     }
 
     function renderStatusBadge() {
-        var cls = 'dm-status-' + connectionStatus;
-        var dotCls = 'dm-dot-' + connectionStatus;
-        var label = connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1);
-        if (faultCount > 0 && connectionStatus === 'online') {
-            cls = 'dm-status-fault';
-            dotCls = 'dm-dot-fault';
-            label = faultCount + ' Fault' + (faultCount > 1 ? 's' : '');
-        }
+        var cls = deviceOnline ? 'dm-status-online' : 'dm-status-offline';
+        var dotCls = deviceOnline ? 'dm-dot-online' : 'dm-dot-offline';
+        var label = deviceOnline ? 'Online' : 'Offline';
         return '<span class="dm-status-badge ' + cls + '">' +
                '<span class="dm-dot ' + dotCls + '"></span>' + label + '</span>';
     }
@@ -286,7 +187,6 @@ self.onInit = function () {
     function renderTabs() {
         var tabs = [
             { id: 'details', label: 'Details' },
-            { id: 'telemetry', label: 'Telemetry' },
             { id: 'credentials', label: 'Credentials' }
         ];
         var html = '<div class="dm-tabs">';
@@ -311,6 +211,7 @@ self.onInit = function () {
                     '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>' +
                     '<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
                     ' Edit</button>';
+            html += '<button class="dm-btn dm-btn-danger" data-action="delete-device">Delete</button>';
         } else {
             html += '<button class="dm-btn dm-btn-secondary" data-action="cancel-edit">Cancel</button>';
             html += '<button class="dm-btn dm-btn-primary" data-action="save"' +
@@ -318,6 +219,11 @@ self.onInit = function () {
                     (isSaving ? 'Saving...' : 'Save') + '</button>';
         }
         html += '</div>';
+
+        // Delete dialog
+        if (deleteState !== 'idle') {
+            html += renderDeleteDeviceDialog();
+        }
 
         // Device info card
         html += '<div class="dm-card">';
@@ -365,28 +271,10 @@ self.onInit = function () {
             }));
         }
 
-        html += '</div>'; // .dm-card
-
-        // Quick telemetry summary
-        html += '<div class="dm-card">';
-        html += '<div class="dm-card-title">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                '<polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>' +
-                ' Quick Status</div>';
-
-        var dimVal = telemetry.dim_value !== undefined ? fmtNumber(telemetry.dim_value, 0) : '-';
-        var lampOn = isFault(telemetry.status_light_src_on) ? 'ON' : 'OFF';
-        var driverOk = isFault(telemetry.status_driver_ok) ? 'OK' : 'N/A';
-        var power = telemetry.power_watts !== undefined ? fmtNumber(telemetry.power_watts, 1) + ' W' : '-';
-        var lastSeen = lastActivity > 0 ? timeSince(lastActivity) : 'Never';
-
-        html += renderMetaRow('Connection', connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1));
-        html += renderMetaRow('Dim Level', dimVal + '%');
-        html += renderMetaRow('Lamp', lampOn);
-        html += renderMetaRow('Driver', driverOk);
-        html += renderMetaRow('Power', power);
-        html += renderMetaRow('Active Faults', faultCount > 0 ?
-                '<span class="dm-fault-count">' + faultCount + '</span>' : '0');
+        // Status
+        var statusLabel = deviceOnline ? 'Online' : 'Offline';
+        var lastSeen = deviceLastActivity > 0 ? timeSince(deviceLastActivity) : 'Never';
+        html += renderMetaRow('Status', statusLabel);
         html += renderMetaRow('Last Seen', lastSeen);
 
         html += '</div>'; // .dm-card
@@ -410,116 +298,27 @@ self.onInit = function () {
                '</div></div>';
     }
 
-    // ── Render: Telemetry Tab ───────────────────────────────────
+    // ── Render: Delete Device Dialog ────────────────────────────
 
-    function renderTelemetryTab() {
-        var html = '<div class="dm-tab-content">';
+    function renderDeleteDeviceDialog() {
+        var html = '<div class="dm-confirm-overlay">';
+        html += '<div class="dm-confirm-panel">';
 
-        // Status Card
-        html += '<div class="dm-card">';
-        html += '<div class="dm-card-title">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                '<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>' +
-                ' Status</div>';
-        html += '<div class="dm-status-row">';
-        html += renderStatusBadge();
-        html += '<span class="dm-last-seen">Last seen: ' +
-                (lastActivity > 0 ? timeSince(lastActivity) : 'Never') + '</span>';
-        html += '</div>';
+        if (deleteState === 'confirm') {
+            var name = deviceEntity ? deviceEntity.name : 'this device';
+            html += '<h3 style="font-size:18px;font-weight:700;margin:0 0 12px 0">Delete ' + esc(name) + '?</h3>';
+            html += '<p style="color:#64748b;font-size:14px;margin:0 0 20px 0;line-height:1.5">This will permanently delete this device and its data. This cannot be undone.</p>';
+            html += '<div style="display:flex;justify-content:flex-end;gap:8px">';
+            html += '<button class="dm-btn dm-btn-secondary" data-action="cancel-delete-device">Cancel</button>';
+            html += '<button class="dm-btn dm-btn-danger" data-action="confirm-delete-device">Delete</button>';
+            html += '</div>';
+        } else if (deleteState === 'deleting') {
+            html += '<h3 style="font-size:18px;font-weight:700;margin:0 0 12px 0">Deleting...</h3>';
+            html += '<p style="color:#64748b;font-size:14px">Please wait...</p>';
+        }
 
-        // Dim level bar
-        var dimRaw = telemetry.dim_value !== undefined ? parseFloat(telemetry.dim_value) : 0;
-        var dimPct = isNaN(dimRaw) ? 0 : Math.max(0, Math.min(100, dimRaw));
-        var dimOn = isFault(telemetry.status_light_src_on);
-        html += '<div class="dm-dim-section">';
-        html += '<div class="dm-dim-label">Dim Level</div>';
-        html += '<div class="dm-dim-bar-wrap">';
-        html += '<div class="dm-dim-bar-track"><div class="dm-dim-bar-fill' +
-                (dimOn ? ' dm-dim-on' : '') + '" style="width:' + dimPct + '%"></div></div>';
-        html += '<span class="dm-dim-value' + (dimOn ? ' dm-dim-on-text' : '') + '">' +
-                fmtNumber(dimRaw, 0) + '%</span>';
         html += '</div></div>';
-
-        // Lamp status
-        html += '<div class="dm-inline-row">';
-        html += '<span class="dm-inline-label">Lamp:</span>';
-        html += '<span class="dm-inline-value' + (dimOn ? ' dm-val-green' : ' dm-val-muted') + '">' +
-                (dimOn ? 'ON' : 'OFF') + '</span>';
-        html += '<span class="dm-inline-label" style="margin-left:16px">Driver:</span>';
-        html += '<span class="dm-inline-value' +
-                (isFault(telemetry.status_driver_ok) ? ' dm-val-green' : ' dm-val-muted') + '">' +
-                (isFault(telemetry.status_driver_ok) ? 'OK' : 'N/A') + '</span>';
-        html += '</div>';
-        html += '</div>'; // .dm-card
-
-        // Power & Energy Card
-        html += '<div class="dm-card">';
-        html += '<div class="dm-card-title">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                '<polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>' +
-                ' Power & Energy</div>';
-        html += '<div class="dm-telemetry-grid">';
-
-        var powerW = telemetry.power_watts !== undefined ? fmtNumber(telemetry.power_watts, 1) : '-';
-        var energyWh = telemetry.energy_wh !== undefined ? fmtNumber(parseFloat(telemetry.energy_wh) / 1000, 2) : '-';
-        var todayWh = telemetry.energy_today_wh !== undefined ? fmtNumber(telemetry.energy_today_wh / 1000, 2) : '-';
-        var co2 = telemetry.co2_grams !== undefined ? fmtNumber(parseFloat(telemetry.co2_grams) / 1000, 2) : '-';
-
-        html += renderTelemetryCell('Power', powerW, 'W');
-        html += renderTelemetryCell('Total Energy', energyWh, 'kWh');
-        html += renderTelemetryCell('Today Energy', todayWh, 'kWh');
-        html += renderTelemetryCell('CO2 Saved', co2, 'kg');
-
-        html += '</div></div>'; // .dm-telemetry-grid, .dm-card
-
-        // Faults Card
-        html += '<div class="dm-card">';
-        html += '<div class="dm-card-title">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>' +
-                '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-                ' Faults (' + faultCount + ')</div>';
-        html += '<div class="dm-fault-list">';
-
-        FAULT_KEYS.forEach(function (key) {
-            var active = isFault(telemetry[key]);
-            html += '<div class="dm-fault-item' + (active ? ' dm-fault-active' : ' dm-fault-inactive') + '">';
-            html += '<span class="dm-fault-dot' + (active ? ' dm-fault-dot-red' : ' dm-fault-dot-green') + '"></span>';
-            html += '<span class="dm-fault-name">' + faultLabel(key) + '</span>';
-            html += '</div>';
-        });
-
-        html += '</div></div>'; // .dm-fault-list, .dm-card
-
-        // Warnings Card
-        html += '<div class="dm-card">';
-        html += '<div class="dm-card-title">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>' +
-                '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-                ' Warnings</div>';
-        html += '<div class="dm-fault-list">';
-
-        WARNING_KEYS.forEach(function (key) {
-            var active = isFault(telemetry[key]);
-            html += '<div class="dm-fault-item' + (active ? ' dm-fault-active' : ' dm-fault-inactive') + '">';
-            html += '<span class="dm-fault-dot' + (active ? ' dm-fault-dot-amber' : ' dm-fault-dot-green') + '"></span>';
-            html += '<span class="dm-fault-name">' + faultLabel(key) + '</span>';
-            html += '</div>';
-        });
-
-        html += '</div></div>'; // .dm-fault-list, .dm-card
-
-        html += '</div>'; // .dm-tab-content
         return html;
-    }
-
-    function renderTelemetryCell(label, value, unit) {
-        return '<div class="dm-telem-cell">' +
-               '<div class="dm-telem-label">' + label + '</div>' +
-               '<div class="dm-telem-value">' + value +
-               '<span class="dm-telem-unit">' + unit + '</span></div>' +
-               '</div>';
     }
 
     // ── Render: Credentials Tab ─────────────────────────────────
@@ -604,7 +403,6 @@ self.onInit = function () {
     function render() {
         var html = renderHeader() + renderTabs();
         if (activeTab === 'details') html += renderDetailsTab();
-        else if (activeTab === 'telemetry') html += renderTelemetryTab();
         else if (activeTab === 'credentials') html += renderCredentialsTab();
         container.innerHTML = html;
         bindEvents();
@@ -673,6 +471,32 @@ self.onInit = function () {
 
             case 'confirm-regen':
                 regenerateToken();
+                break;
+
+            case 'delete-device':
+                deleteState = 'confirm';
+                render();
+                break;
+
+            case 'cancel-delete-device':
+                deleteState = 'idle';
+                render();
+                break;
+
+            case 'confirm-delete-device':
+                deleteState = 'deleting';
+                render();
+                apiDelete('/device/' + deviceId).then(function () {
+                    try {
+                        self.ctx.stateController.resetState();
+                    } catch (e) {
+                        console.error('[DM] Navigate failed:', e);
+                    }
+                }).catch(function (err) {
+                    console.error('[DM] Delete failed:', err);
+                    deleteState = 'idle';
+                    render();
+                });
                 break;
         }
     }
@@ -780,12 +604,15 @@ self.onInit = function () {
     Promise.all([
         apiGet('/device/' + deviceId),
         apiGet('/device/' + deviceId + '/credentials'),
-        pollTelemetry(),
-        fetchTodayEnergy(),
         fetchParentSite()
     ]).then(function (results) {
         deviceEntity = results[0];
         deviceCredentials = results[1];
+        // Extract lastActivity from additionalInfo
+        if (deviceEntity && deviceEntity.additionalInfo && deviceEntity.additionalInfo.lastActivityTime) {
+            deviceLastActivity = deviceEntity.additionalInfo.lastActivityTime;
+        }
+        deviceOnline = deviceLastActivity > 0 && (Date.now() - deviceLastActivity) < 600000;
         if (deviceEntity && deviceEntity.deviceProfileId) {
             return apiGet('/deviceProfile/' + deviceEntity.deviceProfileId.id).then(function (p) {
                 deviceProfile = p;
@@ -793,7 +620,6 @@ self.onInit = function () {
         }
     }).then(function () {
         render();
-        startPolling();
     }).catch(function (err) {
         console.error('[DM] Init failed:', err);
         container.innerHTML = '<div class="dm-error">' +
@@ -804,6 +630,4 @@ self.onInit = function () {
 
 self.onDataUpdated = function () {};
 self.onResize = function () {};
-self.onDestroy = function () {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-};
+self.onDestroy = function () {};
