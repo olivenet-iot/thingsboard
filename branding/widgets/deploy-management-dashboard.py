@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Deploy SignConnect Management Dashboard with 2 states (Phase A):
-  - default: management_nav_tree (5x24 left) + management_home (19x24 right)
+Deploy SignConnect Management Dashboard with 5 states (Phase A+B):
+  - default:    management_nav_tree (5x24) + management_home (19x24)
   - onboarding: onboarding_wizard (24x24 full width)
+  - customer:   management_nav_tree (5x24) + customer_manager (19x24)
+  - site:       management_nav_tree (5x24) + site_manager (19x24)
+  - device:     management_nav_tree (5x24) + device_manager (19x24)
 
 Creates or updates the dashboard. Idempotent.
 
@@ -30,6 +33,11 @@ WIDGET_BUNDLE_ID = '32a536f0-075c-11f1-9f20-c3880cf3b963'
 NAV_TREE_FQN = 'tenant.management_nav_tree'
 HOME_FQN = 'tenant.management_home'
 WIZARD_FQN = 'tenant.onboarding_wizard'
+CUSTOMER_MGR_FQN = 'tenant.customer_manager'
+SITE_MGR_FQN = 'tenant.site_manager'
+DEVICE_MGR_FQN = 'tenant.device_manager'
+
+ALL_FQNS = [NAV_TREE_FQN, HOME_FQN, WIZARD_FQN, CUSTOMER_MGR_FQN, SITE_MGR_FQN, DEVICE_MGR_FQN]
 
 # -- Helpers ----------------------------------------------------------------
 
@@ -82,7 +90,7 @@ def find_widget_types(token):
         pass
 
     # Fallback: use FQN list + direct lookups for any missing required FQNs
-    required = [NAV_TREE_FQN, HOME_FQN, WIZARD_FQN]
+    required = ALL_FQNS
     missing = [f for f in required if f not in types]
     if missing:
         try:
@@ -168,13 +176,52 @@ def build_widget_config(widget_uuid, widget_fqn, widget_types, col, row, size_x,
     return widget_config, layout_widget
 
 
-def build_dashboard(widget_types):
-    """Build complete dashboard JSON with 2 states."""
+NAV_TREE_SETTINGS = {
+    'brandName': 'SIGNCONNECT',
+    'showSearch': True,
+    'showStatusIndicators': True,
+    'showFooterSummary': True,
+    'onlineThresholdMinutes': 10,
+    'pollIntervalSeconds': 60
+}
 
-    # Generate unique widget UUIDs for each state
+GRID_SETTINGS = {
+    'backgroundColor': '#f0f0f0',
+    'columns': 24,
+    'margin': 0,
+    'outerMargin': False,
+    'backgroundSizeMode': '100%'
+}
+
+
+def build_state(all_widgets, widget_configs):
+    """Build a state dict and register widgets. widget_configs is a list of
+    (uuid, fqn, widget_types, col, row, sx, sy, title, settings) tuples."""
+    layout_widgets = {}
+    for cfg in widget_configs:
+        w_uuid, fqn, wt, col, row, sx, sy, title = cfg[:8]
+        settings = cfg[8] if len(cfg) > 8 else None
+        w_config, w_layout = build_widget_config(w_uuid, fqn, wt, col, row, sx, sy, title, settings)
+        if w_config:
+            all_widgets[w_uuid] = w_config
+            layout_widgets[w_uuid] = w_layout
+    return {'widgets': layout_widgets, 'gridSettings': GRID_SETTINGS}
+
+
+def build_dashboard(widget_types):
+    """Build complete dashboard JSON with 5 states."""
+
+    # Generate unique widget UUIDs — each widget instance gets its own UUID
+    # Nav-tree appears in 4 states: default, customer, site, device
     default_nav_uuid = new_uuid()
     default_home_uuid = new_uuid()
     onboarding_wizard_uuid = new_uuid()
+    customer_nav_uuid = new_uuid()
+    customer_mgr_uuid = new_uuid()
+    site_nav_uuid = new_uuid()
+    site_mgr_uuid = new_uuid()
+    device_nav_uuid = new_uuid()
+    device_mgr_uuid = new_uuid()
 
     # Entity alias (stateEntity — required for entity state controller)
     alias_id = new_uuid()
@@ -189,48 +236,36 @@ def build_dashboard(widget_types):
         }
     }
 
-    # Build widget configs for default state
-    nav_config, nav_layout = build_widget_config(
-        default_nav_uuid, NAV_TREE_FQN, widget_types,
-        col=0, row=0, size_x=5, size_y=24,
-        title='Management Nav Tree',
-        settings={
-            'brandName': 'SIGNCONNECT',
-            'showSearch': True,
-            'showStatusIndicators': True,
-            'showFooterSummary': True,
-            'onlineThresholdMinutes': 10,
-            'pollIntervalSeconds': 60
-        }
-    )
-
-    home_config, home_layout = build_widget_config(
-        default_home_uuid, HOME_FQN, widget_types,
-        col=5, row=0, size_x=19, size_y=24,
-        title='Management Home'
-    )
-
-    # Build widget config for onboarding state
-    wizard_config, wizard_layout = build_widget_config(
-        onboarding_wizard_uuid, WIZARD_FQN, widget_types,
-        col=0, row=0, size_x=24, size_y=24,
-        title='Onboarding Wizard'
-    )
-
-    # Collect all configs
     all_widgets = {}
-    default_layout_widgets = {}
-    onboarding_layout_widgets = {}
 
-    if nav_config:
-        all_widgets[default_nav_uuid] = nav_config
-        default_layout_widgets[default_nav_uuid] = nav_layout
-    if home_config:
-        all_widgets[default_home_uuid] = home_config
-        default_layout_widgets[default_home_uuid] = home_layout
-    if wizard_config:
-        all_widgets[onboarding_wizard_uuid] = wizard_config
-        onboarding_layout_widgets[onboarding_wizard_uuid] = wizard_layout
+    # -- default state: nav-tree (5x24) + home (19x24) --
+    default_main = build_state(all_widgets, [
+        (default_nav_uuid, NAV_TREE_FQN, widget_types, 0, 0, 5, 24, 'Management Nav Tree', NAV_TREE_SETTINGS),
+        (default_home_uuid, HOME_FQN, widget_types, 5, 0, 19, 24, 'Management Home'),
+    ])
+
+    # -- onboarding state: wizard (24x24 full width) --
+    onboarding_main = build_state(all_widgets, [
+        (onboarding_wizard_uuid, WIZARD_FQN, widget_types, 0, 0, 24, 24, 'Onboarding Wizard'),
+    ])
+
+    # -- customer state: nav-tree (5x24) + customer_manager (19x24) --
+    customer_main = build_state(all_widgets, [
+        (customer_nav_uuid, NAV_TREE_FQN, widget_types, 0, 0, 5, 24, 'Management Nav Tree', NAV_TREE_SETTINGS),
+        (customer_mgr_uuid, CUSTOMER_MGR_FQN, widget_types, 5, 0, 19, 24, 'Customer Manager'),
+    ])
+
+    # -- site state: nav-tree (5x24) + site_manager (19x24) --
+    site_main = build_state(all_widgets, [
+        (site_nav_uuid, NAV_TREE_FQN, widget_types, 0, 0, 5, 24, 'Management Nav Tree', NAV_TREE_SETTINGS),
+        (site_mgr_uuid, SITE_MGR_FQN, widget_types, 5, 0, 19, 24, 'Site Manager'),
+    ])
+
+    # -- device state: nav-tree (5x24) + device_manager (19x24) --
+    device_main = build_state(all_widgets, [
+        (device_nav_uuid, NAV_TREE_FQN, widget_types, 0, 0, 5, 24, 'Management Nav Tree', NAV_TREE_SETTINGS),
+        (device_mgr_uuid, DEVICE_MGR_FQN, widget_types, 5, 0, 19, 24, 'Device Manager'),
+    ])
 
     # Dashboard configuration
     dashboard_config = {
@@ -239,34 +274,27 @@ def build_dashboard(widget_types):
             'default': {
                 'name': 'Home',
                 'root': True,
-                'layouts': {
-                    'main': {
-                        'widgets': default_layout_widgets,
-                        'gridSettings': {
-                            'backgroundColor': '#f0f0f0',
-                            'columns': 24,
-                            'margin': 0,
-                            'outerMargin': False,
-                            'backgroundSizeMode': '100%'
-                        }
-                    }
-                }
+                'layouts': {'main': default_main}
             },
             'onboarding': {
                 'name': 'New Customer',
                 'root': False,
-                'layouts': {
-                    'main': {
-                        'widgets': onboarding_layout_widgets,
-                        'gridSettings': {
-                            'backgroundColor': '#f0f0f0',
-                            'columns': 24,
-                            'margin': 0,
-                            'outerMargin': False,
-                            'backgroundSizeMode': '100%'
-                        }
-                    }
-                }
+                'layouts': {'main': onboarding_main}
+            },
+            'customer': {
+                'name': 'Customer',
+                'root': False,
+                'layouts': {'main': customer_main}
+            },
+            'site': {
+                'name': 'Site',
+                'root': False,
+                'layouts': {'main': site_main}
+            },
+            'device': {
+                'name': 'Device',
+                'root': False,
+                'layouts': {'main': device_main}
             }
         },
         'entityAliases': entity_aliases,
@@ -307,7 +335,7 @@ def build_dashboard(widget_types):
 
 def deploy(force_create=False):
     print('=' * 60)
-    print(f'  SignConnect Management Dashboard — Phase A Deploy')
+    print(f'  SignConnect Management Dashboard — Phase A+B Deploy')
     print(f'  Target: {TB_URL}')
     print('=' * 60)
 
@@ -319,15 +347,15 @@ def deploy(force_create=False):
     widget_types = find_widget_types(token)
 
     found = []
-    for fqn in [NAV_TREE_FQN, HOME_FQN, WIZARD_FQN]:
+    for fqn in ALL_FQNS:
         if fqn in widget_types:
             found.append(fqn)
             print(f'    {fqn} -> {widget_types[fqn]["id"]}')
         else:
             print(f'    {fqn} -> NOT FOUND (deploy widget first!)')
 
-    if len(found) < 3:
-        missing = [f for f in [NAV_TREE_FQN, HOME_FQN, WIZARD_FQN] if f not in widget_types]
+    if len(found) < len(ALL_FQNS):
+        missing = [f for f in ALL_FQNS if f not in widget_types]
         print(f'\n  Missing widget types: {missing}')
         print('  Deploy them first:')
         for m in missing:
@@ -357,11 +385,15 @@ def deploy(force_create=False):
 
     dashboard_id = result.get('id', {}).get('id', 'unknown')
 
+    state_names = list(config['states'].keys())
+    widget_count = len(config['widgets'])
+
     print('=' * 60)
     print(f'  Dashboard deployed!')
     print(f'  ID: {dashboard_id}')
     print(f'  URL: {TB_URL}/dashboard/{dashboard_id}')
-    print(f'  States: default (nav-tree + home), onboarding (wizard)')
+    print(f'  States ({len(state_names)}): {", ".join(state_names)}')
+    print(f'  Widget instances: {widget_count}')
     print('=' * 60)
 
 
