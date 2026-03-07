@@ -1,0 +1,31 @@
+{
+    "schema": {
+        "type": "object",
+        "title": "Onboarding Wizard Settings",
+        "properties": {
+            "fleetDashboardId": {
+                "title": "Fleet Dashboard ID",
+                "type": "string",
+                "default": "",
+                "description": "UUID of the SignConnect Fleet dashboard to assign to new customers"
+            },
+            "standardDashboardId": {
+                "title": "Standard Dashboard ID",
+                "type": "string",
+                "default": "",
+                "description": "UUID of the SignConnect Standard (DALI2) dashboard"
+            },
+            "plusDashboardId": {
+                "title": "Plus Dashboard ID",
+                "type": "string",
+                "default": "",
+                "description": "UUID of the SignConnect Plus (D4i) dashboard"
+            }
+        }
+    },
+    "form": [
+        "fleetDashboardId",
+        "standardDashboardId",
+        "plusDashboardId"
+    ]
+}

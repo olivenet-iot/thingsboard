@@ -1,0 +1,878 @@
+/* =====================================================================
+   SignConnect — Onboarding Wizard Widget (template.css)
+   Design system: amber accent (#f59e0b), slate tones, white cards
+   ===================================================================== */
+
+/* -- Root / Reset -------------------------------------------------------- */
+
+.ow-root {
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    color: #1e293b;
+    padding: 16px 24px;
+    height: 100%;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-y: auto;
+    overflow-anchor: none;
+    background: #f8fafc;
+}
+
+.ow-root *, .ow-root *::before, .ow-root *::after {
+    box-sizing: border-box;
+}
+
+/* -- Loading / Spinner --------------------------------------------------- */
+
+.ow-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 12px;
+}
+
+.ow-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f1f5f9;
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: ow-spin 0.7s linear infinite;
+}
+
+@keyframes ow-spin {
+    to { transform: rotate(360deg); }
+}
+
+.ow-loading-text {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* -- Header -------------------------------------------------------------- */
+
+.ow-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.ow-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+
+.ow-header p {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* -- Step Indicator (horizontal numbered circles) ------------------------ */
+
+.ow-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    max-width: 720px;
+    padding: 0 16px;
+}
+
+.ow-step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+    white-space: nowrap;
+}
+
+.ow-step-item.ow-step-clickable {
+    cursor: pointer;
+}
+
+.ow-step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.ow-step-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    transition: color 0.2s;
+}
+
+/* Pending step */
+.ow-step-pending .ow-step-circle {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border: 2px solid #e2e8f0;
+}
+
+/* Active step */
+.ow-step-active .ow-step-circle {
+    background: #f59e0b;
+    color: #fff;
+    border: 2px solid #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.ow-step-active .ow-step-label {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+/* Done step */
+.ow-step-done .ow-step-circle {
+    background: #16a34a;
+    color: #fff;
+    border: 2px solid #16a34a;
+}
+
+.ow-step-done .ow-step-label {
+    color: #16a34a;
+}
+
+/* Connector line */
+.ow-step-line {
+    flex: 1;
+    height: 2px;
+    background: #e2e8f0;
+    margin: 0 8px;
+    min-width: 24px;
+    transition: background 0.2s;
+}
+
+.ow-step-line.ow-line-done {
+    background: #16a34a;
+}
+
+/* -- Content Card -------------------------------------------------------- */
+
+.ow-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 860px;
+    margin: 0 auto 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ow-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+
+.ow-card-subtitle {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 0 0 20px;
+}
+
+/* -- Section Divider ----------------------------------------------------- */
+
+.ow-divider {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 20px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* -- Form Inputs --------------------------------------------------------- */
+
+.ow-form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.ow-form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.ow-form-group label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.ow-input, .ow-select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #1e293b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+}
+
+.ow-input:focus, .ow-select:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+}
+
+.ow-input::placeholder {
+    color: #cbd5e1;
+}
+
+.ow-input.ow-input-error, .ow-select.ow-input-error {
+    border-color: #dc2626;
+}
+
+.ow-input[readonly] {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: default;
+}
+
+/* Checkbox row */
+.ow-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.ow-checkbox-row input[type="checkbox"] {
+    accent-color: #f59e0b;
+    width: 15px;
+    height: 15px;
+}
+
+.ow-checkbox-row label {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* -- Editable Tables ----------------------------------------------------- */
+
+.ow-table-wrap {
+    overflow-x: auto;
+    margin: 12px 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.ow-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ow-table th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.ow-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.ow-table tr:last-child td {
+    border-bottom: none;
+}
+
+.ow-table tr:hover td {
+    background: #fefce8;
+}
+
+.ow-table .ow-input, .ow-table .ow-select {
+    padding: 5px 7px;
+    font-size: 12px;
+    background: #fff;
+}
+
+/* Inline table input */
+.ow-table-input {
+    width: 100%;
+    padding: 5px 7px;
+    font-size: 12px;
+    color: #1e293b;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+}
+
+.ow-table-input:focus {
+    border-color: #f59e0b;
+}
+
+/* -- Suggestion Dropdown ------------------------------------------------- */
+
+.ow-suggest-wrap {
+    position: relative;
+}
+
+.ow-suggest-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 100;
+    margin-top: 2px;
+}
+
+.ow-suggest-item {
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #1e293b;
+}
+
+.ow-suggest-item:hover {
+    background: #fef3c7;
+}
+
+.ow-suggest-empty {
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* -- Expand/Collapse Row Details ----------------------------------------- */
+
+.ow-expand-row td {
+    padding: 0 10px 10px;
+    background: #fefce8;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ow-expand-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 0 4px;
+}
+
+.ow-expand-inner .ow-form-group {
+    flex: 0 0 calc(33.333% - 8px);
+    min-width: 160px;
+}
+
+/* -- Buttons ------------------------------------------------------------- */
+
+.ow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.ow-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ow-btn-primary {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.ow-btn-primary:hover:not(:disabled) {
+    background: #d97706;
+}
+
+.ow-btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ow-btn-secondary:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+
+.ow-btn-danger {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.ow-btn-danger:hover:not(:disabled) {
+    background: #fee2e2;
+}
+
+.ow-btn-success {
+    background: #16a34a;
+    color: #fff;
+}
+
+.ow-btn-success:hover:not(:disabled) {
+    background: #15803d;
+}
+
+.ow-btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.ow-btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #94a3b8;
+    border-radius: 4px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ow-btn-icon:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+/* Table action buttons */
+.ow-table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0 4px;
+}
+
+/* -- Navigation Bar ------------------------------------------------------ */
+
+.ow-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 8px 0;
+}
+
+.ow-nav-left, .ow-nav-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* -- Summary Stats ------------------------------------------------------- */
+
+.ow-summary {
+    display: flex;
+    gap: 16px;
+    margin: 12px 0 4px;
+    flex-wrap: wrap;
+}
+
+.ow-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.ow-summary-badge b {
+    color: #f59e0b;
+}
+
+/* -- Review Tree (Step 4) ------------------------------------------------ */
+
+.ow-review-section {
+    margin-bottom: 20px;
+}
+
+.ow-review-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ow-review-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ow-review-field {
+    font-size: 12px;
+}
+
+.ow-review-field .ow-rlabel {
+    color: #94a3b8;
+}
+
+.ow-review-field .ow-rvalue {
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* Hierarchy tree */
+.ow-tree {
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.ow-tree-estate {
+    font-weight: 600;
+    color: #1e293b;
+    padding-left: 0;
+}
+
+.ow-tree-region {
+    padding-left: 24px;
+    color: #475569;
+}
+
+.ow-tree-site {
+    padding-left: 48px;
+    color: #64748b;
+}
+
+.ow-tree-device {
+    padding-left: 72px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.ow-tree-icon {
+    margin-right: 6px;
+    opacity: 0.7;
+}
+
+/* API call estimate */
+.ow-estimate {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.ow-estimate b {
+    color: #f59e0b;
+    font-size: 14px;
+}
+
+/* -- Progress Bar (Step 5) ----------------------------------------------- */
+
+.ow-progress-wrap {
+    background: #f1f5f9;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 24px;
+    margin: 16px 0;
+    position: relative;
+}
+
+.ow-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 8px;
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.ow-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        rgba(255, 255, 255, 0.15) 8px,
+        rgba(255, 255, 255, 0.15) 16px
+    );
+    animation: ow-stripes 1s linear infinite;
+}
+
+@keyframes ow-stripes {
+    to { transform: translateX(22px); }
+}
+
+.ow-progress-bar.ow-progress-done::after {
+    animation: none;
+    background: none;
+}
+
+.ow-progress-bar.ow-progress-error {
+    background: linear-gradient(90deg, #f59e0b, #dc2626);
+}
+
+.ow-progress-pct {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* -- Provisioning Log ---------------------------------------------------- */
+
+.ow-log {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 0;
+    background: #fff;
+    margin: 12px 0;
+}
+
+.ow-log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.ow-log-icon {
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.ow-log-msg {
+    color: #475569;
+    word-break: break-word;
+}
+
+.ow-log-msg b {
+    color: #1e293b;
+}
+
+.ow-log-entry.ow-log-ok .ow-log-icon { color: #16a34a; }
+.ow-log-entry.ow-log-fail .ow-log-icon { color: #dc2626; }
+.ow-log-entry.ow-log-skip .ow-log-icon { color: #94a3b8; }
+.ow-log-entry.ow-log-run .ow-log-icon { color: #f59e0b; }
+
+/* -- Error Panel --------------------------------------------------------- */
+
+.ow-error-panel {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.ow-error-panel p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #dc2626;
+}
+
+.ow-error-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Rename inline input (409 conflict) */
+.ow-rename-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.ow-rename-wrap .ow-input {
+    flex: 1;
+    max-width: 280px;
+}
+
+/* -- Completion Panel ---------------------------------------------------- */
+
+.ow-complete {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.ow-complete-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.ow-complete h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #16a34a;
+    margin: 0 0 6px;
+}
+
+.ow-complete p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 24px;
+}
+
+.ow-complete-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Token copy table */
+.ow-token-table {
+    margin: 16px auto;
+    max-width: 500px;
+    text-align: left;
+}
+
+.ow-token-table td {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.ow-token-table .ow-token-val {
+    font-family: 'Consolas', 'Monaco', monospace;
+    color: #f59e0b;
+    font-size: 11px;
+    user-select: all;
+}
+
+/* -- Validation Errors --------------------------------------------------- */
+
+.ow-errors {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.ow-errors li {
+    font-size: 12px;
+    color: #dc2626;
+    margin: 2px 0;
+    list-style: none;
+}
+
+/* -- Tier Badge ---------------------------------------------------------- */
+
+.ow-tier {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ow-tier-standard {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.ow-tier-plus {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+/* -- Warning Badge ------------------------------------------------------- */
+
+.ow-warn {
+    font-size: 11px;
+    color: #ea580c;
+    background: #fff7ed;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+/* -- Responsive ---------------------------------------------------------- */
+
+@media (max-width: 1366px) {
+    .ow-root {
+        padding: 12px 16px;
+    }
+    .ow-card {
+        padding: 18px;
+    }
+    .ow-stepper {
+        margin-bottom: 20px;
+    }
+    .ow-step-label {
+        display: none;
+    }
+    .ow-expand-inner .ow-form-group {
+        flex: 0 0 calc(50% - 6px);
+    }
+}
+
+@media (max-width: 768px) {
+    .ow-form-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .ow-expand-inner .ow-form-group {
+        flex: 1 1 100%;
+    }
+    .ow-review-info {
+        grid-template-columns: 1fr;
+    }
+}
