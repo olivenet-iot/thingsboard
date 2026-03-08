@@ -29,7 +29,7 @@ self.onInit = function () {
     var poolLoading = false;
     var poolError = '';
 
-    var registerRows = [{ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' }];
+    var registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' }];
     var registerStatus = 'idle'; // idle | registering | done
     var registerResults = null;
 
@@ -188,18 +188,20 @@ self.onInit = function () {
         var html = '';
 
         // Labels row (only once)
-        html += '<div class="dp-form-row" style="margin-bottom:4px;">' +
-            '<div style="width:24px;"></div>' +
-            '<div class="dp-form-group"><span class="dp-form-label">Device ID</span></div>' +
-            '<div class="dp-form-group dp-form-group-eui"><span class="dp-form-label">DevEUI</span></div>' +
-            '<div class="dp-form-group dp-form-group-joineui"><span class="dp-form-label">JoinEUI</span></div>' +
-            '<div class="dp-form-group dp-form-group-key"><span class="dp-form-label">AppKey</span></div>' +
-            '<div style="width:36px;"></div>' +
+        html += '<div class="dp-form-header">' +
+            '<span class="dp-col-num"></span>' +
+            '<span class="dp-form-group dp-form-label">Device ID</span>' +
+            '<span class="dp-form-group dp-form-group-eui dp-form-label">DevEUI</span>' +
+            '<span class="dp-form-group dp-form-group-joineui dp-form-label">JoinEUI</span>' +
+            '<span class="dp-form-group dp-form-group-key dp-form-label">AppKey</span>' +
+            '<span class="dp-col-actions"></span>' +
             '</div>';
 
+        html += '<div class="dp-form-rows">';
         for (var i = 0; i < registerRows.length; i++) {
             html += renderFormRow(registerRows[i], i);
         }
+        html += '</div>';
 
         html += '<div style="display:flex;gap:8px;margin-top:12px;">';
         html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="add-row">+ Add Row</button>';
@@ -355,7 +357,7 @@ self.onInit = function () {
             valid.push({
                 device_name: row.name,
                 dev_eui: row.dev_eui.toUpperCase(),
-                join_eui: (row.join_eui || '0000000000000000').toUpperCase(),
+                join_eui: (row.join_eui || '0101010101010101').toUpperCase(),
                 app_key: row.app_key.toUpperCase()
             });
         }
@@ -430,6 +432,15 @@ self.onInit = function () {
 
     // ── CSV Parsing ─────────────────────────────────────────────
 
+    function cleanHexField(val, expectedLength) {
+        val = val.replace(/^="?(.*?)"?$/, '$1');  // strip Excel ="..." wrapper
+        val = val.replace(/[^0-9A-Fa-f]/g, '');
+        val = val.toUpperCase();
+        while (val.length < expectedLength) val = '0' + val;
+        if (val.length > expectedLength) val = val.substring(0, expectedLength);
+        return val;
+    }
+
     function parseCSV(text) {
         var lines = text.trim().split('\n');
         var rows = [];
@@ -448,20 +459,23 @@ self.onInit = function () {
                 continue;
             }
 
-            var devEui = (parts[1] || '').trim().toUpperCase().replace(/[^0-9A-F]/g, '');
-            if (devEui.length !== 16) {
+            var devEui = cleanHexField((parts[1] || '').trim(), 16);
+            if (/^0+$/.test(devEui) || devEui.length === 0) {
                 errors.push('Row ' + (i + 1) + ': invalid DevEUI (need 16 hex chars)');
                 continue;
             }
 
-            var joinEui = parts[2] ? parts[2].trim().toUpperCase().replace(/[^0-9A-F]/g, '') : '0000000000000000';
-            if (joinEui.length !== 16) joinEui = '0000000000000000';
+            var joinEui = parts[2] ? cleanHexField(parts[2].trim(), 16) : '0101010101010101';
+            if (/^0+$/.test(joinEui)) joinEui = '0101010101010101';
+
+            var appKey = parts[3] ? cleanHexField(parts[3].trim(), 32) : '';
+            if (/^0+$/.test(appKey)) appKey = '';
 
             rows.push({
                 name: (parts[0] || '').trim(),
                 dev_eui: devEui,
                 join_eui: joinEui,
-                app_key: parts[3] ? parts[3].trim().toUpperCase().replace(/[^0-9A-F]/g, '') : ''
+                app_key: appKey
             });
         }
 
@@ -470,7 +484,9 @@ self.onInit = function () {
 
     function downloadTemplate() {
         var csv = 'device_id,dev_eui,join_eui,app_key\n' +
-            'zenopix-example-001,70B3D57ED006A001,0000000000000000,A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4\n';
+            'lumosoft-001,50FACB7000000002,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
+            'lumosoft-002,50FACB7000000003,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
+            'lumosoft-003,50FACB7000000004,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n';
         var blob = new Blob([csv], { type: 'text/csv' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -578,7 +594,7 @@ self.onInit = function () {
                 render();
                 break;
             case 'add-row':
-                registerRows.push({ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' });
+                registerRows.push({ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' });
                 render();
                 break;
             case 'remove-row':
@@ -593,7 +609,7 @@ self.onInit = function () {
             case 'register-reset':
                 registerStatus = 'idle';
                 registerResults = null;
-                registerRows = [{ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' }];
+                registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' }];
                 render();
                 break;
             case 'download-template':

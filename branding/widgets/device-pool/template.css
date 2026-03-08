@@ -319,10 +319,10 @@
 
 .dp-form-row {
     display: flex;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
     margin-bottom: 8px;
-    flex-wrap: wrap;
 }
 
 .dp-form-group {
@@ -330,7 +330,7 @@
     flex-direction: column;
     gap: 3px;
     flex: 1;
-    min-width: 120px;
+    min-width: 0;
 }
 
 .dp-form-group-eui {
@@ -342,7 +342,7 @@
 }
 
 .dp-form-group-key {
-    flex: 1.5;
+    flex: 1.8;
 }
 
 .dp-form-label {
@@ -381,11 +381,36 @@
     text-transform: uppercase;
 }
 
+.dp-form-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.dp-col-num {
+    width: 24px;
+    flex-shrink: 0;
+}
+
+.dp-col-actions {
+    width: 32px;
+    flex-shrink: 0;
+}
+
+.dp-form-rows {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
 .dp-form-actions {
     display: flex;
     align-items: center;
     gap: 6px;
     padding-bottom: 1px;
+    flex-shrink: 0;
 }
 
 .dp-row-num {
