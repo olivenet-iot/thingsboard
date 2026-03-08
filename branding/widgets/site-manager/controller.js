@@ -44,9 +44,13 @@ self.onInit = function () {
 
     // Add Device tab state
     var deviceProfiles = {};
-    var addDeviceForm = { name: '', profileId: '', profileName: '' };
+    var addDeviceForm = { name: '', profileId: '', profileName: '', poolDeviceId: '', poolDeviceName: '' };
     var addDeviceStatus = '';
     var addDeviceError = '';
+    var poolDevices = [];
+    var poolFetched = false;
+    var poolFetchError = '';
+    var addDevicePoolMode = true;
 
     // Delete state
     var deleteState = 'idle';
@@ -679,12 +683,24 @@ self.onInit = function () {
 
     // ═══ TAB 3: ADD DEVICE ═════════════════════════════════════
 
+    function getDefaultTierProfile() {
+        var tier = (siteAttrs.dashboard_tier || 'standard').toLowerCase();
+        var profKeys = Object.keys(deviceProfiles);
+        for (var p = 0; p < profKeys.length; p++) {
+            var pLower = profKeys[p].toLowerCase();
+            if (tier === 'plus' && pLower.indexOf('d4i') >= 0) return profKeys[p];
+            if (tier === 'standard' && pLower.indexOf('dali2') >= 0) return profKeys[p];
+        }
+        return profKeys[0] || '';
+    }
+
     function renderAddDeviceTab() {
         var html = '';
 
         // Status messages
         if (addDeviceStatus === 'done') {
-            html += '<div class="sm-success-msg">Device created successfully and linked to this site.</div>';
+            var doneMsg = addDevicePoolMode ? 'Device assigned successfully and linked to this site.' : 'Device created successfully and linked to this site.';
+            html += '<div class="sm-success-msg">' + doneMsg + '</div>';
         }
         if (addDeviceStatus === 'error') {
             html += '<div class="sm-error-msg">' + esc(addDeviceError || 'Failed to create device.') + '</div>';
@@ -695,33 +711,78 @@ self.onInit = function () {
             '<div class="sm-meta-icon sm-meta-icon-amber">' +
                 '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
             '</div>' +
-            'Provision New Device' +
+            (addDevicePoolMode ? 'Assign Device from Pool' : 'Provision New Device') +
         '</div>';
 
-        // Device name
-        html += '<div class="sm-form-group">' +
-            '<label>Device Name</label>' +
-            '<input class="sm-input" data-add-field="name" value="' + esc(addDeviceForm.name) + '" placeholder="e.g. LUM-001" />' +
-        '</div>';
+        if (addDevicePoolMode) {
+            // Pool mode
+            if (poolFetchError) {
+                html += '<div class="sm-info-msg">' + esc(poolFetchError) + '</div>';
+            } else if (poolDevices.length === 0) {
+                html += '<div class="sm-info-msg">No devices in pool. <a href="#" data-action="toggle-pool-mode" class="sm-pool-toggle">Create device manually</a> or register devices first.</div>';
+            } else {
+                // Pool device dropdown
+                html += '<div class="sm-form-group">' +
+                    '<label>Select Device from Pool</label>' +
+                    '<select class="sm-select" data-add-field="poolDevice">' +
+                    '<option value="">-- Select Pool Device --</option>';
+                for (var pi = 0; pi < poolDevices.length; pi++) {
+                    var pd = poolDevices[pi];
+                    var pdLabel = pd.name + ' (' + pd.dev_eui + ')';
+                    var pdSel = addDeviceForm.poolDeviceId === pd.id ? ' selected' : '';
+                    html += '<option value="' + esc(pd.id) + '"' + pdSel + '>' + esc(pdLabel) + '</option>';
+                }
+                html += '</select></div>';
 
-        // Device profile dropdown
-        html += '<div class="sm-form-group">' +
-            '<label>Device Profile</label>' +
-            '<select class="sm-select" data-add-field="profile">';
-        html += '<option value="">-- Select Profile --</option>';
-        Object.keys(deviceProfiles).forEach(function (name) {
-            var selected = addDeviceForm.profileName === name ? ' selected' : '';
-            html += '<option value="' + esc(name) + '"' + selected + '>' + esc(name) + '</option>';
-        });
-        html += '</select></div>';
+                // Device profile dropdown (auto-selected by tier)
+                html += '<div class="sm-form-group">' +
+                    '<label>Device Profile</label>' +
+                    '<select class="sm-select" data-add-field="profile">';
+                html += '<option value="">-- Select Profile --</option>';
+                var profKeys = Object.keys(deviceProfiles);
+                for (var pk = 0; pk < profKeys.length; pk++) {
+                    var selected = addDeviceForm.profileName === profKeys[pk] ? ' selected' : '';
+                    html += '<option value="' + esc(profKeys[pk]) + '"' + selected + '>' + esc(profKeys[pk]) + '</option>';
+                }
+                html += '</select></div>';
+            }
 
-        // Create button
-        var canCreate = addDeviceForm.name.trim() && addDeviceForm.profileName;
-        var btnDisabled = !canCreate || addDeviceStatus === 'saving' ? ' disabled' : '';
-        var btnLabel = addDeviceStatus === 'saving' ? 'Creating...' : 'Create Device';
-        html += '<div style="margin-top:20px; display:flex; justify-content:flex-end;">' +
-            '<button class="sm-btn sm-btn-primary" data-action="create-device"' + btnDisabled + '>' + btnLabel + '</button>' +
-        '</div>';
+            // Assign button
+            var canAssign = addDeviceForm.poolDeviceId && addDeviceForm.profileName;
+            var btnDisabled = !canAssign || addDeviceStatus === 'saving' ? ' disabled' : '';
+            var btnLabel = addDeviceStatus === 'saving' ? 'Assigning...' : 'Assign Device';
+            html += '<div style="margin-top:20px; display:flex; justify-content:flex-end; align-items:center;">';
+            if (!poolFetchError) {
+                html += '<a href="#" data-action="toggle-pool-mode" class="sm-pool-toggle" style="margin-right:auto">or create device manually</a>';
+            }
+            html += '<button class="sm-btn sm-btn-primary" data-action="create-device"' + btnDisabled + '>' + btnLabel + '</button>';
+            html += '</div>';
+        } else {
+            // Manual mode (original form)
+            html += '<div class="sm-form-group">' +
+                '<label>Device Name</label>' +
+                '<input class="sm-input" data-add-field="name" value="' + esc(addDeviceForm.name) + '" placeholder="e.g. LUM-001" />' +
+            '</div>';
+
+            html += '<div class="sm-form-group">' +
+                '<label>Device Profile</label>' +
+                '<select class="sm-select" data-add-field="profile">';
+            html += '<option value="">-- Select Profile --</option>';
+            var profKeys2 = Object.keys(deviceProfiles);
+            for (var pk2 = 0; pk2 < profKeys2.length; pk2++) {
+                var selected2 = addDeviceForm.profileName === profKeys2[pk2] ? ' selected' : '';
+                html += '<option value="' + esc(profKeys2[pk2]) + '"' + selected2 + '>' + esc(profKeys2[pk2]) + '</option>';
+            }
+            html += '</select></div>';
+
+            var canCreate = addDeviceForm.name.trim() && addDeviceForm.profileName;
+            var btnDisabled2 = !canCreate || addDeviceStatus === 'saving' ? ' disabled' : '';
+            var btnLabel2 = addDeviceStatus === 'saving' ? 'Creating...' : 'Create Device';
+            html += '<div style="margin-top:20px; display:flex; justify-content:flex-end; align-items:center;">';
+            html += '<a href="#" data-action="toggle-pool-mode" class="sm-pool-toggle" style="margin-right:auto">or select from device pool</a>';
+            html += '<button class="sm-btn sm-btn-primary" data-action="create-device"' + btnDisabled2 + '>' + btnLabel2 + '</button>';
+            html += '</div>';
+        }
 
         html += '</div>';
         return html;
@@ -738,6 +799,20 @@ self.onInit = function () {
                     }
                 });
             }).catch(function () { deviceProfiles = {}; });
+    }
+
+    function fetchPool() {
+        return fetchExternal('http://46.225.54.21:5002/pool', 10000)
+            .then(function (resp) {
+                poolDevices = (resp && resp.devices) ? resp.devices : [];
+                poolFetched = true;
+                poolFetchError = '';
+            })
+            .catch(function (err) {
+                poolDevices = [];
+                poolFetched = true;
+                poolFetchError = 'Could not reach device pool service.';
+            });
     }
 
     function createDevice() {
@@ -800,7 +875,7 @@ self.onInit = function () {
         })
         .then(function () {
             addDeviceStatus = 'done';
-            addDeviceForm = { name: '', profileId: '', profileName: '' };
+            addDeviceForm = { name: '', profileId: '', profileName: '', poolDeviceId: '', poolDeviceName: '' };
             // Refresh devices list
             return fetchDevices();
         })
@@ -810,6 +885,88 @@ self.onInit = function () {
         .catch(function (err) {
             addDeviceStatus = 'error';
             var errMsg = 'Failed to create device.';
+            if (err && err.error && err.error.message) errMsg = err.error.message;
+            else if (err && err.message) errMsg = err.message;
+            addDeviceError = errMsg;
+            render();
+        });
+    }
+
+    function assignPoolDevice() {
+        if (addDeviceStatus === 'saving') return;
+        var poolDeviceId = addDeviceForm.poolDeviceId;
+        var profileName = addDeviceForm.profileName;
+        var profileId = deviceProfiles[profileName];
+
+        if (!poolDeviceId || !profileId) {
+            addDeviceStatus = 'error';
+            addDeviceError = 'Please select a pool device and a profile.';
+            render();
+            return;
+        }
+
+        addDeviceStatus = 'saving';
+        addDeviceError = '';
+        render();
+
+        var customerId = null;
+        if (siteEntity && siteEntity.customerId && siteEntity.customerId.id &&
+            siteEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+            customerId = siteEntity.customerId.id;
+        }
+
+        if (!customerId) {
+            addDeviceStatus = 'error';
+            addDeviceError = 'Site has no customer assigned. Cannot assign device.';
+            render();
+            return;
+        }
+
+        var assignedDeviceId = null;
+
+        // Step 1: Assign device to customer
+        apiPost('/customer/' + customerId + '/device/' + poolDeviceId, {})
+        .then(function (dev) {
+            assignedDeviceId = dev.id.id;
+            // Step 2: Update device profile
+            dev.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
+            return apiPost('/device', dev);
+        })
+        .then(function () {
+            // Step 3: Create relation: site Contains device
+            return apiPost('/relation', {
+                from: { id: siteId, entityType: 'ASSET' },
+                to: { id: assignedDeviceId, entityType: 'DEVICE' },
+                type: 'Contains',
+                typeGroup: 'COMMON'
+            });
+        })
+        .then(function () {
+            // Step 4: Copy site CO2/rate attrs to device
+            var devAttrs = {};
+            if (siteAttrs.co2_per_kwh) devAttrs.co2_per_kwh = parseFloat(siteAttrs.co2_per_kwh) || 0;
+            if (siteAttrs.energy_rate) devAttrs.energy_rate = parseFloat(siteAttrs.energy_rate) || 0;
+            if (siteAttrs.currency_symbol) devAttrs.currency_symbol = siteAttrs.currency_symbol;
+            if (Object.keys(devAttrs).length > 0) {
+                return apiPost('/plugins/telemetry/DEVICE/' + assignedDeviceId + '/attributes/SERVER_SCOPE', devAttrs);
+            }
+        })
+        .then(function () {
+            addDeviceStatus = 'done';
+            addDeviceForm = { name: '', profileId: '', profileName: '', poolDeviceId: '', poolDeviceName: '' };
+            // Remove from local pool cache + re-fetch
+            for (var ri = poolDevices.length - 1; ri >= 0; ri--) {
+                if (poolDevices[ri].id === poolDeviceId) {
+                    poolDevices.splice(ri, 1);
+                    break;
+                }
+            }
+            poolFetched = false;
+            fetchPool().then(function () { return fetchDevices(); }).then(function () { render(); });
+        })
+        .catch(function (err) {
+            addDeviceStatus = 'error';
+            var errMsg = 'Failed to assign device.';
             if (err && err.error && err.error.message) errMsg = err.error.message;
             else if (err && err.message) errMsg = err.message;
             addDeviceError = errMsg;
@@ -830,6 +987,14 @@ self.onInit = function () {
                     if (newTab !== 'add-device') {
                         addDeviceStatus = '';
                         addDeviceError = '';
+                    }
+                    // Auto-select profile based on tier when entering add-device tab
+                    if (newTab === 'add-device' && !addDeviceForm.profileName) {
+                        var defProf = getDefaultTierProfile();
+                        if (defProf) {
+                            addDeviceForm.profileName = defProf;
+                            addDeviceForm.profileId = deviceProfiles[defProf] || '';
+                        }
                     }
                     render();
                 }
@@ -1083,10 +1248,45 @@ self.onInit = function () {
             });
         }
 
-        // Create device button
+        // Create/Assign device button
         container.querySelectorAll('[data-action="create-device"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                createDevice();
+                if (addDevicePoolMode) {
+                    assignPoolDevice();
+                } else {
+                    createDevice();
+                }
+            });
+        });
+
+        // Pool device select
+        var poolSelect = container.querySelector('[data-add-field="poolDevice"]');
+        if (poolSelect) {
+            poolSelect.addEventListener('change', function () {
+                addDeviceForm.poolDeviceId = poolSelect.value;
+                // Find pool device name
+                for (var pi = 0; pi < poolDevices.length; pi++) {
+                    if (poolDevices[pi].id === poolSelect.value) {
+                        addDeviceForm.poolDeviceName = poolDevices[pi].name;
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Toggle pool mode
+        container.querySelectorAll('[data-action="toggle-pool-mode"]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                addDevicePoolMode = !addDevicePoolMode;
+                addDeviceForm = { name: '', profileId: '', profileName: '', poolDeviceId: '', poolDeviceName: '' };
+                addDeviceStatus = '';
+                addDeviceError = '';
+                if (addDevicePoolMode && !poolFetched) {
+                    fetchPool().then(function () { render(); });
+                } else {
+                    render();
+                }
             });
         });
     }
@@ -1121,7 +1321,8 @@ self.onInit = function () {
         apiGet('/plugins/telemetry/ASSET/' + siteId + '/values/attributes/SERVER_SCOPE'),
         fetchDevices(),
         fetchBreadcrumb(),
-        fetchDeviceProfiles()
+        fetchDeviceProfiles(),
+        fetchPool()
     ]).then(function (results) {
         siteEntity = results[0];
         siteAttrs = {};

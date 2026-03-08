@@ -833,6 +833,29 @@ input.sm-meta-input {
     }
 }
 
+/* -- Pool Mode ------------------------------------------------------ */
+
+.sm-pool-toggle {
+    color: #3b82f6;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.sm-pool-toggle:hover {
+    color: #2563eb;
+}
+
+.sm-info-msg {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #1e40af;
+    margin: 12px 0;
+}
+
 /* -- Remove widget chrome ------------------------------------------- */
 
 :host {

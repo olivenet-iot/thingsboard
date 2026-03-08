@@ -38,6 +38,10 @@ self.onInit = function () {
     var devices = [];    // [{siteName, deviceName, profile, token, tokenMode}]
     var deviceProfiles = {};  // name -> id map
     var profilesFetched = false;
+    var poolDevices = [];      // from GET /pool
+    var poolFetched = false;
+    var poolFetchError = '';
+    var poolMode = true;       // true=pool dropdown, false=manual input
 
     var provisionState = {
         running: false,
@@ -233,15 +237,26 @@ self.onInit = function () {
     function validateStep3() {
         var errors = [];
         if (devices.length === 0) errors.push('Add at least one device');
-        var seen = {};
-        for (var i = 0; i < devices.length; i++) {
-            var d = devices[i];
-            if (!d.siteName) errors.push('Row ' + (i + 1) + ': Site is required');
-            if (!d.deviceName.trim()) errors.push('Row ' + (i + 1) + ': Device name is required');
-            var dname = d.deviceName.trim().toLowerCase();
-            if (dname && seen[dname]) errors.push('Duplicate device name: "' + d.deviceName.trim() + '"');
-            seen[dname] = true;
-            if (d.tokenMode === 'manual' && !d.token.trim()) errors.push('Row ' + (i + 1) + ': Manual token is required');
+        if (poolMode) {
+            var seenPool = {};
+            for (var i = 0; i < devices.length; i++) {
+                var d = devices[i];
+                if (!d.siteName) errors.push('Row ' + (i + 1) + ': Site is required');
+                if (!d.poolDeviceId) errors.push('Row ' + (i + 1) + ': Select a pool device');
+                if (d.poolDeviceId && seenPool[d.poolDeviceId]) errors.push('Row ' + (i + 1) + ': Duplicate pool device selection');
+                if (d.poolDeviceId) seenPool[d.poolDeviceId] = true;
+            }
+        } else {
+            var seen = {};
+            for (var i = 0; i < devices.length; i++) {
+                var d = devices[i];
+                if (!d.siteName) errors.push('Row ' + (i + 1) + ': Site is required');
+                if (!d.deviceName.trim()) errors.push('Row ' + (i + 1) + ': Device name is required');
+                var dname = d.deviceName.trim().toLowerCase();
+                if (dname && seen[dname]) errors.push('Duplicate device name: "' + d.deviceName.trim() + '"');
+                seen[dname] = true;
+                if (d.tokenMode === 'manual' && !d.token.trim()) errors.push('Row ' + (i + 1) + ': Manual token is required');
+            }
         }
         return { valid: errors.length === 0, errors: errors };
     }
@@ -414,8 +429,14 @@ self.onInit = function () {
         html += '<div class="ow-card-title">Devices</div>';
         html += '<div class="ow-card-subtitle">Assign devices to sites. Profiles determine DALI2 (standard) or D4i (plus) capability.</div>';
 
-        if (!profilesFetched) {
-            html += '<div class="ow-loading"><div class="ow-spinner"></div><div class="ow-loading-text">Loading device profiles...</div></div>';
+        if (!profilesFetched || (poolMode && !poolFetched)) {
+            html += '<div class="ow-loading"><div class="ow-spinner"></div><div class="ow-loading-text">Loading' + (poolMode ? ' device pool and' : '') + ' profiles...</div></div>';
+            html += '</div>';
+            return html;
+        }
+
+        if (poolMode && poolFetchError) {
+            html += '<div class="ow-info-msg">' + esc(poolFetchError) + ' <a href="#" data-action="toggle-pool-mode" class="ow-pool-toggle">Create devices manually</a></div>';
             html += '</div>';
             return html;
         }
@@ -425,11 +446,30 @@ self.onInit = function () {
             siteNames.push(sites[s].site);
         }
 
+        // Pool mode with empty pool
+        if (poolMode && poolDevices.length === 0 && devices.length === 0) {
+            html += '<div class="ow-info-msg">No devices in pool. <a href="#" data-action="toggle-pool-mode" class="ow-pool-toggle">Create devices manually</a> or register devices first.</div>';
+            html += '</div>';
+            return html;
+        }
+
         html += '<div class="ow-table-wrap"><table class="ow-table">';
-        html += '<thead><tr><th>Site</th><th>Device Name</th><th>Profile</th><th style="width:40px"></th></tr></thead>';
+        if (poolMode) {
+            html += '<thead><tr><th>Site</th><th>Pool Device</th><th>Profile</th><th style="width:40px"></th></tr></thead>';
+        } else {
+            html += '<thead><tr><th>Site</th><th>Device Name</th><th>Profile</th><th style="width:40px"></th></tr></thead>';
+        }
         html += '<tbody>';
 
         var profileNames = Object.keys(deviceProfiles);
+
+        // Collect already-selected pool IDs for duplicate prevention
+        var usedPoolIds = {};
+        if (poolMode) {
+            for (var u = 0; u < devices.length; u++) {
+                if (devices[u].poolDeviceId) usedPoolIds[devices[u].poolDeviceId] = true;
+            }
+        }
 
         for (var i = 0; i < devices.length; i++) {
             var d = devices[i];
@@ -440,6 +480,24 @@ self.onInit = function () {
                 siteSel += '<option value="' + esc(siteNames[si]) + '"' + (d.siteName === siteNames[si] ? ' selected' : '') + '>' + esc(siteNames[si]) + '</option>';
             }
             siteSel += '</select>';
+
+            var nameCol = '';
+            if (poolMode) {
+                // Pool device dropdown
+                var poolSel = '<select class="ow-table-input" data-dev-field="poolDeviceId" data-idx="' + i + '">';
+                poolSel += '<option value="">-- Select from Pool --</option>';
+                for (var pi2 = 0; pi2 < poolDevices.length; pi2++) {
+                    var pd = poolDevices[pi2];
+                    // Skip if already used by another row (but allow current row's selection)
+                    if (usedPoolIds[pd.id] && d.poolDeviceId !== pd.id) continue;
+                    var pdLabel = pd.name + ' (' + pd.dev_eui + ')';
+                    poolSel += '<option value="' + esc(pd.id) + '"' + (d.poolDeviceId === pd.id ? ' selected' : '') + '>' + esc(pdLabel) + '</option>';
+                }
+                poolSel += '</select>';
+                nameCol = poolSel;
+            } else {
+                nameCol = '<input class="ow-table-input" data-dev-field="deviceName" data-idx="' + i + '" value="' + esc(d.deviceName) + '" placeholder="Device name">';
+            }
 
             // Profile dropdown
             var profSel = '<select class="ow-table-input" data-dev-field="profile" data-idx="' + i + '">';
@@ -465,7 +523,7 @@ self.onInit = function () {
 
             html += '<tr>';
             html += '<td>' + siteSel + '</td>';
-            html += '<td><input class="ow-table-input" data-dev-field="deviceName" data-idx="' + i + '" value="' + esc(d.deviceName) + '" placeholder="Device name">' + warn + '</td>';
+            html += '<td>' + nameCol + warn + '</td>';
             html += '<td>' + profSel + '</td>';
             html += '<td><button class="ow-btn-icon" data-action="remove-device" data-idx="' + i + '" title="Remove">\u2715</button></td>';
             html += '</tr>';
@@ -479,6 +537,13 @@ self.onInit = function () {
         html += '<button class="ow-btn ow-btn-sm ow-btn-secondary" data-action="auto-generate-devices">Auto-generate (1 per site)</button>';
         html += '</div>';
 
+        // Mode toggle
+        if (poolMode) {
+            html += '<div style="margin-top:8px;font-size:12px"><a href="#" data-action="toggle-pool-mode" class="ow-pool-toggle">or create devices manually</a></div>';
+        } else {
+            html += '<div style="margin-top:8px;font-size:12px"><a href="#" data-action="toggle-pool-mode" class="ow-pool-toggle">or select from device pool</a></div>';
+        }
+
         html += '</div>';
         return html;
     }
@@ -488,6 +553,17 @@ self.onInit = function () {
             if (sites[i].site === siteName) return sites[i].tier;
         }
         return 'standard';
+    }
+
+    function getTierProfile(siteName) {
+        var tier = getSiteTier(siteName);
+        var profileNames = Object.keys(deviceProfiles);
+        for (var p = 0; p < profileNames.length; p++) {
+            var pLower = profileNames[p].toLowerCase();
+            if (tier === 'plus' && pLower.indexOf('d4i') >= 0) return profileNames[p];
+            if (tier === 'standard' && pLower.indexOf('dali2') >= 0) return profileNames[p];
+        }
+        return profileNames[0] || 'default';
     }
 
     // ── Step 4: Review ──────────────────────────────────────────
@@ -532,8 +608,9 @@ self.onInit = function () {
                         '</div>';
                     var siteDevs = getDevicesForSite(site.name);
                     for (var di = 0; di < siteDevs.length; di++) {
+                        var poolTag = siteDevs[di].poolDeviceId ? ' <span class="ow-pool-tag">[pool]</span>' : '';
                         html += '<div class="ow-tree-device"><span class="ow-tree-icon">\u2B24</span>' + esc(siteDevs[di].deviceName) +
-                            ' <span style="color:#94a3b8">(' + esc(siteDevs[di].profile) + ')</span></div>';
+                            ' <span style="color:#94a3b8">(' + esc(siteDevs[di].profile) + ')</span>' + poolTag + '</div>';
                     }
                 }
             }
@@ -546,11 +623,17 @@ self.onInit = function () {
         var siteCount = sites.length;
         var devCount = devices.length;
         var userCount = customer.users.length;
-        // 1 customer + U users + 3 dashboard assigns + E estates + 2R regions (asset+relation) + 3S sites (asset+relation+attrs) + 3D devices (device+relation+attrs)
-        var apiCalls = 1 + userCount + 3 + estCount + (2 * regCount) + (3 * siteCount) + (3 * devCount);
+        // Pool devices: 4 calls each (assign + profile + relation + attrs), manual: 3 calls each
+        var poolDevCount = 0;
+        var manualDevCount = 0;
+        for (var dc = 0; dc < devices.length; dc++) {
+            if (devices[dc].poolDeviceId) poolDevCount++;
+            else manualDevCount++;
+        }
+        var apiCalls = 1 + userCount + 3 + estCount + (2 * regCount) + (3 * siteCount) + (4 * poolDevCount) + (3 * manualDevCount);
         html += '<div class="ow-estimate">';
         html += 'This will make approximately <b>' + apiCalls + '</b> API calls: ';
-        html += '1 customer, ' + userCount + ' user(s), 3 dashboard assignments, ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s), ' + devCount + ' device(s).';
+        html += '1 customer, ' + userCount + ' user(s), 3 dashboard assignments, ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s), ' + devCount + ' device(s)' + (poolDevCount > 0 ? ' (' + poolDevCount + ' from pool)' : '') + '.';
         html += '</div>';
 
         // Provision button
@@ -868,35 +951,54 @@ self.onInit = function () {
             })(sites[si]);
         }
 
-        // 7. Create devices with relations and attributes
+        // 7. Create/assign devices with relations and attributes
         for (var dvi = 0; dvi < devices.length; dvi++) {
             (function (devData) {
-                // Ensure token is generated
-                if (devData.tokenMode === 'auto' && !devData.token) {
-                    devData.token = generateToken();
-                }
-
-                plan.push({
-                    phase: 'device', label: 'Create device: ' + devData.deviceName,
-                    fn: function () {
-                        var key = 'DEVICE:' + devData.deviceName;
-                        if (provisionState.createdIds[key]) return Promise.resolve();
-                        var profileId = deviceProfiles[devData.profile];
-                        var body = {
-                            name: devData.deviceName,
-                            type: 'default',
-                            label: devData.deviceName,
-                            customerId: { id: provisionState.customerId, entityType: 'CUSTOMER' }
-                        };
-                        if (profileId) {
-                            body.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
+                if (devData.poolDeviceId) {
+                    // Pool mode: assign existing device to customer, then update profile
+                    plan.push({
+                        phase: 'device', label: 'Assign pool device: ' + devData.deviceName,
+                        fn: function () {
+                            var key = 'DEVICE:' + devData.deviceName;
+                            if (provisionState.createdIds[key]) return Promise.resolve();
+                            return apiPost('/customer/' + provisionState.customerId + '/device/' + devData.poolDeviceId, {}).then(function (dev) {
+                                provisionState.createdIds[key] = dev.id.id;
+                                // Update device profile if needed
+                                var profileId = deviceProfiles[devData.profile];
+                                if (profileId) {
+                                    dev.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
+                                    return apiPost('/device', dev);
+                                }
+                            });
                         }
-                        var qp = '?accessToken=' + encodeURIComponent(devData.token);
-                        return apiPost('/device' + qp, body).then(function (dev) {
-                            provisionState.createdIds[key] = dev.id.id;
-                        });
+                    });
+                } else {
+                    // Manual mode: create new device
+                    if (devData.tokenMode === 'auto' && !devData.token) {
+                        devData.token = generateToken();
                     }
-                });
+                    plan.push({
+                        phase: 'device', label: 'Create device: ' + devData.deviceName,
+                        fn: function () {
+                            var key = 'DEVICE:' + devData.deviceName;
+                            if (provisionState.createdIds[key]) return Promise.resolve();
+                            var profileId = deviceProfiles[devData.profile];
+                            var body = {
+                                name: devData.deviceName,
+                                type: 'default',
+                                label: devData.deviceName,
+                                customerId: { id: provisionState.customerId, entityType: 'CUSTOMER' }
+                            };
+                            if (profileId) {
+                                body.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
+                            }
+                            var qp = '?accessToken=' + encodeURIComponent(devData.token);
+                            return apiPost('/device' + qp, body).then(function (dev) {
+                                provisionState.createdIds[key] = dev.id.id;
+                            });
+                        }
+                    });
+                }
                 plan.push({
                     phase: 'relation', label: 'Link site \u2192 device: ' + devData.siteName + ' \u2192 ' + devData.deviceName,
                     fn: function () {
@@ -951,6 +1053,18 @@ self.onInit = function () {
                 provisionState.running = false;
                 provisionState.done = true;
                 provisionState.log.push({ type: 'ok', msg: '<b>All done!</b> Provisioning complete.' });
+                // Remove assigned pool devices from local cache
+                for (var pi = 0; pi < devices.length; pi++) {
+                    if (devices[pi].poolDeviceId) {
+                        for (var pj = poolDevices.length - 1; pj >= 0; pj--) {
+                            if (poolDevices[pj].id === devices[pi].poolDeviceId) {
+                                poolDevices.splice(pj, 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+                poolFetched = false;
                 render();
                 return;
             }
@@ -1011,6 +1125,22 @@ self.onInit = function () {
             .catch(function (err) {
                 console.error('[OW] Failed to fetch device profiles:', err);
                 profilesFetched = true;
+                if (currentStep === 3) render();
+            });
+    }
+
+    function fetchPool() {
+        fetchExternal('http://46.225.54.21:5002/pool', 10000)
+            .then(function (resp) {
+                poolDevices = (resp && resp.devices) ? resp.devices : [];
+                poolFetched = true;
+                poolFetchError = '';
+                if (currentStep === 3) render();
+            })
+            .catch(function (err) {
+                poolDevices = [];
+                poolFetched = true;
+                poolFetchError = 'Could not reach device pool service.';
                 if (currentStep === 3) render();
             });
     }
@@ -1275,14 +1405,26 @@ self.onInit = function () {
             } else if (action === 'add-device') {
                 el.addEventListener('click', function () {
                     captureStepState();
-                    var defaultProfile = Object.keys(deviceProfiles)[0] || 'default';
-                    devices.push({
-                        siteName: sites.length > 0 ? sites[0].site : '',
-                        deviceName: '',
-                        profile: defaultProfile,
-                        token: generateToken(),
-                        tokenMode: 'auto'
-                    });
+                    var defaultSite = sites.length > 0 ? sites[0].site : '';
+                    var tierProfile = getTierProfile(defaultSite);
+                    if (poolMode) {
+                        devices.push({
+                            siteName: defaultSite,
+                            deviceName: '',
+                            poolDeviceId: '',
+                            profile: tierProfile,
+                            token: '',
+                            tokenMode: 'auto'
+                        });
+                    } else {
+                        devices.push({
+                            siteName: defaultSite,
+                            deviceName: '',
+                            profile: tierProfile,
+                            token: generateToken(),
+                            tokenMode: 'auto'
+                        });
+                    }
                     render();
                 });
             } else if (action === 'remove-device') {
@@ -1295,32 +1437,62 @@ self.onInit = function () {
             } else if (action === 'auto-generate-devices') {
                 el.addEventListener('click', function () {
                     captureStepState();
-                    var defaultProfile = Object.keys(deviceProfiles)[0] || 'default';
-                    for (var i = 0; i < sites.length; i++) {
-                        var devName = slugify(sites[i].site) + '-01';
-                        // Check if device already exists for this site
-                        var exists = false;
-                        for (var j = 0; j < devices.length; j++) {
-                            if (devices[j].siteName === sites[i].site) { exists = true; break; }
-                        }
-                        if (!exists) {
-                            // Choose profile based on tier
-                            var prof = defaultProfile;
-                            var profileNames = Object.keys(deviceProfiles);
-                            for (var p = 0; p < profileNames.length; p++) {
-                                var pLower = profileNames[p].toLowerCase();
-                                if (sites[i].tier === 'plus' && pLower.indexOf('d4i') >= 0) { prof = profileNames[p]; break; }
-                                if (sites[i].tier === 'standard' && pLower.indexOf('dali2') >= 0) { prof = profileNames[p]; break; }
+                    if (poolMode) {
+                        // Assign available pool devices round-robin to sites
+                        var poolIdx = 0;
+                        for (var i = 0; i < sites.length; i++) {
+                            var exists = false;
+                            for (var j = 0; j < devices.length; j++) {
+                                if (devices[j].siteName === sites[i].site) { exists = true; break; }
                             }
-                            devices.push({
-                                siteName: sites[i].site,
-                                deviceName: devName,
-                                profile: prof,
-                                token: generateToken(),
-                                tokenMode: 'auto'
-                            });
+                            if (!exists && poolIdx < poolDevices.length) {
+                                var prof = getTierProfile(sites[i].site);
+                                devices.push({
+                                    siteName: sites[i].site,
+                                    deviceName: poolDevices[poolIdx].name,
+                                    poolDeviceId: poolDevices[poolIdx].id,
+                                    profile: prof,
+                                    token: '',
+                                    tokenMode: 'auto'
+                                });
+                                poolIdx++;
+                            }
+                        }
+                    } else {
+                        var defaultProfile = Object.keys(deviceProfiles)[0] || 'default';
+                        for (var i = 0; i < sites.length; i++) {
+                            var devName = slugify(sites[i].site) + '-01';
+                            var exists = false;
+                            for (var j = 0; j < devices.length; j++) {
+                                if (devices[j].siteName === sites[i].site) { exists = true; break; }
+                            }
+                            if (!exists) {
+                                var prof = defaultProfile;
+                                var profileNames = Object.keys(deviceProfiles);
+                                for (var p = 0; p < profileNames.length; p++) {
+                                    var pLower = profileNames[p].toLowerCase();
+                                    if (sites[i].tier === 'plus' && pLower.indexOf('d4i') >= 0) { prof = profileNames[p]; break; }
+                                    if (sites[i].tier === 'standard' && pLower.indexOf('dali2') >= 0) { prof = profileNames[p]; break; }
+                                }
+                                devices.push({
+                                    siteName: sites[i].site,
+                                    deviceName: devName,
+                                    profile: prof,
+                                    token: generateToken(),
+                                    tokenMode: 'auto'
+                                });
+                            }
                         }
                     }
+                    render();
+                });
+            } else if (action === 'toggle-pool-mode') {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    captureStepState();
+                    poolMode = !poolMode;
+                    devices = [];  // Clear devices when switching modes
+                    if (poolMode && !poolFetched) fetchPool();
                     render();
                 });
             } else if (action === 'provision-now') {
@@ -1478,6 +1650,16 @@ self.onInit = function () {
             inp.addEventListener('change', function () {
                 if (idx >= 0 && idx < devices.length) {
                     devices[idx][field] = inp.value;
+                    // When pool device selected, update deviceName from pool data
+                    if (field === 'poolDeviceId' && inp.value) {
+                        for (var pd = 0; pd < poolDevices.length; pd++) {
+                            if (poolDevices[pd].id === inp.value) {
+                                devices[idx].deviceName = poolDevices[pd].name;
+                                break;
+                            }
+                        }
+                        render();  // re-render to update duplicate prevention in other dropdowns
+                    }
                 }
             });
         });
@@ -1528,6 +1710,9 @@ self.onInit = function () {
         // Fetch device profiles when entering step 3
         if (currentStep === 3 && !profilesFetched) {
             fetchDeviceProfiles();
+        }
+        if (currentStep === 3 && !poolFetched) {
+            fetchPool();
         }
 
         render();
