@@ -78,13 +78,13 @@ async def process_single_device(device: DeviceRegistration, client: httpx.AsyncC
         error = tts_result["error"]
 
     # Register in TB (regardless of TTS result)
-    tb_result = await register_device_tb(device.device_name, device.dev_eui, client, tb_token)
+    tb_result = await register_device_tb(device.device_name, device.dev_eui, device.join_eui, client, tb_token)
     if tb_result.get("reauth"):
         # Re-authenticate and retry once
         try:
             tb_token = await get_tb_token(client)
             app.state.tb_token = tb_token
-            tb_result = await register_device_tb(device.device_name, device.dev_eui, client, tb_token)
+            tb_result = await register_device_tb(device.device_name, device.dev_eui, device.join_eui, client, tb_token)
         except Exception as e:
             tb_result = {"success": False, "error": f"TB reauth failed: {e}"}
 
@@ -148,12 +148,16 @@ async def register_csv(file: UploadFile):
     reader = csv.DictReader(io.StringIO(text))
     devices = []
     for row in reader:
-        if "device_name" not in row or "dev_eui" not in row:
-            raise HTTPException(status_code=400, detail="CSV must have 'device_name' and 'dev_eui' columns")
+        # Support both 'device_name' and 'device_id' column headers
+        name = (row.get("device_name") or row.get("device_id") or "").strip()
+        dev_eui = (row.get("dev_eui") or "").strip()
+        if not name or not dev_eui:
+            raise HTTPException(status_code=400, detail="CSV must have 'device_id' (or 'device_name') and 'dev_eui' columns")
         devices.append(
             DeviceRegistration(
-                device_name=row["device_name"].strip(),
-                dev_eui=row["dev_eui"].strip(),
+                device_name=name,
+                dev_eui=dev_eui,
+                join_eui=(row.get("join_eui") or "0000000000000000").strip(),
                 app_key=row.get("app_key", "").strip() or None,
             )
         )

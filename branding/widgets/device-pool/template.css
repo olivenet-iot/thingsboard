@@ -334,11 +334,15 @@
 }
 
 .dp-form-group-eui {
-    flex: 1.2;
+    flex: 1;
+}
+
+.dp-form-group-joineui {
+    flex: 1;
 }
 
 .dp-form-group-key {
-    flex: 2;
+    flex: 1.5;
 }
 
 .dp-form-label {

@@ -434,24 +434,6 @@
     text-align: center;
 }
 
-/* ── Devices (Add Site) ────────────────────────────────── */
-
-.cm-device-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto auto;
-    gap: 10px;
-    align-items: end;
-    margin-bottom: 10px;
-}
-
-.cm-device-token {
-    font-size: 11px;
-    color: #94a3b8;
-    font-family: monospace;
-    margin-top: 2px;
-    word-break: break-all;
-}
-
 /* ── Spinner / Loading ─────────────────────────────────── */
 
 .cm-spinner {
@@ -620,10 +602,6 @@
     }
 
     .cm-form-row-3 {
-        grid-template-columns: 1fr;
-    }
-
-    .cm-device-row {
         grid-template-columns: 1fr;
     }
 

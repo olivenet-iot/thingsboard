@@ -29,11 +29,9 @@ self.onInit = function () {
     var poolLoading = false;
     var poolError = '';
 
-    var registerRows = [{ name: '', dev_eui: '', app_key: '' }];
+    var registerRows = [{ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' }];
     var registerStatus = 'idle'; // idle | registering | done
     var registerResults = null;
-
-    var csvMode = false;
 
     var toastMessage = '';
     var toastType = 'success';
@@ -171,19 +169,16 @@ self.onInit = function () {
             return html;
         }
 
-        // CSV toggle
         html += '<div class="dp-card">';
         html += '<div class="dp-card-header">';
         html += '<div class="dp-card-title">Register Devices</div>';
-        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="toggle-csv">' +
-            (csvMode ? 'Form Mode' : 'CSV Paste') + '</button>';
+        html += '<div style="display:flex;gap:6px;">';
+        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="download-template">&#8681; Template</button>';
+        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="upload-csv">&#8679; Upload CSV</button>';
+        html += '</div>';
         html += '</div>';
 
-        if (csvMode) {
-            html += renderCSVMode();
-        } else {
-            html += renderFormMode();
-        }
+        html += renderFormMode();
 
         html += '</div>';
         return html;
@@ -195,10 +190,11 @@ self.onInit = function () {
         // Labels row (only once)
         html += '<div class="dp-form-row" style="margin-bottom:4px;">' +
             '<div style="width:24px;"></div>' +
-            '<div class="dp-form-group"><span class="dp-form-label">Device Name</span></div>' +
+            '<div class="dp-form-group"><span class="dp-form-label">Device ID</span></div>' +
             '<div class="dp-form-group dp-form-group-eui"><span class="dp-form-label">DevEUI</span></div>' +
+            '<div class="dp-form-group dp-form-group-joineui"><span class="dp-form-label">JoinEUI</span></div>' +
             '<div class="dp-form-group dp-form-group-key"><span class="dp-form-label">AppKey</span></div>' +
-            '<div style="width:72px;"></div>' +
+            '<div style="width:36px;"></div>' +
             '</div>';
 
         for (var i = 0; i < registerRows.length; i++) {
@@ -220,28 +216,23 @@ self.onInit = function () {
             '<span class="dp-row-num">' + (index + 1) + '</span>' +
             '<div class="dp-form-group">' +
             '<input class="dp-form-input" data-field="name" data-idx="' + index + '" ' +
-            'placeholder="e.g. Sign-001" value="' + esc(row.name) + '" />' +
+            'placeholder="e.g. zenopix-bk-001" value="' + esc(row.name) + '" />' +
             '</div>' +
             '<div class="dp-form-group dp-form-group-eui">' +
             '<input class="dp-form-input dp-mono-input" data-field="dev_eui" data-idx="' + index + '" ' +
             'placeholder="16 hex chars" maxlength="16" value="' + esc(row.dev_eui) + '" />' +
+            '</div>' +
+            '<div class="dp-form-group dp-form-group-joineui">' +
+            '<input class="dp-form-input dp-mono-input" data-field="join_eui" data-idx="' + index + '" ' +
+            'placeholder="16 hex chars" maxlength="16" value="' + esc(row.join_eui) + '" />' +
             '</div>' +
             '<div class="dp-form-group dp-form-group-key">' +
             '<input class="dp-form-input dp-mono-input" data-field="app_key" data-idx="' + index + '" ' +
             'placeholder="32 hex chars" maxlength="32" value="' + esc(row.app_key) + '" />' +
             '</div>' +
             '<div class="dp-form-actions">' +
-            '<button class="dp-btn dp-btn-secondary dp-btn-sm dp-btn-icon" data-action="gen-key" data-idx="' + index + '" title="Generate AppKey">&#9881;</button>' +
             '<button class="dp-btn dp-btn-secondary dp-btn-sm dp-btn-icon" data-action="remove-row" data-idx="' + index + '" title="Remove">&times;</button>' +
             '</div>' +
-            '</div>';
-    }
-
-    function renderCSVMode() {
-        return '<textarea class="dp-csv-area" id="dp-csv-input" placeholder="device_name,dev_eui,app_key\nSign-001,A1B2C3D4E5F60708,00112233445566778899AABBCCDDEEFF\nSign-002,B2C3D4E5F6070809,"></textarea>' +
-            '<div class="dp-csv-hint">One device per line: name,dev_eui,app_key. Header row is optional. AppKey is optional (will be auto-generated).</div>' +
-            '<div style="display:flex;gap:8px;margin-top:12px;">' +
-            '<button class="dp-btn dp-btn-primary" data-action="import-csv">Import &amp; Register</button>' +
             '</div>';
     }
 
@@ -364,6 +355,7 @@ self.onInit = function () {
             valid.push({
                 device_name: row.name,
                 dev_eui: row.dev_eui.toUpperCase(),
+                join_eui: (row.join_eui || '0000000000000000').toUpperCase(),
                 app_key: row.app_key.toUpperCase()
             });
         }
@@ -441,25 +433,77 @@ self.onInit = function () {
     function parseCSV(text) {
         var lines = text.trim().split('\n');
         var rows = [];
+        var errors = [];
 
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
             if (!line) continue;
 
             // Skip header row
-            if (i === 0 && /device.?name|dev.?eui|name/i.test(line)) continue;
+            if (i === 0 && /device.?id|device.?name|dev.?eui/i.test(line)) continue;
 
             var parts = line.split(/[,;\t]+/);
-            if (parts.length < 2) continue;
+            if (parts.length < 2) {
+                errors.push('Row ' + (i + 1) + ': needs at least device_id and dev_eui');
+                continue;
+            }
+
+            var devEui = (parts[1] || '').trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+            if (devEui.length !== 16) {
+                errors.push('Row ' + (i + 1) + ': invalid DevEUI (need 16 hex chars)');
+                continue;
+            }
+
+            var joinEui = parts[2] ? parts[2].trim().toUpperCase().replace(/[^0-9A-F]/g, '') : '0000000000000000';
+            if (joinEui.length !== 16) joinEui = '0000000000000000';
 
             rows.push({
                 name: (parts[0] || '').trim(),
-                dev_eui: (parts[1] || '').trim().toUpperCase().replace(/[^0-9A-F]/g, ''),
-                app_key: parts[2] ? parts[2].trim().toUpperCase().replace(/[^0-9A-F]/g, '') : generateAppKey()
+                dev_eui: devEui,
+                join_eui: joinEui,
+                app_key: parts[3] ? parts[3].trim().toUpperCase().replace(/[^0-9A-F]/g, '') : ''
             });
         }
 
-        return rows;
+        return { rows: rows, errors: errors };
+    }
+
+    function downloadTemplate() {
+        var csv = 'device_id,dev_eui,join_eui,app_key\n' +
+            'zenopix-example-001,70B3D57ED006A001,0000000000000000,A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4\n';
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'device-registration-template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function uploadCSV() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.onchange = function () {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var result = parseCSV(e.target.result);
+                if (result.errors.length > 0) {
+                    showToast(result.errors[0], 'error');
+                    return;
+                }
+                if (result.rows.length === 0) {
+                    showToast('No valid rows found in CSV', 'error');
+                    return;
+                }
+                registerRows = result.rows;
+                render();
+                showToast('Loaded ' + result.rows.length + ' devices from CSV', 'success');
+            };
+            reader.readAsText(input.files[0]);
+        };
+        input.click();
     }
 
     // ── Event Binding ───────────────────────────────────────────
@@ -534,18 +578,12 @@ self.onInit = function () {
                 render();
                 break;
             case 'add-row':
-                registerRows.push({ name: '', dev_eui: '', app_key: '' });
+                registerRows.push({ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' });
                 render();
                 break;
             case 'remove-row':
                 if (!isNaN(idx) && registerRows.length > 1) {
                     registerRows.splice(idx, 1);
-                    render();
-                }
-                break;
-            case 'gen-key':
-                if (!isNaN(idx) && registerRows[idx]) {
-                    registerRows[idx].app_key = generateAppKey();
                     render();
                 }
                 break;
@@ -555,27 +593,14 @@ self.onInit = function () {
             case 'register-reset':
                 registerStatus = 'idle';
                 registerResults = null;
-                registerRows = [{ name: '', dev_eui: '', app_key: '' }];
+                registerRows = [{ name: '', dev_eui: '', join_eui: '0000000000000000', app_key: '' }];
                 render();
                 break;
-            case 'toggle-csv':
-                csvMode = !csvMode;
-                render();
+            case 'download-template':
+                downloadTemplate();
                 break;
-            case 'import-csv':
-                var textarea = container.querySelector('#dp-csv-input');
-                if (textarea && textarea.value.trim()) {
-                    var parsed = parseCSV(textarea.value);
-                    if (parsed.length === 0) {
-                        showToast('No valid rows found in CSV', 'error');
-                    } else {
-                        registerRows = parsed;
-                        csvMode = false;
-                        registerDevices();
-                    }
-                } else {
-                    showToast('Paste CSV data first', 'error');
-                }
+            case 'upload-csv':
+                uploadCSV();
                 break;
         }
     }
@@ -585,7 +610,7 @@ self.onInit = function () {
         var idx = parseInt(e.target.getAttribute('data-idx'), 10);
         if (field && !isNaN(idx) && registerRows[idx]) {
             var val = e.target.value;
-            if (field === 'dev_eui' || field === 'app_key') {
+            if (field === 'dev_eui' || field === 'join_eui' || field === 'app_key') {
                 val = val.toUpperCase().replace(/[^0-9A-F]/g, '');
                 e.target.value = val;
             }

@@ -68,9 +68,6 @@ self.onInit = function () {
     var addressSelected = null;
     var addressFetching = false;
     var addrDebounceTimer = null;
-    var deviceProfiles = {};
-    var profilesFetched = false;
-    var newSiteDevices = [];
     var addSiteStatus = '';
     var addSiteError = '';
     var addSiteLog = [];
@@ -171,13 +168,6 @@ self.onInit = function () {
     function esc(str) {
         if (!str) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function generateToken() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0;
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
     }
 
     function formatDate(ts) {
@@ -600,31 +590,6 @@ self.onInit = function () {
         html += '</select></div>';
         html += '</div>';
 
-        // Devices section
-        html += '<div style="margin-top:20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">';
-        html += '<h3 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">Devices (optional)</h3>';
-        html += '<button class="cm-btn cm-btn-outline cm-btn-sm" data-action="add-device-row">+ Add Device</button>';
-        html += '</div>';
-
-        if (newSiteDevices.length > 0) {
-            for (var di = 0; di < newSiteDevices.length; di++) {
-                var dev = newSiteDevices[di];
-                html += '<div class="cm-device-row">';
-                html += '<div class="cm-form-group"><label>Device Name</label><input class="cm-input" data-dev-idx="' + di + '" data-dev-field="name" value="' + esc(dev.name) + '" placeholder="Device name"></div>';
-                html += '<div class="cm-form-group"><label>Profile</label>';
-                html += '<select class="cm-select" data-dev-idx="' + di + '" data-dev-field="profile">';
-                html += '<option value="">Default</option>';
-                var profNames = Object.keys(deviceProfiles);
-                for (var pi = 0; pi < profNames.length; pi++) {
-                    html += '<option value="' + esc(profNames[pi]) + '"' + (dev.profile === profNames[pi] ? ' selected' : '') + '>' + esc(profNames[pi]) + '</option>';
-                }
-                html += '</select></div>';
-                html += '<div class="cm-form-group"><label>&nbsp;</label><button class="cm-btn cm-btn-danger cm-btn-sm" data-action="remove-device" data-dev-idx="' + di + '">Remove</button></div>';
-                html += '</div>';
-                html += '<div class="cm-device-token">Token: ' + esc(dev.token) + '</div>';
-            }
-        }
-
         // Error/Status
         if (addSiteError) {
             html += '<div class="cm-inline-error" style="margin-top:12px">' + esc(addSiteError) + '</div>';
@@ -662,9 +627,6 @@ self.onInit = function () {
                     activeTab = newTab;
                     if (newTab === 'hierarchy' && !hierarchyLoaded) {
                         loadHierarchy();
-                    }
-                    if (newTab === 'add-site' && !profilesFetched) {
-                        fetchDeviceProfiles();
                     }
                     render();
                 }
@@ -717,20 +679,6 @@ self.onInit = function () {
             el.addEventListener(evtType, handleSiteFieldChange);
         }
 
-        // Device inputs
-        var devInputs = container.querySelectorAll('[data-dev-field]');
-        for (var dvi = 0; dvi < devInputs.length; dvi++) {
-            var devEl = devInputs[dvi];
-            var devEvt = (devEl.tagName === 'SELECT') ? 'change' : 'input';
-            devEl.addEventListener(devEvt, function () {
-                var idx = parseInt(this.getAttribute('data-dev-idx'));
-                var field = this.getAttribute('data-dev-field');
-                if (newSiteDevices[idx]) {
-                    newSiteDevices[idx][field] = this.value;
-                }
-            });
-        }
-
         // Address option clicks
         var addrOpts = container.querySelectorAll('.cm-addr-option');
         for (var aoi = 0; aoi < addrOpts.length; aoi++) {
@@ -775,13 +723,6 @@ self.onInit = function () {
                 entityId: { id: siteId, entityType: 'ASSET' },
                 entityName: siteName
             });
-        } else if (action === 'add-device-row') {
-            newSiteDevices.push({ name: '', profile: '', token: generateToken() });
-            render();
-        } else if (action === 'remove-device') {
-            var idx = parseInt(this.getAttribute('data-dev-idx'));
-            newSiteDevices.splice(idx, 1);
-            render();
         } else if (action === 'create-site') {
             createSite();
         } else if (action === 'add-another-site') {
@@ -1319,26 +1260,6 @@ self.onInit = function () {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // ADD SITE: DEVICE PROFILES
-    // ═══════════════════════════════════════════════════════════
-
-    function fetchDeviceProfiles() {
-        apiGet('/deviceProfiles?pageSize=100&page=0').then(function (resp) {
-            var data = (resp && resp.data) ? resp.data : (Array.isArray(resp) ? resp : []);
-            deviceProfiles = {};
-            for (var i = 0; i < data.length; i++) {
-                var p = data[i];
-                var name = p.name || p.title || 'Profile';
-                var pid = p.id ? p.id.id : '';
-                if (pid) deviceProfiles[name] = pid;
-            }
-            profilesFetched = true;
-        }).catch(function () {
-            profilesFetched = true;
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════
     // ADD SITE: CREATE
     // ═══════════════════════════════════════════════════════════
 
@@ -1481,53 +1402,6 @@ self.onInit = function () {
             });
         });
 
-        // Step 5: Create devices (if any)
-        var validDevices = newSiteDevices.filter(function (d) { return d.name && d.name.trim(); });
-        for (var di = 0; di < validDevices.length; di++) {
-            (function (dev) {
-                steps.push(function () {
-                    addSiteLog.push({ type: 'run', msg: 'Creating device: ' + dev.name });
-                    render();
-
-                    var body = {
-                        name: dev.name.trim(),
-                        type: 'default',
-                        label: dev.name.trim(),
-                        customerId: { id: customerId, entityType: 'CUSTOMER' }
-                    };
-
-                    if (dev.profile && deviceProfiles[dev.profile]) {
-                        body.deviceProfileId = { id: deviceProfiles[dev.profile], entityType: 'DEVICE_PROFILE' };
-                    }
-
-                    var qp = dev.token ? '?accessToken=' + encodeURIComponent(dev.token) : '';
-
-                    return apiPost('/device' + qp, body).then(function (device) {
-                        var deviceId = device.id.id;
-                        addSiteLog[addSiteLog.length - 1] = { type: 'ok', msg: 'Created device: ' + dev.name };
-                        render();
-
-                        // Link site -> device
-                        return apiPost('/relation', {
-                            from: { id: createdIds.siteId, entityType: 'ASSET' },
-                            to: { id: deviceId, entityType: 'DEVICE' },
-                            type: 'Contains',
-                            typeGroup: 'COMMON'
-                        }).then(function () {
-                            // Set device attributes
-                            var cc = addSiteForm.countryCode || '';
-                            var cInfo = CO2_FACTORS[cc] || {};
-                            return apiPost('/plugins/telemetry/DEVICE/' + deviceId + '/attributes/SERVER_SCOPE', {
-                                co2_per_kwh: parseFloat(addSiteForm.co2) || cInfo.co2 || 0,
-                                energy_rate: parseFloat(addSiteForm.rate) || cInfo.rate || 0,
-                                currency_symbol: addSiteForm.currency || cInfo.symbol || ''
-                            });
-                        });
-                    });
-                });
-            })(validDevices[di]);
-        }
-
         // Execute steps sequentially
         var stepIdx = 0;
         function runNext() {
@@ -1570,7 +1444,6 @@ self.onInit = function () {
         addressResults = [];
         addressSelected = null;
         addressFetching = false;
-        newSiteDevices = [];
         addSiteStatus = '';
         addSiteError = '';
         addSiteLog = [];

@@ -21,7 +21,7 @@ async def get_tb_token(client: httpx.AsyncClient) -> str:
 
 
 async def register_device_tb(
-    device_name: str, dev_eui: str, client: httpx.AsyncClient, token: str
+    device_name: str, dev_eui: str, join_eui: str, client: httpx.AsyncClient, token: str
 ) -> dict:
     """Create a device in ThingsBoard and save attributes."""
     headers = {"X-Authorization": f"Bearer {token}"}
@@ -63,6 +63,7 @@ async def register_device_tb(
             headers=headers,
             json={
                 "dev_eui": dev_eui,
+                "join_eui": join_eui,
                 "registered_at": datetime.utcnow().isoformat(),
             },
         )

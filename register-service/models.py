@@ -8,6 +8,7 @@ class DeviceRegistration(BaseModel):
     device_name: str
     dev_eui: str
     app_key: Optional[str] = None
+    join_eui: str = "0000000000000000"
     frequency_plan: str = config.DEFAULT_FREQUENCY_PLAN
     lorawan_version: str = config.DEFAULT_LORAWAN_VERSION
     lorawan_phy_version: str = config.DEFAULT_LORAWAN_PHY_VERSION

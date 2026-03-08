@@ -31,7 +31,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "ids": {
                         "device_id": dev_id,
                         "dev_eui": dev_eui,
-                        "join_eui": config.DEFAULT_JOIN_EUI,
+                        "join_eui": device.join_eui,
                     },
                     "join_server_address": base.replace("https://", ""),
                     "network_server_address": base.replace("https://", ""),
@@ -59,7 +59,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "ids": {
                         "device_id": dev_id,
                         "dev_eui": dev_eui,
-                        "join_eui": config.DEFAULT_JOIN_EUI,
+                        "join_eui": device.join_eui,
                     },
                     "root_keys": {
                         "app_key": {"key": app_key},
@@ -84,7 +84,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "ids": {
                         "device_id": dev_id,
                         "dev_eui": dev_eui,
-                        "join_eui": config.DEFAULT_JOIN_EUI,
+                        "join_eui": device.join_eui,
                     },
                     "frequency_plan_id": device.frequency_plan,
                     "lorawan_version": device.lorawan_version,
@@ -117,7 +117,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "ids": {
                         "device_id": dev_id,
                         "dev_eui": dev_eui,
-                        "join_eui": config.DEFAULT_JOIN_EUI,
+                        "join_eui": device.join_eui,
                     },
                 },
                 "field_mask": {"paths": []},
