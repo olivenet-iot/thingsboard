@@ -1245,6 +1245,7 @@ self.onInit = function () {
             profileSelect.addEventListener('change', function () {
                 addDeviceForm.profileName = profileSelect.value;
                 addDeviceForm.profileId = deviceProfiles[profileSelect.value] || '';
+                render();
             });
         }
 
@@ -1271,6 +1272,7 @@ self.onInit = function () {
                         break;
                     }
                 }
+                render();
             });
         }
 

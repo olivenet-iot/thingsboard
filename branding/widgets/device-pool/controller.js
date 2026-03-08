@@ -312,7 +312,7 @@ self.onInit = function () {
         return '<div class="dp-dialog-overlay" data-action="close-dialog">' +
             '<div class="dp-dialog" onclick="event.stopPropagation()">' +
             '<div class="dp-dialog-title">Restart Bridge</div>' +
-            '<div class="dp-dialog-body">Are you sure you want to restart the ChirpStack-to-ThingsBoard bridge? ' +
+            '<div class="dp-dialog-body">Are you sure you want to restart the TTN-to-ThingsBoard bridge? ' +
             'This will briefly interrupt telemetry forwarding.</div>' +
             '<div class="dp-dialog-actions">' +
             '<button class="dp-btn dp-btn-secondary" data-action="close-dialog">Cancel</button>' +

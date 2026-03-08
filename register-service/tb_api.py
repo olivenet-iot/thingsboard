@@ -31,7 +31,7 @@ async def register_device_tb(
         resp = await client.post(
             f"{config.TB_URL}/api/device",
             headers=headers,
-            json={"name": device_name, "type": "LoRaWAN"},
+            json={"name": device_name},
         )
         if resp.status_code == 401:
             return {"success": False, "error": "TB auth expired", "reauth": True}
