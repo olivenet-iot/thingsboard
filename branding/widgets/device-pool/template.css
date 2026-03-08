@@ -315,89 +315,32 @@
     font-size: 14px;
 }
 
-/* ── Form ─────────────────────────────────────────────────── */
-
-.dp-form-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.dp-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    flex: 1;
-    min-width: 0;
-}
-
-.dp-form-group-eui {
-    flex: 1;
-}
-
-.dp-form-group-joineui {
-    flex: 1;
-}
-
-.dp-form-group-key {
-    flex: 1.8;
-}
-
-.dp-form-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-}
-
-.dp-form-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 13px;
-    color: #0f172a;
-    background: #ffffff;
-    outline: none;
-    transition: border-color 0.15s;
-}
-
-.dp-form-input:focus {
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
-}
-
-.dp-form-input::placeholder {
-    color: #cbd5e1;
-}
-
-.dp-form-input.dp-mono-input {
-    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 12px;
-    text-transform: uppercase;
-}
+/* ── Register Form ───────────────────────────────────────── */
 
 .dp-form-header {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    padding: 0 0 8px 0;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-.dp-col-num {
-    width: 24px;
-    flex-shrink: 0;
+.dp-form-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.dp-col-actions {
-    width: 32px;
-    flex-shrink: 0;
-}
+.dp-hdr-num { width: 24px; flex-shrink: 0; }
+.dp-hdr-id { flex: 1.2; }
+.dp-hdr-eui { flex: 1; }
+.dp-hdr-joineui { flex: 1; }
+.dp-hdr-appkey { flex: 1.8; }
+.dp-hdr-actions { width: 28px; flex-shrink: 0; }
 
 .dp-form-rows {
     max-height: 500px;
@@ -405,27 +348,77 @@
     padding-right: 4px;
 }
 
-.dp-form-actions {
+.dp-form-row {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 6px;
-    padding-bottom: 1px;
-    flex-shrink: 0;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
 .dp-row-num {
-    display: inline-flex;
+    width: 24px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #f59e0b;
+    background: #fef3c7;
+    border-radius: 4px;
+    padding: 2px 0;
+}
+
+.dp-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    box-sizing: border-box;
+    text-transform: uppercase;
+    transition: border-color 0.2s;
+}
+
+.dp-input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+}
+
+.dp-input::placeholder {
+    color: #cbd5e1;
+    text-transform: none;
+}
+
+.dp-input-id {
+    flex: 1.2;
+    text-transform: none;
+}
+.dp-input-eui { flex: 1; }
+.dp-input-joineui { flex: 1; }
+.dp-input-appkey { flex: 1.8; }
+
+.dp-row-remove {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: none;
+    background: #fee2e2;
+    color: #ef4444;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #f1f5f9;
-    font-size: 11px;
-    font-weight: 600;
-    color: #64748b;
-    flex-shrink: 0;
-    margin-bottom: 1px;
+}
+
+.dp-row-remove:hover {
+    background: #fecaca;
 }
 
 /* ── CSV Area ─────────────────────────────────────────────── */
@@ -718,20 +711,6 @@
 
     .dp-tabs {
         padding: 0 14px;
-    }
-
-    .dp-form-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .dp-form-group {
-        min-width: 0;
-    }
-
-    .dp-form-actions {
-        flex-direction: row;
-        justify-content: flex-end;
     }
 
     .dp-table th,

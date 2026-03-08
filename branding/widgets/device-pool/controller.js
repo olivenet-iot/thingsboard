@@ -189,12 +189,12 @@ self.onInit = function () {
 
         // Labels row (only once)
         html += '<div class="dp-form-header">' +
-            '<span class="dp-col-num"></span>' +
-            '<span class="dp-form-group dp-form-label">Device ID</span>' +
-            '<span class="dp-form-group dp-form-group-eui dp-form-label">DevEUI</span>' +
-            '<span class="dp-form-group dp-form-group-joineui dp-form-label">JoinEUI</span>' +
-            '<span class="dp-form-group dp-form-group-key dp-form-label">AppKey</span>' +
-            '<span class="dp-col-actions"></span>' +
+            '<span class="dp-hdr-num"></span>' +
+            '<span class="dp-hdr-id">Device ID</span>' +
+            '<span class="dp-hdr-eui">DevEUI</span>' +
+            '<span class="dp-hdr-joineui">JoinEUI</span>' +
+            '<span class="dp-hdr-appkey">AppKey</span>' +
+            '<span class="dp-hdr-actions"></span>' +
             '</div>';
 
         html += '<div class="dp-form-rows">';
@@ -216,25 +216,15 @@ self.onInit = function () {
     function renderFormRow(row, index) {
         return '<div class="dp-form-row">' +
             '<span class="dp-row-num">' + (index + 1) + '</span>' +
-            '<div class="dp-form-group">' +
-            '<input class="dp-form-input" data-field="name" data-idx="' + index + '" ' +
-            'placeholder="e.g. zenopix-bk-001" value="' + esc(row.name) + '" />' +
-            '</div>' +
-            '<div class="dp-form-group dp-form-group-eui">' +
-            '<input class="dp-form-input dp-mono-input" data-field="dev_eui" data-idx="' + index + '" ' +
-            'placeholder="16 hex chars" maxlength="16" value="' + esc(row.dev_eui) + '" />' +
-            '</div>' +
-            '<div class="dp-form-group dp-form-group-joineui">' +
-            '<input class="dp-form-input dp-mono-input" data-field="join_eui" data-idx="' + index + '" ' +
-            'placeholder="16 hex chars" maxlength="16" value="' + esc(row.join_eui) + '" />' +
-            '</div>' +
-            '<div class="dp-form-group dp-form-group-key">' +
-            '<input class="dp-form-input dp-mono-input" data-field="app_key" data-idx="' + index + '" ' +
-            'placeholder="32 hex chars" maxlength="32" value="' + esc(row.app_key) + '" />' +
-            '</div>' +
-            '<div class="dp-form-actions">' +
-            '<button class="dp-btn dp-btn-secondary dp-btn-sm dp-btn-icon" data-action="remove-row" data-idx="' + index + '" title="Remove">&times;</button>' +
-            '</div>' +
+            '<input class="dp-input dp-input-id" data-field="name" data-idx="' + index + '" ' +
+            'placeholder="e.g. lumosoft-001" value="' + esc(row.name) + '" />' +
+            '<input class="dp-input dp-input-eui" data-field="dev_eui" data-idx="' + index + '" ' +
+            'placeholder="16 HEX" maxlength="16" value="' + esc(row.dev_eui) + '" />' +
+            '<input class="dp-input dp-input-joineui" data-field="join_eui" data-idx="' + index + '" ' +
+            'placeholder="16 HEX" maxlength="16" value="' + esc(row.join_eui) + '" />' +
+            '<input class="dp-input dp-input-appkey" data-field="app_key" data-idx="' + index + '" ' +
+            'placeholder="32 HEX" maxlength="32" value="' + esc(row.app_key) + '" />' +
+            '<button class="dp-row-remove" data-action="remove-row" data-idx="' + index + '" title="Remove">&times;</button>' +
             '</div>';
     }
 
@@ -538,7 +528,7 @@ self.onInit = function () {
         }
 
         // Form inputs
-        var inputs = container.querySelectorAll('.dp-form-input');
+        var inputs = container.querySelectorAll('.dp-input');
         for (var n = 0; n < inputs.length; n++) {
             inputs[n].addEventListener('input', handleInput);
         }
