@@ -1,0 +1,15 @@
+[Unit]
+Description=SignConnect Register Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/thingsboard/register-service
+EnvironmentFile=/home/ubuntu/thingsboard/register-service/.env
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 5002
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
