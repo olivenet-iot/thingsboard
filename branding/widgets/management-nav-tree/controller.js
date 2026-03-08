@@ -88,6 +88,11 @@ self.onInit = function() {
         self.navigateToOnboarding();
     });
 
+    // Device Pool button
+    self.$container.find('.mnt-pool-row').on('click', function() {
+        self.navigateToPool();
+    });
+
     // Clients section toggle
     self.clientsCollapsed = false;
     self.clientsLabelEl = self.$container.find('.mnt-clients-label');
@@ -607,6 +612,20 @@ self.navigateToOnboarding = function() {
     }
 };
 
+self.navigateToPool = function() {
+    try {
+        var sc = self.ctx.stateController;
+        if (sc && sc.openState) {
+            sc.resetState();
+            sc.openState('pool', {});
+            self.updateNavHighlight();
+            return;
+        }
+    } catch (e) {
+        console.error('[MNT] Failed to navigate to pool:', e);
+    }
+};
+
 self.navigateToEntity = function(entityId, entityName, entityType, nodeType) {
     var stateId = '';
     if (nodeType === 'customer') stateId = 'customer';
@@ -645,6 +664,9 @@ self.updateNavHighlight = function() {
 
     if (!currentState || currentState === 'default') {
         self.$container.find('.mnt-home-row').addClass('mnt-nav-active');
+    }
+    if (currentState === 'pool') {
+        self.$container.find('.mnt-pool-row').addClass('mnt-nav-active');
     }
 };
 
@@ -783,5 +805,6 @@ self.onDestroy = function() {
     self.clientsLabelEl.find('.mnt-clients-row').off('click');
     self.$container.find('.mnt-home-row').off('click');
     self.$container.find('.mnt-new-customer-row').off('click');
+    self.$container.find('.mnt-pool-row').off('click');
     self.brandEl.off('click');
 };
