@@ -40,6 +40,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "lorawan_version": device.lorawan_version,
                     "lorawan_phy_version": device.lorawan_phy_version,
                     "supports_join": True,
+                    "supports_class_c": device.supports_class_c,
                 },
             },
         )
@@ -90,6 +91,10 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "lorawan_version": device.lorawan_version,
                     "lorawan_phy_version": device.lorawan_phy_version,
                     "supports_join": True,
+                    "supports_class_c": device.supports_class_c,
+                    "mac_settings": {
+                        "rx1_delay": {"value": "RX_DELAY_10"}
+                    },
                 },
                 "field_mask": {
                     "paths": [
@@ -97,6 +102,8 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                         "lorawan_version",
                         "lorawan_phy_version",
                         "supports_join",
+                        "supports_class_c",
+                        "mac_settings.rx1_delay",
                     ]
                 },
             },

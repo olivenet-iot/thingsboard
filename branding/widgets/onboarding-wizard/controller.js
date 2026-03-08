@@ -952,10 +952,29 @@ self.onInit = function () {
         }
 
         // 7. Create/assign devices with relations and attributes
+        var siteDeviceCounters = {};
         for (var dvi = 0; dvi < devices.length; dvi++) {
             (function (devData) {
+                // Track per-site device numbering
+                if (!siteDeviceCounters[devData.siteName]) siteDeviceCounters[devData.siteName] = 0;
+                siteDeviceCounters[devData.siteName]++;
+                var deviceNum = siteDeviceCounters[devData.siteName];
+                var numStr = deviceNum < 10 ? '0' + deviceNum : '' + deviceNum;
+
+                // Build label: Customer - Estate - Region - Site - ##
+                var siteInfo = null;
+                for (var si2 = 0; si2 < sites.length; si2++) {
+                    if (sites[si2].site === devData.siteName) { siteInfo = sites[si2]; break; }
+                }
+                var labelParts = [customer.companyName,
+                    siteInfo ? siteInfo.estate : '',
+                    siteInfo ? siteInfo.region : '',
+                    devData.siteName,
+                    numStr];
+                var deviceLabel = labelParts.filter(function (p) { return p; }).join(' - ');
+
                 if (devData.poolDeviceId) {
-                    // Pool mode: assign existing device to customer, then update profile
+                    // Pool mode: assign existing device to customer, then update profile + label
                     plan.push({
                         phase: 'device', label: 'Assign pool device: ' + devData.deviceName,
                         fn: function () {
@@ -963,12 +982,13 @@ self.onInit = function () {
                             if (provisionState.createdIds[key]) return Promise.resolve();
                             return apiPost('/customer/' + provisionState.customerId + '/device/' + devData.poolDeviceId, {}).then(function (dev) {
                                 provisionState.createdIds[key] = dev.id.id;
+                                dev.label = deviceLabel;
                                 // Update device profile if needed
                                 var profileId = deviceProfiles[devData.profile];
                                 if (profileId) {
                                     dev.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
-                                    return apiPost('/device', dev);
                                 }
+                                return apiPost('/device', dev);
                             });
                         }
                     });
@@ -986,7 +1006,7 @@ self.onInit = function () {
                             var body = {
                                 name: devData.deviceName,
                                 type: 'default',
-                                label: devData.deviceName,
+                                label: deviceLabel,
                                 customerId: { id: provisionState.customerId, entityType: 'CUSTOMER' }
                             };
                             if (profileId) {

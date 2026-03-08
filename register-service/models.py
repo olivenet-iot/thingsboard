@@ -12,6 +12,7 @@ class DeviceRegistration(BaseModel):
     frequency_plan: str = config.DEFAULT_FREQUENCY_PLAN
     lorawan_version: str = config.DEFAULT_LORAWAN_VERSION
     lorawan_phy_version: str = config.DEFAULT_LORAWAN_PHY_VERSION
+    supports_class_c: bool = True
 
 
 class RegisterRequest(BaseModel):

@@ -31,6 +31,9 @@ self.onInit = function () {
     var siteAttrs = {};
     var devices = [];
     var parentBreadcrumb = '';
+    var parentCustomerName = '';
+    var parentEstateName = '';
+    var parentRegionName = '';
     var activeTab = 'details';
     var isEditing = false;
     var isSaving = false;
@@ -230,21 +233,24 @@ self.onInit = function () {
     }
 
     function fetchBreadcrumb() {
+        parentEstateName = '';
+        parentRegionName = '';
         return apiGet('/relations?toId=' + siteId + '&toType=ASSET&relationType=Contains')
             .then(function (rels) {
                 var parentRel = rels.find(function (r) { return r.from && r.from.entityType === 'ASSET'; });
                 if (!parentRel) { parentBreadcrumb = ''; return; }
                 return apiGet('/asset/' + parentRel.from.id).then(function (region) {
-                    var regionName = region.name;
+                    parentRegionName = region.name;
                     return apiGet('/relations?toId=' + parentRel.from.id + '&toType=ASSET&relationType=Contains')
                         .then(function (rels2) {
                             var estateRel = rels2.find(function (r) { return r.from && r.from.entityType === 'ASSET'; });
                             if (estateRel) {
                                 return apiGet('/asset/' + estateRel.from.id).then(function (estate) {
-                                    parentBreadcrumb = estate.name + ' > ' + regionName;
+                                    parentEstateName = estate.name;
+                                    parentBreadcrumb = estate.name + ' > ' + parentRegionName;
                                 });
                             }
-                            parentBreadcrumb = regionName;
+                            parentBreadcrumb = parentRegionName;
                         });
                 });
             }).catch(function () { parentBreadcrumb = ''; });
@@ -928,8 +934,14 @@ self.onInit = function () {
         apiPost('/customer/' + customerId + '/device/' + poolDeviceId, {})
         .then(function (dev) {
             assignedDeviceId = dev.id.id;
-            // Step 2: Update device profile
+            // Step 2: Update device profile + set label
             dev.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
+            // Auto-generate label: Customer - Estate - Region - Site - ##
+            var siteName = siteEntity ? siteEntity.name : '';
+            var deviceNum = devices.length + 1;
+            var numStr = deviceNum < 10 ? '0' + deviceNum : '' + deviceNum;
+            var parts = [parentCustomerName, parentEstateName, parentRegionName, siteName, numStr];
+            dev.label = parts.filter(function (p) { return p; }).join(' - ');
             return apiPost('/device', dev);
         })
         .then(function () {
@@ -1336,6 +1348,7 @@ self.onInit = function () {
             siteEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
             return apiGet('/customer/' + siteEntity.customerId.id).then(function (c) {
                 if (c && c.title) {
+                    parentCustomerName = c.title;
                     parentBreadcrumb = parentBreadcrumb
                         ? (c.title + ' > ' + parentBreadcrumb)
                         : c.title;

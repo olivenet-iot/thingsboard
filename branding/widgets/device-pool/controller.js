@@ -120,7 +120,7 @@ self.onInit = function () {
             var name = d.name || d.device_name || '—';
             var eui = d.dev_eui || d.devEui || '—';
             var profile = d.device_profile || d.profile || '—';
-            var created = d.created_at || d.createdAt || '';
+            var created = d.created_time || d.created_at || d.createdAt || '';
             var assigned = d.assigned || d.is_assigned || false;
 
             var createdStr = '';
