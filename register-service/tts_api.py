@@ -93,7 +93,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                     "supports_join": True,
                     "supports_class_c": device.supports_class_c,
                     "mac_settings": {
-                        "rx1_delay": {"value": "RX_DELAY_10"}
+                        "desired_rx1_delay": "RX_DELAY_10"
                     },
                 },
                 "field_mask": {
@@ -103,7 +103,7 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
                         "lorawan_phy_version",
                         "supports_join",
                         "supports_class_c",
-                        "mac_settings.rx1_delay",
+                        "mac_settings.desired_rx1_delay",
                     ]
                 },
             },
