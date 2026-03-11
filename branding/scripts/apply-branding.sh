@@ -241,6 +241,9 @@ if ! $NO_BACKUP && [[ "$CREATE_BACKUP" == "true" ]]; then
         [[ -f "$template" ]] && backup_file "$template"
     done
 
+    # Backup email subject lines
+    backup_file "$APP_RESOURCES/i18n/messages.properties"
+
     # Backup translation files
     if [[ "$BACKUP_TRANSLATIONS" == "true" ]]; then
         mkdir -p "$BRANDING_DIR/$BACKUP_DIR/locale"
@@ -413,11 +416,18 @@ for template in "$TEMPLATES"/*.ftl; do
         modify_file "$template" "your Thingsboard account" "your $BRAND_NAME account"
         modify_file "$template" "Your ThingsBoard account" "Your $BRAND_NAME account"
         modify_file "$template" "your ThingsBoard account" "your $BRAND_NAME account"
+        modify_file "$template" "Your Thingsboard account" "Your $BRAND_NAME account"
+        modify_file "$template" "Thingsboard space" "$BRAND_NAME space"
+        modify_file "$template" "Thingsboard user account" "$BRAND_NAME user account"
+        modify_file "$template" "from Thingsboard" "from $BRAND_NAME"
+        modify_file "$template" "Activate your Thingsboard" "Activate your $BRAND_NAME"
+        modify_file "$template" "ThingsBoard is already" "$BRAND_NAME is already"
+        modify_file "$template" "ThingsBoard has already" "$BRAND_NAME has already"
 
         # Update signature
         if [[ -n "$EMAIL_SIGNATURE" ]]; then
-            modify_file "$template" "— The Thingsboard" "$EMAIL_SIGNATURE"
-            modify_file "$template" "— The ThingsBoard" "$EMAIL_SIGNATURE"
+            modify_file "$template" "&mdash; The Thingsboard" "$EMAIL_SIGNATURE"
+            modify_file "$template" "&mdash; The ThingsBoard" "$EMAIL_SIGNATURE"
         fi
 
         # Update footer
@@ -427,6 +437,21 @@ for template in "$TEMPLATES"/*.ftl; do
         fi
     fi
 done
+
+# =============================================================================
+# 10b. UPDATE EMAIL SUBJECT LINES
+# =============================================================================
+
+log_section "10b. Updating Email Subject Lines"
+
+MESSAGES_PROPS="$APP_RESOURCES/i18n/messages.properties"
+if [[ -f "$MESSAGES_PROPS" ]]; then
+    backup_file "$MESSAGES_PROPS"
+    modify_file "$MESSAGES_PROPS" "from Thingsboard" "from $BRAND_NAME"
+    modify_file "$MESSAGES_PROPS" "on Thingsboard" "on $BRAND_NAME"
+    modify_file "$MESSAGES_PROPS" "Thingsboard -" "$BRAND_NAME -"
+    modify_file "$MESSAGES_PROPS" "ThingsBoard -" "$BRAND_NAME -"
+fi
 
 # =============================================================================
 # 11. UPDATE TRANSLATIONS
