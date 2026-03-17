@@ -29,7 +29,7 @@ self.onInit = function () {
     var poolLoading = false;
     var poolError = '';
 
-    var registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' }];
+    var registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '2AE60CB235944C98BB5665BF25DD6B16' }];
     var registerStatus = 'idle'; // idle | registering | done
     var registerResults = null;
 
@@ -584,7 +584,7 @@ self.onInit = function () {
                 render();
                 break;
             case 'add-row':
-                registerRows.push({ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' });
+                registerRows.push({ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '2AE60CB235944C98BB5665BF25DD6B16' });
                 render();
                 break;
             case 'remove-row':
@@ -599,7 +599,7 @@ self.onInit = function () {
             case 'register-reset':
                 registerStatus = 'idle';
                 registerResults = null;
-                registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '' }];
+                registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '2AE60CB235944C98BB5665BF25DD6B16' }];
                 render();
                 break;
             case 'download-template':
