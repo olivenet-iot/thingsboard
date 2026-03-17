@@ -474,9 +474,9 @@ self.onInit = function () {
 
     function downloadTemplate() {
         var csv = 'device_id,dev_eui,join_eui,app_key\n' +
-            'lumosoft-001,50FACB7000000002,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
-            'lumosoft-002,50FACB7000000003,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
-            'lumosoft-003,50FACB7000000004,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n';
+            'lumosoft-001,50FACB7000000001,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
+            'lumosoft-002,50FACB7000000002,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n' +
+            'lumosoft-003,50FACB7000000003,0101010101010101,2AE60CB235944C98BB5665BF25DD6B16\n';
         var blob = new Blob([csv], { type: 'text/csv' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
