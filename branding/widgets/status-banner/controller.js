@@ -108,29 +108,6 @@ self.onInit = function () {
         });
     }
 
-    // ── Fetch site name from parent asset relation ────────────────
-    function fetchSiteName() {
-        var url = '/api/relations?toId=' + DEVICE_ID
-            + '&toType=DEVICE&relationType=Contains&direction=FROM';
-        http.get(url).toPromise().then(function (relations) {
-            var siteRel = null;
-            for (var i = 0; i < relations.length; i++) {
-                if (relations[i].from && relations[i].from.entityType === 'ASSET') {
-                    siteRel = relations[i];
-                    break;
-                }
-            }
-            if (!siteRel) return;
-            return http.get('/api/asset/' + siteRel.from.id).toPromise();
-        }).then(function (asset) {
-            if (asset) {
-                elSiteName.textContent = '\u2014 ' + (asset.label || asset.name);
-            }
-        }).catch(function (err) {
-            console.warn('[SB] Site name fetch failed:', err);
-        });
-    }
-
     // ── Update Functions ──────────────────────────────────────────
 
     function updateLamp(isOn, dimVal) {
@@ -317,7 +294,6 @@ self.onInit = function () {
 
     // ── Initialize ────────────────────────────────────────────────
     fetchDeviceName();
-    fetchSiteName();
     poll();
     pollTimer = setInterval(poll, POLL_MS);
     self._sbPollTimer = pollTimer;
