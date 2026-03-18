@@ -381,7 +381,7 @@ self.onInit = function () {
         elLastCmd.textContent = 'Sending ' + value + '%…';
 
         http.post(url, payload).toPromise().then(function () {
-            showToast('Sent ' + value + '% — waiting for device…', 'info', 5000);
+            showToast('Sent ' + value + '% — waiting for device… (may take up to 2 min)', 'info', 8000);
             console.log('[DIM] POST success, waiting for confirm');
         }).catch(function (err) {
             // POST itself failed (network/auth) — bail out immediately
