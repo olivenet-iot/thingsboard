@@ -28,6 +28,8 @@ self.onInit = function () {
     var deviceLastActivity = 0;
     var deviceOnline = false;
     var deleteState = 'idle';
+    var unassignState = 'idle';
+    var deviceProfiles = {}; // {name → id} map
 
     // ── Resolve Device ID ───────────────────────────────────────
 
@@ -119,6 +121,18 @@ self.onInit = function () {
         } catch (e) { console.error('[DM] Navigate failed:', e); }
     }
 
+    // ── Fetch Device Profiles ─────────────────────────────────
+
+    function fetchDeviceProfiles() {
+        return apiGet('/deviceProfiles?pageSize=100&page=0').then(function (resp) {
+            var list = resp.data || [];
+            deviceProfiles = {};
+            list.forEach(function (p) {
+                deviceProfiles[p.name] = p.id.id;
+            });
+        }).catch(function () { deviceProfiles = {}; });
+    }
+
     // ── Fetch Parent Site ───────────────────────────────────────
 
     function fetchParentSite() {
@@ -180,6 +194,10 @@ self.onInit = function () {
                     '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>' +
                     '<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
                     ' Edit</button>';
+            if (deviceEntity && deviceEntity.customerId && deviceEntity.customerId.id &&
+                deviceEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+                html += '<button class="dm-btn dm-btn-warning" data-action="unassign-device">Unassign</button>';
+            }
             html += '<button class="dm-btn dm-btn-danger" data-action="delete-device">Delete</button>';
         } else {
             html += '<button class="dm-btn dm-btn-secondary" data-action="cancel-edit">Cancel</button>';
@@ -194,6 +212,11 @@ self.onInit = function () {
             html += renderDeleteDeviceDialog();
         }
 
+        // Unassign dialog
+        if (unassignState !== 'idle') {
+            html += renderUnassignDialog();
+        }
+
         // Device info card
         html += '<div class="dm-card">';
         html += '<div class="dm-card-title">' +
@@ -202,17 +225,23 @@ self.onInit = function () {
                 '<line x1="9" y1="13" x2="15" y2="13"/></svg>' +
                 ' Device Information</div>';
 
+        html += renderMetaRow('Name', deviceEntity ? deviceEntity.name : '-');
         if (isEditing) {
-            html += renderMetaRowInput('Name', 'edit-name', deviceEntity ? deviceEntity.name : '');
             html += renderMetaRowInput('Label', 'edit-label', deviceEntity ? (deviceEntity.label || '') : '');
         } else {
-            html += renderMetaRow('Name', deviceEntity ? deviceEntity.name : '-');
             html += renderMetaRow('Label', deviceEntity && deviceEntity.label ? deviceEntity.label : '-');
         }
 
         html += renderMetaRow('Device ID', deviceId || '-');
-        html += renderMetaRow('Type', deviceEntity && deviceEntity.type ? deviceEntity.type : '-');
-        html += renderMetaRow('Profile', deviceProfile ? deviceProfile.name : '-');
+        if (isEditing) {
+            var profileOptions = Object.keys(deviceProfiles).map(function (name) {
+                return { id: deviceProfiles[name], name: name };
+            });
+            var currentProfileName = deviceProfile ? deviceProfile.name : '';
+            html += renderMetaRowSelect('Profile', 'edit-profile', currentProfileName, profileOptions);
+        } else {
+            html += renderMetaRow('Profile', deviceProfile ? deviceProfile.name : '-');
+        }
 
         // Customer
         var customerName = '-';
@@ -265,6 +294,42 @@ self.onInit = function () {
                '<div class="dm-meta-value">' +
                '<input type="text" class="dm-input" id="' + inputId + '" value="' + esc(value) + '" />' +
                '</div></div>';
+    }
+
+    function renderMetaRowSelect(label, inputId, currentValue, options) {
+        var html = '<div class="dm-meta-row">' +
+               '<div class="dm-meta-label">' + esc(label) + '</div>' +
+               '<div class="dm-meta-value">' +
+               '<select class="dm-input" id="' + inputId + '">';
+        options.forEach(function (opt) {
+            var selected = opt.name === currentValue ? ' selected' : '';
+            html += '<option value="' + esc(opt.id) + '"' + selected + '>' + esc(opt.name) + '</option>';
+        });
+        html += '</select></div></div>';
+        return html;
+    }
+
+    // ── Render: Unassign Dialog ───────────────────────────────
+
+    function renderUnassignDialog() {
+        var html = '<div class="dm-confirm-overlay">';
+        html += '<div class="dm-confirm-panel">';
+
+        if (unassignState === 'confirm') {
+            var name = deviceEntity ? deviceEntity.name : 'this device';
+            html += '<h3 style="font-size:18px;font-weight:700;margin:0 0 12px 0">Unassign ' + esc(name) + '?</h3>';
+            html += '<p style="color:#64748b;font-size:14px;margin:0 0 20px 0;line-height:1.5">This will remove the device from its customer and site, returning it to the pool.</p>';
+            html += '<div style="display:flex;justify-content:flex-end;gap:8px">';
+            html += '<button class="dm-btn dm-btn-secondary" data-action="cancel-unassign">Cancel</button>';
+            html += '<button class="dm-btn dm-btn-warning" data-action="confirm-unassign">Unassign</button>';
+            html += '</div>';
+        } else if (unassignState === 'unassigning') {
+            html += '<h3 style="font-size:18px;font-weight:700;margin:0 0 12px 0">Unassigning...</h3>';
+            html += '<p style="color:#64748b;font-size:14px">Please wait...</p>';
+        }
+
+        html += '</div></div>';
+        return html;
     }
 
     // ── Render: Delete Device Dialog ────────────────────────────
@@ -336,6 +401,20 @@ self.onInit = function () {
                 }
                 break;
 
+            case 'unassign-device':
+                unassignState = 'confirm';
+                render();
+                break;
+
+            case 'cancel-unassign':
+                unassignState = 'idle';
+                render();
+                break;
+
+            case 'confirm-unassign':
+                unassignDevice();
+                break;
+
             case 'delete-device':
                 deleteState = 'confirm';
                 render();
@@ -369,27 +448,64 @@ self.onInit = function () {
     function saveDevice() {
         if (isSaving || !deviceEntity) return;
 
-        var nameInput = container.querySelector('#edit-name');
         var labelInput = container.querySelector('#edit-label');
-        var newName = nameInput ? nameInput.value.trim() : deviceEntity.name;
+        var profileSelect = container.querySelector('#edit-profile');
         var newLabel = labelInput ? labelInput.value.trim() : (deviceEntity.label || '');
+        var newProfileId = profileSelect ? profileSelect.value : null;
 
         isSaving = true;
         render();
 
         // Re-fetch to get latest version (optimistic locking)
         apiGet('/device/' + deviceId).then(function (latest) {
-            latest.name = newName;
             latest.label = newLabel;
+            if (newProfileId && newProfileId !== latest.deviceProfileId.id) {
+                latest.deviceProfileId = { id: newProfileId, entityType: 'DEVICE_PROFILE' };
+            }
             return apiPost('/device', latest);
         }).then(function (saved) {
             deviceEntity = saved;
+            // Re-fetch profile if changed
+            if (saved.deviceProfileId) {
+                return apiGet('/deviceProfile/' + saved.deviceProfileId.id).then(function (p) {
+                    deviceProfile = p;
+                });
+            }
+        }).then(function () {
             isEditing = false;
             isSaving = false;
             render();
         }).catch(function (err) {
             console.error('[DM] Save failed:', err);
             isSaving = false;
+            render();
+        });
+    }
+
+    // ── Unassign Device ──────────────────────────────────────────
+
+    function unassignDevice() {
+        unassignState = 'unassigning';
+        render();
+
+        // Step 1: Remove customer assignment
+        apiDelete('/customer/device/' + deviceId).then(function () {
+            // Step 2: Remove site relation if exists
+            if (parentSite) {
+                return apiDelete('/relation?fromId=' + parentSite.id +
+                    '&fromType=ASSET&toId=' + deviceId +
+                    '&toType=DEVICE&relationType=Contains');
+            }
+        }).then(function () {
+            // Navigate back to parent state
+            try {
+                self.ctx.stateController.resetState();
+            } catch (e) {
+                console.error('[DM] Navigate failed:', e);
+            }
+        }).catch(function (err) {
+            console.error('[DM] Unassign failed:', err);
+            unassignState = 'idle';
             render();
         });
     }
@@ -406,7 +522,8 @@ self.onInit = function () {
 
     Promise.all([
         apiGet('/device/' + deviceId),
-        fetchParentSite()
+        fetchParentSite(),
+        fetchDeviceProfiles()
     ]).then(function (results) {
         deviceEntity = results[0];
         // Extract lastActivity from additionalInfo

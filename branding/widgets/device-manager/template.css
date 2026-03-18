@@ -272,6 +272,14 @@
 .dm-btn-danger:hover { background: #dc2626; }
 .dm-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.dm-btn-warning {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.dm-btn-warning:hover { background: #d97706; }
+.dm-btn-warning:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .dm-btn-icon {
     background: transparent;
     border: 1px solid #e2e8f0;
