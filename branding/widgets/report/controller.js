@@ -120,7 +120,7 @@ self.onInit = function () {
 
     // ── State ───────────────────────────────────────────────────
 
-    var customerId = settings.customerId || '6e1b23e0-fc24-11f0-999c-9b8fab55435e';
+    var customerId = null; // resolved dynamically below
     var estates = [];
     var regions = [];
     var sites = [];
@@ -131,6 +131,30 @@ self.onInit = function () {
     var selectedPeriod = 'last_month';
     var isGenerating = false;
     var currentSchedule = null;
+
+    // ── Customer ID Detection (matches nav-tree pattern) ──────
+    function getCustomerId() {
+        // 1. Try currentUser.customerId
+        try {
+            var cu = self.ctx.currentUser;
+            if (cu && cu.customerId && cu.customerId.id &&
+                cu.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+                return Promise.resolve(cu.customerId.id);
+            }
+        } catch (e) { /* ignore */ }
+
+        // 2. Fallback: GET /api/auth/user
+        return apiGet('/auth/user').then(function (user) {
+            if (user && user.customerId && user.customerId.id &&
+                user.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+                return user.customerId.id;
+            }
+            // 3. Fallback: widget setting or hardcoded default
+            return settings.customerId || '6e1b23e0-fc24-11f0-999c-9b8fab55435e';
+        }).catch(function () {
+            return settings.customerId || '6e1b23e0-fc24-11f0-999c-9b8fab55435e';
+        });
+    }
 
     // ── Helpers ─────────────────────────────────────────────────
 
@@ -896,7 +920,11 @@ self.onInit = function () {
     }
 
     updateVisibility();
-    loadEstates().then(function () {
+    getCustomerId().then(function (resolvedId) {
+        customerId = resolvedId;
+        console.log('[REPORT] Resolved customerId:', customerId);
+        return loadEstates();
+    }).then(function () {
         if (loadingEl) loadingEl.style.display = 'none';
         if (mainEl) mainEl.style.display = 'block';
         // If starting at region/site level, load children of first estate
