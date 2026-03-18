@@ -368,13 +368,14 @@ self.onInit = function () {
 
     function saveDevice() {
         if (isSaving || !deviceEntity) return;
-        isSaving = true;
-        render();
 
         var nameInput = container.querySelector('#edit-name');
         var labelInput = container.querySelector('#edit-label');
         var newName = nameInput ? nameInput.value.trim() : deviceEntity.name;
         var newLabel = labelInput ? labelInput.value.trim() : (deviceEntity.label || '');
+
+        isSaving = true;
+        render();
 
         // Re-fetch to get latest version (optimistic locking)
         apiGet('/device/' + deviceId).then(function (latest) {
