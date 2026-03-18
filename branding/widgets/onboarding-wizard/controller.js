@@ -961,17 +961,8 @@ self.onInit = function () {
                 var deviceNum = siteDeviceCounters[devData.siteName];
                 var numStr = deviceNum < 10 ? '0' + deviceNum : '' + deviceNum;
 
-                // Build label: Customer - Estate - Region - Site - ##
-                var siteInfo = null;
-                for (var si2 = 0; si2 < sites.length; si2++) {
-                    if (sites[si2].site === devData.siteName) { siteInfo = sites[si2]; break; }
-                }
-                var labelParts = [customer.companyName,
-                    siteInfo ? siteInfo.estate : '',
-                    siteInfo ? siteInfo.region : '',
-                    devData.siteName,
-                    numStr];
-                var deviceLabel = labelParts.filter(function (p) { return p; }).join(' - ');
+                // Build label: Site - ##
+                var deviceLabel = devData.siteName ? (devData.siteName + ' - ' + numStr) : numStr;
 
                 if (devData.poolDeviceId) {
                     // Pool mode: assign existing device to customer, then update profile + label

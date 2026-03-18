@@ -936,12 +936,11 @@ self.onInit = function () {
             assignedDeviceId = dev.id.id;
             // Step 2: Update device profile + set label
             dev.deviceProfileId = { id: profileId, entityType: 'DEVICE_PROFILE' };
-            // Auto-generate label: Customer - Estate - Region - Site - ##
+            // Auto-generate label: Site - ##
             var siteName = siteEntity ? siteEntity.name : '';
             var deviceNum = devices.length + 1;
             var numStr = deviceNum < 10 ? '0' + deviceNum : '' + deviceNum;
-            var parts = [parentCustomerName, parentEstateName, parentRegionName, siteName, numStr];
-            dev.label = parts.filter(function (p) { return p; }).join(' - ');
+            dev.label = siteName ? (siteName + ' - ' + numStr) : numStr;
             return apiPost('/device', dev);
         })
         .then(function () {
