@@ -497,6 +497,18 @@ self.onInit = function () {
                     '&toType=DEVICE&relationType=Contains');
             }
         }).then(function () {
+            // Step 3: Reset label and device profile
+            return apiGet('/device/' + deviceId);
+        }).then(function (latest) {
+            latest.label = '';
+            if (deviceProfiles['default']) {
+                latest.deviceProfileId = {
+                    id: deviceProfiles['default'],
+                    entityType: 'DEVICE_PROFILE'
+                };
+            }
+            return apiPost('/device', latest);
+        }).then(function () {
             // Navigate back to parent state
             try {
                 self.ctx.stateController.resetState();
