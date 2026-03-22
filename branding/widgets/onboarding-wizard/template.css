@@ -53,8 +53,19 @@
 /* -- Header -------------------------------------------------------------- */
 
 .ow-header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 24px;
+}
+
+.ow-header-text {
+    text-align: center;
+    flex: 1;
+}
+
+.ow-header-refresh {
+    flex-shrink: 0;
 }
 
 .ow-header h1 {

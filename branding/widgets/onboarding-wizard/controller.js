@@ -1308,7 +1308,12 @@ self.onInit = function () {
     function render() {
         var html = '';
 
-        html += '<div class="ow-header"><h1>Customer Onboarding</h1><p>SignConnect provisioning wizard</p></div>';
+        html += '<div class="ow-header">';
+        html += '<div class="ow-header-text"><h1>Customer Onboarding</h1><p>SignConnect provisioning wizard</p></div>';
+        if (!provisionState.running) {
+            html += '<button class="ow-btn ow-btn-sm ow-btn-secondary ow-header-refresh" data-action="reset-wizard" title="Reset wizard">\u21BB Reset</button>';
+        }
+        html += '</div>';
         html += renderStepper();
 
         // Validation errors
