@@ -14,7 +14,8 @@ _TOPIC_KEYWORDS: list[re.Pattern] = [
     # Lighting
     re.compile(
         r"\b(lights?|lamps?|dim|dims|dimm|bright|brightness|led|dali|d4i|"
-        r"fixture|luminaire|controller|driver|dimming|dimLevel|luminous|lux)\b",
+        r"fixture|luminaire|controller|driver|dimming|dimLevel|luminous|lux|"
+        r"schedule|timer|automation|sunrise|sunset|timetable|program)\b",
         re.IGNORECASE,
     ),
     # Energy
@@ -26,7 +27,8 @@ _TOPIC_KEYWORDS: list[re.Pattern] = [
     # Status / devices
     re.compile(
         r"\b(device|devices|site|sites|online|offline|fault|faults|alarm|"
-        r"alarms|alert|alerts|status|health|temperature|active|inactive)\b",
+        r"alarms|alert|alerts|status|health|temperature|active|inactive|"
+        r"location|gps|coordinate|timezone|latitude|longitude)\b",
         re.IGNORECASE,
     ),
     # SignConnect / LoRaWAN

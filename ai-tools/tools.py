@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
+from datetime import date, datetime
 
 from cache import get_cached_entity, set_cached_entity
 from config import resolve_time_range
@@ -247,6 +249,230 @@ TOOL_DEFINITIONS = [
         },
     },
     {
+        "name": "send_task_schedule",
+        "description": (
+            "Deploy, update, or delete a DALI lighting schedule on a controller. "
+            "Creates time-based automation: lights turn on/off at specific times or sunrise/sunset. "
+            "Each schedule supports up to 4 time slots with different dim levels. "
+            "IMPORTANT: Sunrise/sunset schedules require location_setup to be configured first. "
+            "Always use confirmation flow — first call with confirmed=false to preview, "
+            "then confirmed=true to execute."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "description": (
+                        "Device UUID or site asset UUID. If site UUID, "
+                        "schedule is sent to ALL devices at that site."
+                    ),
+                },
+                "operation": {
+                    "type": "string",
+                    "enum": ["deploy", "update", "delete"],
+                    "description": (
+                        "deploy=create new schedule, update=modify existing, "
+                        "delete=remove schedule"
+                    ),
+                },
+                "profile_id": {
+                    "type": "integer",
+                    "description": (
+                        "Schedule profile ID (uint32). Required for update/delete. "
+                        "For deploy, auto-generated if omitted."
+                    ),
+                },
+                "start_date": {
+                    "type": "string",
+                    "description": (
+                        "Start date in YYYY-MM-DD format. Default: today."
+                    ),
+                },
+                "end_date": {
+                    "type": "string",
+                    "description": (
+                        "End date in YYYY-MM-DD format. Use 'forever' for "
+                        "indefinite. Default: 'forever'."
+                    ),
+                },
+                "priority": {
+                    "type": "integer",
+                    "description": "Schedule priority 1-5 (1=highest). Default: 1.",
+                },
+                "channel_number": {
+                    "type": "integer",
+                    "description": "DALI driver channel (1-based). Default: 1.",
+                },
+                "time_slots": {
+                    "type": "array",
+                    "description": (
+                        "Array of 1-4 time slot objects defining on/off "
+                        "times and dim levels."
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "on_time": {
+                                "type": "string",
+                                "description": (
+                                    "Turn-on time: 'HH:MM' (24h format), "
+                                    "'sunrise', or 'sunset'"
+                                ),
+                            },
+                            "on_offset": {
+                                "type": "integer",
+                                "description": (
+                                    "Minutes offset from on_time (-60 to +60). "
+                                    "E.g., -30 with sunrise = 30 min before sunrise."
+                                ),
+                            },
+                            "off_time": {
+                                "type": "string",
+                                "description": (
+                                    "Turn-off time: 'HH:MM' (24h format), "
+                                    "'sunrise', or 'sunset'"
+                                ),
+                            },
+                            "off_offset": {
+                                "type": "integer",
+                                "description": (
+                                    "Minutes offset from off_time (-60 to +60)."
+                                ),
+                            },
+                            "dim_value": {
+                                "type": "integer",
+                                "description": (
+                                    "Brightness level 0-100 during this time slot."
+                                ),
+                            },
+                        },
+                        "required": ["on_time", "off_time", "dim_value"],
+                    },
+                },
+                "confirmed": {
+                    "type": "boolean",
+                    "description": (
+                        "false=preview schedule details and ask for confirmation, "
+                        "true=execute. Default: false."
+                    ),
+                },
+            },
+            "required": ["device_id", "operation", "time_slots"],
+        },
+    },
+    {
+        "name": "query_task_schedule",
+        "description": (
+            "Query the lighting schedule stored at a specific index on a DALI controller. "
+            "The device stores up to 20 schedules (index 0-19). "
+            "This sends a query command and reads back the response. "
+            "Note: The device must send an uplink before the response arrives "
+            "(LoRaWAN Class A). The response may not be immediately available — "
+            "check the task_query_response attribute."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "description": "Device UUID of the controller to query.",
+                },
+                "task_index": {
+                    "type": "integer",
+                    "description": (
+                        "Schedule slot index to query (0-19). Default: 0."
+                    ),
+                },
+            },
+            "required": ["device_id"],
+        },
+    },
+    {
+        "name": "send_location_setup",
+        "description": (
+            "Configure GPS coordinates and timezone on a DALI controller. "
+            "Required before using sunrise/sunset in task schedules. "
+            "Claude should resolve city names to coordinates "
+            "(e.g., 'London' -> 51.5074, -0.1278, tz=0). "
+            "Common locations: London (51.5074, -0.1278, tz=0), "
+            "Amsterdam (52.3676, 4.9041, tz=1), "
+            "Istanbul (41.0082, 28.9784, tz=3), "
+            "Dublin (53.3498, -6.2603, tz=0). "
+            "Always use confirmation flow."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "description": (
+                        "Device UUID or site asset UUID. If site UUID, "
+                        "location is set on ALL devices at that site."
+                    ),
+                },
+                "latitude": {
+                    "type": "number",
+                    "description": (
+                        "GPS latitude in decimal degrees "
+                        "(e.g., 51.5074 for London)."
+                    ),
+                },
+                "longitude": {
+                    "type": "number",
+                    "description": (
+                        "GPS longitude in decimal degrees "
+                        "(e.g., -0.1278 for London)."
+                    ),
+                },
+                "timezone": {
+                    "type": "number",
+                    "description": (
+                        "UTC timezone offset as float "
+                        "(e.g., 0.0 for UK, 1.0 for Netherlands, 3.0 for Turkey)."
+                    ),
+                },
+                "confirmed": {
+                    "type": "boolean",
+                    "description": (
+                        "false=preview and confirm, true=execute. Default: false."
+                    ),
+                },
+            },
+            "required": ["device_id", "latitude", "longitude", "timezone"],
+        },
+    },
+    {
+        "name": "delete_task_schedule",
+        "description": (
+            "Delete a specific lighting schedule from a DALI controller by profile ID. "
+            "Use query_task_schedule first to find the profile_id if the user "
+            "doesn't know it. Always use confirmation flow."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "description": "Device UUID or site asset UUID.",
+                },
+                "profile_id": {
+                    "type": "integer",
+                    "description": (
+                        "The profile ID of the schedule to delete."
+                    ),
+                },
+                "confirmed": {
+                    "type": "boolean",
+                    "description": (
+                        "false=preview and confirm, true=execute. Default: false."
+                    ),
+                },
+            },
+            "required": ["device_id", "profile_id"],
+        },
+    },
+    {
         "name": "compare_sites",
         "description": (
             "Compare energy, cost, and savings metrics across multiple "
@@ -295,6 +521,10 @@ async def execute_tool(
         "get_alarms": _get_alarms,
         "get_device_attributes": _get_device_attributes,
         "send_dim_command": _send_dim_command,
+        "send_task_schedule": _send_task_schedule,
+        "query_task_schedule": _query_task_schedule,
+        "send_location_setup": _send_location_setup,
+        "delete_task_schedule": _delete_task_schedule,
         "compare_sites": _compare_sites,
     }
     executor = executors.get(tool_name)
@@ -736,6 +966,426 @@ async def _send_dim_command(inp: dict, tb: TBClient, ctx: EntityContext | None =
         "message": (
             f"Dim {dim_value}% sent to {len(results)} device(s): "
             f"{', '.join(d['name'] for d in devices)}"
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Task command helpers
+# ---------------------------------------------------------------------------
+
+async def _write_task_command(tb: TBClient, device_id: str, command_dict: dict) -> dict:
+    """Write a task_command shared attribute to a device (JSON string value)."""
+    payload = {"task_command": json.dumps(command_dict)}
+    await tb.update_shared_attributes(device_id, payload)
+    return {"status": "sent", "device_id": device_id}
+
+
+def _parse_time_slot(slot: dict) -> dict:
+    """Convert Claude's human-friendly time slot to bridge format."""
+    result = {
+        "on_offset": max(-60, min(60, slot.get("on_offset", 0))),
+        "off_offset": max(-60, min(60, slot.get("off_offset", 0))),
+        "dim_value": max(0, min(100, slot["dim_value"])),
+    }
+
+    on_time = slot["on_time"].strip().lower()
+    if on_time == "sunrise":
+        result["on_event"] = "sunrise"
+    elif on_time == "sunset":
+        result["on_event"] = "sunset"
+    else:
+        parts = on_time.split(":")
+        result["on_hour"] = int(parts[0])
+        result["on_minute"] = int(parts[1])
+
+    off_time = slot["off_time"].strip().lower()
+    if off_time == "sunrise":
+        result["off_event"] = "sunrise"
+    elif off_time == "sunset":
+        result["off_event"] = "sunset"
+    else:
+        parts = off_time.split(":")
+        result["off_hour"] = int(parts[0])
+        result["off_minute"] = int(parts[1])
+
+    return result
+
+
+def _format_time_slot_preview(slot: dict) -> str:
+    """Format a time slot for human-readable preview."""
+    on = slot["on_time"]
+    off = slot["off_time"]
+    dim = slot["dim_value"]
+    on_off_str = slot.get("on_offset", 0)
+    off_off_str = slot.get("off_offset", 0)
+    on_label = on.capitalize() if on in ("sunrise", "sunset") else on
+    off_label = off.capitalize() if off in ("sunrise", "sunset") else off
+    if on_off_str:
+        on_label += f" {on_off_str:+d}min"
+    if off_off_str:
+        off_label += f" {off_off_str:+d}min"
+    return f"{on_label} -> {off_label} at {dim}%"
+
+
+# ---------------------------------------------------------------------------
+# Task schedule executor
+# ---------------------------------------------------------------------------
+
+async def _send_task_schedule(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
+    """Deploy, update, or delete a DALI lighting schedule."""
+    device_id = inp["device_id"]
+    operation = inp["operation"]
+    confirmed = inp.get("confirmed", False)
+    time_slots = inp.get("time_slots", [])
+
+    # Validation
+    op_map = {"deploy": 1, "update": 2, "delete": 3}
+    if operation not in op_map:
+        return {"error": f"Invalid operation '{operation}'. Must be deploy, update, or delete."}
+
+    if operation in ("update", "delete") and "profile_id" not in inp:
+        return {"error": f"profile_id is required for {operation} operation."}
+
+    if not time_slots and operation != "delete":
+        return {"error": "At least one time_slot is required for deploy/update."}
+
+    if len(time_slots) > 4:
+        return {"error": "Maximum 4 time slots per schedule."}
+
+    priority = inp.get("priority", 1)
+    if not (1 <= priority <= 5):
+        return {"error": "Priority must be between 1 and 5."}
+
+    channel = inp.get("channel_number", 1)
+    if channel < 1:
+        return {"error": "Channel number must be >= 1."}
+
+    for i, slot in enumerate(time_slots):
+        if not (0 <= slot.get("dim_value", -1) <= 100):
+            return {"error": f"Time slot {i+1}: dim_value must be 0-100."}
+        on_t = slot.get("on_time", "").strip().lower()
+        off_t = slot.get("off_time", "").strip().lower()
+        for label, val in [("on_time", on_t), ("off_time", off_t)]:
+            if val not in ("sunrise", "sunset"):
+                try:
+                    parts = val.split(":")
+                    h, m = int(parts[0]), int(parts[1])
+                    if not (0 <= h <= 23 and 0 <= m <= 59):
+                        return {"error": f"Time slot {i+1}: {label} '{val}' out of range."}
+                except (ValueError, IndexError):
+                    return {"error": f"Time slot {i+1}: {label} must be 'HH:MM', 'sunrise', or 'sunset'."}
+
+    devices = await _resolve_device_ids(device_id, tb)
+    if not devices:
+        return {"error": f"No devices found for ID {device_id}"}
+
+    # Profile ID
+    profile_id = inp.get("profile_id")
+    if profile_id is None and operation == "deploy":
+        profile_id = int(time.time()) % 100000
+
+    # Dates
+    today = date.today()
+    start_str = inp.get("start_date", today.isoformat())
+    try:
+        start_dt = datetime.strptime(start_str, "%Y-%m-%d").date()
+    except ValueError:
+        return {"error": f"Invalid start_date format: '{start_str}'. Use YYYY-MM-DD."}
+
+    end_str = inp.get("end_date", "forever")
+    end_forever = end_str.lower() == "forever"
+    end_dt = None
+    if not end_forever:
+        try:
+            end_dt = datetime.strptime(end_str, "%Y-%m-%d").date()
+        except ValueError:
+            return {"error": f"Invalid end_date format: '{end_str}'. Use YYYY-MM-DD or 'forever'."}
+
+    # Preview
+    if not confirmed:
+        slot_previews = [_format_time_slot_preview(s) for s in time_slots]
+        end_label = "forever" if end_forever else end_str
+        return {
+            "requires_confirmation": True,
+            "message": (
+                f"Schedule {operation} on {len(devices)} device(s): "
+                f"{', '.join(d['name'] for d in devices)}\n"
+                f"Profile ID: {profile_id}\n"
+                f"Period: {start_str} -> {end_label}\n"
+                f"Priority: {priority}, Channel: {channel}\n"
+                f"Time slots:\n" + "\n".join(f"  {i+1}. {s}" for i, s in enumerate(slot_previews))
+            ),
+            "devices": devices,
+            "profile_id": profile_id,
+            "operation": operation,
+        }
+
+    # Build bridge command JSON
+    parsed_slots = [_parse_time_slot(s) for s in time_slots]
+
+    command = {
+        "command": "send_task",
+        "operation_type": op_map[operation],
+        "profile_id": profile_id,
+        "start_year": start_dt.year,
+        "start_month": start_dt.month,
+        "start_day": start_dt.day,
+        "end_forever": end_forever,
+        "priority": priority,
+        "cyclic_type": 5,
+        "cyclic_time": 0,
+        "off_days_mask": 0,
+        "channel_number": channel,
+        "time_slots": parsed_slots,
+    }
+    if not end_forever and end_dt:
+        command["end_year"] = end_dt.year
+        command["end_month"] = end_dt.month
+        command["end_day"] = end_dt.day
+
+    # Execute
+    customer_id = ctx.customer_id if ctx else "unknown"
+    results = []
+    for dev in devices:
+        logger.warning(
+            "TASK_SCHEDULE customer=%s device=%s op=%s profile=%s",
+            customer_id, dev["id"], operation, profile_id,
+        )
+        await _write_task_command(tb, dev["id"], command)
+        results.append({
+            "device_name": dev["name"],
+            "device_id": dev["id"],
+            "status": "sent",
+        })
+
+    return {
+        "devices_commanded": len(results),
+        "operation": operation,
+        "profile_id": profile_id,
+        "results": results,
+        "message": (
+            f"Schedule {operation} (profile {profile_id}) sent to "
+            f"{len(results)} device(s): {', '.join(d['name'] for d in devices)}"
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Query task schedule executor
+# ---------------------------------------------------------------------------
+
+async def _query_task_schedule(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
+    """Query a schedule slot on a DALI controller."""
+    device_id = inp["device_id"]
+    task_index = inp.get("task_index", 0)
+
+    if not (0 <= task_index <= 19):
+        return {"error": "task_index must be 0-19."}
+
+    # Send query command
+    command = {"command": "task_request", "task_index": task_index}
+    await _write_task_command(tb, device_id, command)
+
+    # Brief wait for device response
+    await asyncio.sleep(2)
+
+    # Read back client attribute
+    attrs = await tb.get_attributes(
+        "DEVICE", device_id, "CLIENT_SCOPE", keys=["task_query_response"]
+    )
+
+    response_raw = attrs.get("task_query_response")
+    if not response_raw:
+        return {
+            "query_sent": True,
+            "task_index": task_index,
+            "response": None,
+            "message": (
+                f"Query sent for schedule slot {task_index}. "
+                "The device needs to send an uplink first (LoRaWAN Class A). "
+                "The response will be available shortly — ask again in a few minutes."
+            ),
+        }
+
+    # Parse the response
+    try:
+        if isinstance(response_raw, str):
+            response_data = json.loads(response_raw)
+        else:
+            response_data = response_raw
+    except (json.JSONDecodeError, TypeError):
+        response_data = {"raw": response_raw}
+
+    # Check staleness via received_at timestamp
+    stale = False
+    received_at = response_data.get("received_at")
+    if received_at:
+        try:
+            if isinstance(received_at, (int, float)):
+                age = time.time() - received_at
+            else:
+                age = time.time() - datetime.fromisoformat(str(received_at)).timestamp()
+            stale = age > 30
+        except (ValueError, TypeError):
+            stale = True
+
+    result = {
+        "query_sent": True,
+        "task_index": task_index,
+        "response": response_data,
+    }
+
+    if stale:
+        result["message"] = (
+            f"Query sent for slot {task_index}. The current response may be "
+            "from a previous query (stale). The fresh response hasn't arrived yet — "
+            "try again in a few minutes after the device sends an uplink."
+        )
+    else:
+        result["message"] = f"Schedule at slot {task_index} retrieved successfully."
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Location setup executor
+# ---------------------------------------------------------------------------
+
+async def _send_location_setup(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
+    """Configure GPS coordinates and timezone on a DALI controller."""
+    device_id = inp["device_id"]
+    latitude = inp["latitude"]
+    longitude = inp["longitude"]
+    timezone_offset = inp["timezone"]
+    confirmed = inp.get("confirmed", False)
+
+    # Validation
+    if not (-90 <= latitude <= 90):
+        return {"error": "Latitude must be between -90 and 90."}
+    if not (-180 <= longitude <= 180):
+        return {"error": "Longitude must be between -180 and 180."}
+    if not (-12 <= timezone_offset <= 14):
+        return {"error": "Timezone must be between -12 and 14."}
+
+    devices = await _resolve_device_ids(device_id, tb)
+    if not devices:
+        return {"error": f"No devices found for ID {device_id}"}
+
+    if not confirmed:
+        return {
+            "requires_confirmation": True,
+            "message": (
+                f"Set location on {len(devices)} device(s): "
+                f"{', '.join(d['name'] for d in devices)}\n"
+                f"Latitude: {latitude}, Longitude: {longitude}\n"
+                f"Timezone: UTC{timezone_offset:+.1f}"
+            ),
+            "devices": devices,
+            "latitude": latitude,
+            "longitude": longitude,
+            "timezone": timezone_offset,
+        }
+
+    # Execute
+    command = {
+        "command": "location_setup",
+        "latitude": latitude,
+        "longitude": longitude,
+        "timezone": timezone_offset,
+    }
+
+    customer_id = ctx.customer_id if ctx else "unknown"
+    results = []
+    for dev in devices:
+        logger.warning(
+            "LOCATION_SETUP customer=%s device=%s lat=%s lon=%s tz=%s",
+            customer_id, dev["id"], latitude, longitude, timezone_offset,
+        )
+        await _write_task_command(tb, dev["id"], command)
+        results.append({
+            "device_name": dev["name"],
+            "device_id": dev["id"],
+            "status": "sent",
+        })
+
+    return {
+        "devices_commanded": len(results),
+        "results": results,
+        "message": (
+            f"Location (lat={latitude}, lon={longitude}, tz=UTC{timezone_offset:+.1f}) "
+            f"sent to {len(results)} device(s): {', '.join(d['name'] for d in devices)}"
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Delete task schedule executor
+# ---------------------------------------------------------------------------
+
+async def _delete_task_schedule(inp: dict, tb: TBClient, ctx: EntityContext | None = None) -> dict:
+    """Delete a specific lighting schedule from a DALI controller by profile ID."""
+    device_id = inp["device_id"]
+    profile_id = inp["profile_id"]
+    confirmed = inp.get("confirmed", False)
+
+    if not isinstance(profile_id, int) or profile_id <= 0:
+        return {"error": "profile_id must be a positive integer."}
+
+    devices = await _resolve_device_ids(device_id, tb)
+    if not devices:
+        return {"error": f"No devices found for ID {device_id}"}
+
+    if not confirmed:
+        return {
+            "requires_confirmation": True,
+            "message": (
+                f"Delete schedule (profile {profile_id}) from {len(devices)} device(s): "
+                f"{', '.join(d['name'] for d in devices)}"
+            ),
+            "devices": devices,
+            "profile_id": profile_id,
+        }
+
+    # Build delete command — operation_type 3, today's date, empty time_slots
+    today = date.today()
+    command = {
+        "command": "send_task",
+        "operation_type": 3,
+        "profile_id": profile_id,
+        "start_year": today.year,
+        "start_month": today.month,
+        "start_day": today.day,
+        "end_forever": True,
+        "priority": 1,
+        "cyclic_type": 5,
+        "cyclic_time": 0,
+        "off_days_mask": 0,
+        "channel_number": 1,
+        "time_slots": [],
+    }
+
+    customer_id = ctx.customer_id if ctx else "unknown"
+    results = []
+    for dev in devices:
+        logger.warning(
+            "DELETE_SCHEDULE customer=%s device=%s profile=%s",
+            customer_id, dev["id"], profile_id,
+        )
+        await _write_task_command(tb, dev["id"], command)
+        results.append({
+            "device_name": dev["name"],
+            "device_id": dev["id"],
+            "status": "sent",
+        })
+
+    return {
+        "devices_deleted": len(results),
+        "profile_id": profile_id,
+        "results": results,
+        "message": (
+            f"Delete schedule (profile {profile_id}) sent to "
+            f"{len(results)} device(s): {', '.join(d['name'] for d in devices)}"
         ),
     }
 

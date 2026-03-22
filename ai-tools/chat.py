@@ -193,8 +193,15 @@ async def process_chat(
                 tool_input = block.input
                 tools_used.append(tool_name)
 
-                # Entity-level ownership check for dim commands
-                if tool_name == "send_dim_command" and customer_id:
+                # Entity-level ownership check for downlink/query tools
+                _OWNERSHIP_CHECKED_TOOLS = {
+                    "send_dim_command",
+                    "send_task_schedule",
+                    "delete_task_schedule",
+                    "send_location_setup",
+                    "query_task_schedule",
+                }
+                if tool_name in _OWNERSHIP_CHECKED_TOOLS and customer_id:
                     allowed_ids = get_hierarchy_entity_ids(customer_id)
                     target_id = tool_input.get("device_id", "")
                     if allowed_ids and target_id not in allowed_ids:
