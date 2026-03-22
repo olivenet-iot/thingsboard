@@ -880,6 +880,16 @@ self.onInit = function () {
             }
         })
         .then(function () {
+            // Provision attributes (SHARED_SCOPE — bridge receives via MQTT)
+            return apiPost('/plugins/telemetry/DEVICE/' + newDeviceId + '/attributes/SHARED_SCOPE', {
+                provision_tier: siteAttrs.dashboard_tier || 'standard',
+                provision_lat: parseFloat(siteAttrs.latitude) || 0,
+                provision_lon: parseFloat(siteAttrs.longitude) || 0,
+                provision_tz: parseFloat(siteAttrs.tzOffset) || 0,
+                provision_status: 'pending'
+            });
+        })
+        .then(function () {
             addDeviceStatus = 'done';
             addDeviceForm = { name: '', profileId: '', profileName: '', poolDeviceId: '', poolDeviceName: '' };
             // Refresh devices list
@@ -961,6 +971,16 @@ self.onInit = function () {
             if (Object.keys(devAttrs).length > 0) {
                 return apiPost('/plugins/telemetry/DEVICE/' + assignedDeviceId + '/attributes/SERVER_SCOPE', devAttrs);
             }
+        })
+        .then(function () {
+            // Provision attributes (SHARED_SCOPE — bridge receives via MQTT)
+            return apiPost('/plugins/telemetry/DEVICE/' + assignedDeviceId + '/attributes/SHARED_SCOPE', {
+                provision_tier: siteAttrs.dashboard_tier || 'standard',
+                provision_lat: parseFloat(siteAttrs.latitude) || 0,
+                provision_lon: parseFloat(siteAttrs.longitude) || 0,
+                provision_tz: parseFloat(siteAttrs.tzOffset) || 0,
+                provision_status: 'pending'
+            });
         })
         .then(function () {
             addDeviceStatus = 'done';
