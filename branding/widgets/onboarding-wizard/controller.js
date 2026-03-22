@@ -217,7 +217,7 @@ self.onInit = function () {
 
     function validateStep2() {
         var errors = [];
-        if (sites.length === 0) errors.push('Add at least one site');
+        // sites array can be empty (optional) — validate only if rows exist
         for (var i = 0; i < sites.length; i++) {
             var s = sites[i];
             if (!s.estate.trim()) errors.push('Row ' + (i + 1) + ': Estate is required');
@@ -236,7 +236,9 @@ self.onInit = function () {
 
     function validateStep3() {
         var errors = [];
-        if (devices.length === 0) errors.push('Add at least one device');
+        // If no sites, devices section is informational — always valid
+        if (sites.length === 0) return { valid: true, errors: [] };
+        // devices array can be empty (optional) — validate only if rows exist
         if (poolMode) {
             var seenPool = {};
             for (var i = 0; i < devices.length; i++) {
@@ -332,6 +334,7 @@ self.onInit = function () {
         var html = '<div class="ow-card">';
         html += '<div class="ow-card-title">Site Structure</div>';
         html += '<div class="ow-card-subtitle">Define estate / region / site hierarchy. Expand rows for address details.</div>';
+        html += '<div class="ow-info-msg" style="margin-bottom:16px">Optional \u2014 you can add sites later from the Management Dashboard.</div>';
 
         html += '<div class="ow-table-wrap"><table class="ow-table">';
         html += '<thead><tr><th>Estate</th><th>Region</th><th>Site Name</th><th>Tier</th><th style="width:60px"></th></tr></thead>';
@@ -437,6 +440,12 @@ self.onInit = function () {
 
         if (poolMode && poolFetchError) {
             html += '<div class="ow-info-msg">' + esc(poolFetchError) + ' <a href="#" data-action="toggle-pool-mode" class="ow-pool-toggle">Create devices manually</a></div>';
+            html += '</div>';
+            return html;
+        }
+
+        if (sites.length === 0) {
+            html += '<div class="ow-info-msg">No sites configured \u2014 devices can be assigned later from Site Manager.</div>';
             html += '</div>';
             return html;
         }
@@ -591,31 +600,37 @@ self.onInit = function () {
         html += '</div>';
 
         // Hierarchy tree
-        html += '<div class="ow-review-section"><h3>Hierarchy</h3>';
-        html += '<div class="ow-tree">';
-        var tree = buildHierarchyTree();
-        for (var ei = 0; ei < tree.length; ei++) {
-            var estate = tree[ei];
-            html += '<div class="ow-tree-estate"><span class="ow-tree-icon">\uD83C\uDFE2</span>' + esc(estate.name) + '</div>';
-            for (var ri = 0; ri < estate.regions.length; ri++) {
-                var region = estate.regions[ri];
-                html += '<div class="ow-tree-region"><span class="ow-tree-icon">\uD83D\uDCC1</span>' + esc(region.name) + '</div>';
-                for (var si = 0; si < region.sites.length; si++) {
-                    var site = region.sites[si];
-                    html += '<div class="ow-tree-site"><span class="ow-tree-icon">\uD83D\uDCCD</span>' + esc(site.name) +
-                        ' <span class="ow-tier ow-tier-' + site.tier + '">' + site.tier + '</span>' +
-                        (site.countryCode ? ' <span style="color:#94a3b8;font-size:12px">(' + esc(site.countryCode) + ')</span>' : '') +
-                        '</div>';
-                    var siteDevs = getDevicesForSite(site.name);
-                    for (var di = 0; di < siteDevs.length; di++) {
-                        var poolTag = siteDevs[di].poolDeviceId ? ' <span class="ow-pool-tag">[pool]</span>' : '';
-                        html += '<div class="ow-tree-device"><span class="ow-tree-icon">\u2B24</span>' + esc(siteDevs[di].deviceName) +
-                            ' <span style="color:#94a3b8">(' + esc(siteDevs[di].profile) + ')</span>' + poolTag + '</div>';
+        if (sites.length > 0) {
+            html += '<div class="ow-review-section"><h3>Hierarchy</h3>';
+            html += '<div class="ow-tree">';
+            var tree = buildHierarchyTree();
+            for (var ei = 0; ei < tree.length; ei++) {
+                var estate = tree[ei];
+                html += '<div class="ow-tree-estate"><span class="ow-tree-icon">\uD83C\uDFE2</span>' + esc(estate.name) + '</div>';
+                for (var ri = 0; ri < estate.regions.length; ri++) {
+                    var region = estate.regions[ri];
+                    html += '<div class="ow-tree-region"><span class="ow-tree-icon">\uD83D\uDCC1</span>' + esc(region.name) + '</div>';
+                    for (var si = 0; si < region.sites.length; si++) {
+                        var site = region.sites[si];
+                        html += '<div class="ow-tree-site"><span class="ow-tree-icon">\uD83D\uDCCD</span>' + esc(site.name) +
+                            ' <span class="ow-tier ow-tier-' + site.tier + '">' + site.tier + '</span>' +
+                            (site.countryCode ? ' <span style="color:#94a3b8;font-size:12px">(' + esc(site.countryCode) + ')</span>' : '') +
+                            '</div>';
+                        var siteDevs = getDevicesForSite(site.name);
+                        for (var di = 0; di < siteDevs.length; di++) {
+                            var poolTag = siteDevs[di].poolDeviceId ? ' <span class="ow-pool-tag">[pool]</span>' : '';
+                            html += '<div class="ow-tree-device"><span class="ow-tree-icon">\u2B24</span>' + esc(siteDevs[di].deviceName) +
+                                ' <span style="color:#94a3b8">(' + esc(siteDevs[di].profile) + ')</span>' + poolTag + '</div>';
+                        }
                     }
                 }
             }
+            html += '</div></div>';
+        } else {
+            html += '<div class="ow-review-section"><h3>Hierarchy</h3>';
+            html += '<div class="ow-info-msg">No sites or devices \u2014 customer account only. You can add sites later from the Management Dashboard.</div>';
+            html += '</div>';
         }
-        html += '</div></div>';
 
         // API call estimate
         var estCount = uniqueValues(sites, 'estate').length;
@@ -630,10 +645,18 @@ self.onInit = function () {
             if (devices[dc].poolDeviceId) poolDevCount++;
             else manualDevCount++;
         }
-        var apiCalls = 1 + userCount + 3 + estCount + (2 * regCount) + (3 * siteCount) + (4 * poolDevCount) + (3 * manualDevCount);
+        var dashCount = (settings.fleetDashboardId ? 1 : 0) + (settings.standardDashboardId ? 1 : 0) + (settings.plusDashboardId ? 1 : 0);
+        var apiCalls = 1 + userCount + dashCount + estCount + (2 * regCount) + (3 * siteCount) + (4 * poolDevCount) + (3 * manualDevCount);
         html += '<div class="ow-estimate">';
         html += 'This will make approximately <b>' + apiCalls + '</b> API calls: ';
-        html += '1 customer, ' + userCount + ' user(s), 3 dashboard assignments, ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s), ' + devCount + ' device(s)' + (poolDevCount > 0 ? ' (' + poolDevCount + ' from pool)' : '') + '.';
+        html += '1 customer, ' + userCount + ' user(s), ' + dashCount + ' dashboard assignment(s)';
+        if (siteCount > 0) {
+            html += ', ' + estCount + ' estate(s), ' + regCount + ' region(s), ' + siteCount + ' site(s)';
+        }
+        if (devCount > 0) {
+            html += ', ' + devCount + ' device(s)' + (poolDevCount > 0 ? ' (' + poolDevCount + ' from pool)' : '');
+        }
+        html += '.';
         html += '</div>';
 
         // Provision button
@@ -686,7 +709,11 @@ self.onInit = function () {
             html += '<div class="ow-complete">';
             html += '<div class="ow-complete-icon">\u2705</div>';
             html += '<h2>Provisioning Complete</h2>';
-            html += '<p>Successfully onboarded <b>' + esc(customer.companyName) + '</b> with ' + sites.length + ' site(s) and ' + devices.length + ' device(s).</p>';
+            var completionParts = [];
+            if (sites.length > 0) completionParts.push(sites.length + ' site(s)');
+            if (devices.length > 0) completionParts.push(devices.length + ' device(s)');
+            var completionSuffix = completionParts.length > 0 ? ' with ' + completionParts.join(' and ') : ' (customer account only)';
+            html += '<p>Successfully onboarded <b>' + esc(customer.companyName) + '</b>' + completionSuffix + '.</p>';
 
             html += '<div class="ow-complete-actions">';
             if (settings.fleetDashboardId) {
@@ -1307,6 +1334,9 @@ self.onInit = function () {
             }
             html += '</div>';
             html += '<div class="ow-nav-right">';
+            if (currentStep === 2 || currentStep === 3) {
+                html += '<button class="ow-btn ow-btn-secondary" data-action="skip-to-review">Skip \u2192</button>';
+            }
             if (currentStep < 4) {
                 html += '<button class="ow-btn ow-btn-primary" data-action="next-step">Next \u2192</button>';
             }
@@ -1338,6 +1368,20 @@ self.onInit = function () {
 
             if (action === 'next-step') {
                 el.addEventListener('click', function () { goToStep(currentStep + 1); });
+            } else if (action === 'skip-to-review') {
+                el.addEventListener('click', function () {
+                    captureStepState();
+                    var v;
+                    if (currentStep === 2) {
+                        v = validateStep2();
+                        if (!v.valid) { showValidationErrors(v.errors); return; }
+                    } else if (currentStep === 3) {
+                        v = validateStep3();
+                        if (!v.valid) { showValidationErrors(v.errors); return; }
+                    }
+                    currentStep = 4;
+                    render();
+                });
             } else if (action === 'prev-step') {
                 el.addEventListener('click', function () { goToStep(currentStep - 1); });
             } else if (action === 'goto-step') {
