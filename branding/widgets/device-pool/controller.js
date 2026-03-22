@@ -33,6 +33,9 @@ self.onInit = function () {
     var registerStatus = 'idle'; // idle | registering | done
     var registerResults = null;
 
+    var sortColumn = '';      // 'name' | 'eui' | 'profile' | 'created' | 'status'
+    var sortDirection = 'asc'; // 'asc' | 'desc'
+
     var toastMessage = '';
     var toastType = 'success';
     var toastTimer = null;
@@ -101,18 +104,58 @@ self.onInit = function () {
             return html;
         }
 
-        html += renderDeviceTable(poolDevices);
+        html += renderDeviceTable(getSortedDevices(poolDevices));
         return html;
+    }
+
+    function getSortedDevices(devices) {
+        if (!sortColumn || !devices || devices.length === 0) return devices;
+        var sorted = devices.slice();
+        var dir = sortDirection === 'desc' ? -1 : 1;
+        sorted.sort(function (a, b) {
+            var va, vb;
+            switch (sortColumn) {
+                case 'name':
+                    va = (a.name || a.device_name || '').toLowerCase();
+                    vb = (b.name || b.device_name || '').toLowerCase();
+                    return dir * va.localeCompare(vb);
+                case 'eui':
+                    va = (a.dev_eui || a.devEui || '').toLowerCase();
+                    vb = (b.dev_eui || b.devEui || '').toLowerCase();
+                    return dir * va.localeCompare(vb);
+                case 'profile':
+                    va = (a.device_profile || a.profile || '').toLowerCase();
+                    vb = (b.device_profile || b.profile || '').toLowerCase();
+                    return dir * va.localeCompare(vb);
+                case 'created':
+                    va = new Date(a.created_time || a.created_at || a.createdAt || 0).getTime();
+                    vb = new Date(b.created_time || b.created_at || b.createdAt || 0).getTime();
+                    return dir * (va - vb);
+                case 'status':
+                    va = a.assigned || a.is_assigned ? 1 : 0;
+                    vb = b.assigned || b.is_assigned ? 1 : 0;
+                    return dir * (va - vb);
+                default:
+                    return 0;
+            }
+        });
+        return sorted;
+    }
+
+    function sortIcon(col) {
+        if (sortColumn !== col) return '';
+        var arrow = sortDirection === 'asc' ? '\u25B2' : '\u25BC';
+        return '<span class="dp-sort-icon">' + arrow + '</span>';
     }
 
     function renderDeviceTable(devices) {
         var html = '<div class="dp-table-wrap"><table class="dp-table">';
         html += '<thead><tr>' +
-            '<th>Name</th>' +
-            '<th>DevEUI</th>' +
-            '<th>Profile</th>' +
-            '<th>Created</th>' +
-            '<th>Status</th>' +
+            '<th class="dp-th-sort" data-sort="name">Name' + sortIcon('name') + '</th>' +
+            '<th class="dp-th-sort" data-sort="eui">DevEUI' + sortIcon('eui') + '</th>' +
+            '<th class="dp-th-sort" data-sort="profile">Profile' + sortIcon('profile') + '</th>' +
+            '<th class="dp-th-sort" data-sort="created">Created' + sortIcon('created') + '</th>' +
+            '<th class="dp-th-sort" data-sort="status">Status' + sortIcon('status') + '</th>' +
             '</tr></thead><tbody>';
 
         for (var i = 0; i < devices.length; i++) {
@@ -527,6 +570,12 @@ self.onInit = function () {
             btns[b].addEventListener('click', handleAction);
         }
 
+        // Sort headers
+        var sortHeaders = container.querySelectorAll('.dp-th-sort');
+        for (var s = 0; s < sortHeaders.length; s++) {
+            sortHeaders[s].addEventListener('click', handleSort);
+        }
+
         // Form inputs
         var inputs = container.querySelectorAll('.dp-input');
         for (var n = 0; n < inputs.length; n++) {
@@ -622,6 +671,17 @@ self.onInit = function () {
             }
             registerRows[idx][field] = val;
         }
+    }
+
+    function handleSort(e) {
+        var col = e.currentTarget.getAttribute('data-sort');
+        if (col === sortColumn) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = col;
+            sortDirection = 'asc';
+        }
+        render();
     }
 
     // ── Navigation ──────────────────────────────────────────────

@@ -222,6 +222,23 @@
     background: #fefce8;
 }
 
+.dp-th-sort {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.dp-th-sort:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.dp-sort-icon {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.7;
+}
+
 .dp-table .dp-mono {
     font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
     font-size: 12px;
