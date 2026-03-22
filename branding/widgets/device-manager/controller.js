@@ -511,11 +511,11 @@ self.onInit = function () {
         }).then(function () {
             // Step 4: Clear site-related SERVER_SCOPE attributes
             return apiDelete('/plugins/telemetry/DEVICE/' + deviceId +
-                '/attributes/SERVER_SCOPE?keys=co2_per_kwh,energy_rate,currency_symbol');
+                '/SERVER_SCOPE?keys=co2_per_kwh,energy_rate,currency_symbol');
         }).then(function () {
             // Step 5: Clear provision SHARED_SCOPE attributes
             return apiDelete('/plugins/telemetry/DEVICE/' + deviceId +
-                '/attributes/SHARED_SCOPE?keys=provision_tier,provision_lat,provision_lon,provision_tz,provision_status');
+                '/SHARED_SCOPE?keys=provision_tier,provision_lat,provision_lon,provision_tz,provision_status');
         }).then(function () {
             // Navigate back to parent state
             try {
