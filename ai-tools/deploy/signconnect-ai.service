@@ -7,9 +7,9 @@ Wants=network-online.target
 Type=simple
 User=ubuntu
 Group=ubuntu
-WorkingDirectory=/home/ubuntu/thingsboard/ai-tools
-EnvironmentFile=/etc/signconnect-ai/env
-ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 5001 --workers 2 --log-level info
+WorkingDirectory=/opt/thingsboard/ai-tools
+EnvironmentFile=/opt/thingsboard/ai-tools/.env
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 5001 --workers 1 --log-level info
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -19,7 +19,7 @@ SyslogIdentifier=signconnect-ai
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/home/ubuntu/thingsboard/ai-tools/__pycache__
+ReadWritePaths=/opt/thingsboard/ai-tools/__pycache__
 PrivateTmp=true
 
 [Install]
