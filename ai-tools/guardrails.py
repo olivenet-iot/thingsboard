@@ -37,10 +37,17 @@ _TOPIC_KEYWORDS: list[re.Pattern] = [
         r"uplink|sensor|sensors)\b",
         re.IGNORECASE,
     ),
-    # Greetings / meta
+    # Greetings / meta / confirmation
     re.compile(
         r"\b(hello|hi|hey|help|what can you|how do|thank|thanks|sorry|"
-        r"please|who are you|can you)\b",
+        r"please|who are you|can you|"
+        # Confirmation / response (EN)
+        r"yes|no|ok|okay|sure|confirm|confirmed|go ahead|do it|proceed|"
+        r"cancel|stop|correct|right|exactly|approve|deny|reject|"
+        r"absolutely|definitely|nope|yep|yeah|nah|affirmative|negative|"
+        # Confirmation / response (TR)
+        r"evet|hayır|tamam|onayla|onaylıyorum|iptal|devam|dur|lütfen|"
+        r"doğru|yanlış|kesinlikle|olur|olmaz|yap|yapma|gönder)\b",
         re.IGNORECASE,
     ),
     # Operations
