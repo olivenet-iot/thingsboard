@@ -18,6 +18,8 @@ from cache import (
 from guardrails import (
     REJECTION_RESPONSE,
     REJECTION_SUGGESTIONS,
+    MessageTier,
+    classify_message,
     is_on_topic,
     sanitize_input,
 )
@@ -29,7 +31,7 @@ from models import (
 )
 from prompts import build_system_prompt
 from tb_client import TBClient
-from tools import TOOL_DEFINITIONS, execute_tool
+from tools import ALL_TOOLS, READ_ONLY_TOOLS, TOOL_DEFINITIONS, execute_tool
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,7 @@ async def process_chat(
     8. Return final response with suggestions + metadata.
     """
     ctx = request.context
+    request_start = time.time()
 
     # -- 1. Topic guard ---------------------------------------------------
     if not is_on_topic(request.message):
@@ -105,6 +108,11 @@ async def process_chat(
         )
     # Use the cleaned message from here on
     user_message = result
+
+    # -- 2b. Trim chat history to last N messages -------------------------
+    chat_history = request.chat_history
+    if len(chat_history) > config.MAX_CHAT_HISTORY_MESSAGES:
+        chat_history = chat_history[-config.MAX_CHAT_HISTORY_MESSAGES:]
 
     # -- 3. Per-customer rate limit ---------------------------------------
     customer_id = ctx.customer_id if ctx else None
@@ -148,35 +156,69 @@ async def process_chat(
         else:
             logger.debug("Using cached hierarchy for customer %s", customer_id)
 
+    # -- 5b. Classify message tier for smart tool routing -----------------
+    has_pending_confirmation = False
+    if chat_history:
+        for msg in reversed(chat_history):
+            if msg.role == "assistant":
+                text_lower = msg.content.lower()
+                has_pending_confirmation = any(
+                    phrase in text_lower for phrase in (
+                        "confirm", "shall i", "proceed", "go ahead",
+                        "would you like", "want me to", "should i",
+                        "onaylıyor", "onaylayın", "devam edeyim",
+                        "yapmamı ister", "göndere", "onay",
+                    )
+                )
+                break
+
+    tier = classify_message(user_message, has_pending_confirmation)
+
+    if tier == MessageTier.GREETING:
+        tools_for_call = None
+    elif tier == MessageTier.DATA_QUERY:
+        tools_for_call = READ_ONLY_TOOLS
+    else:
+        tools_for_call = ALL_TOOLS
+
     # -- 6. Build system prompt + messages --------------------------------
     system_prompt = build_system_prompt(ctx, hierarchy_data=hierarchy_data)
 
     messages: list[dict] = []
-    for msg in request.chat_history:
+    for msg in chat_history:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": user_message})
 
     tools_used: list[str] = []
     entity_refs: list[EntityReference] = []
+    total_input_tokens = 0
+    total_output_tokens = 0
+    api_call_count = 0
 
     # -- 7. Iterative tool-use loop ---------------------------------------
     iterations = 0
     while iterations < config.MAX_TOOL_ITERATIONS:
         iterations += 1
         try:
-            response = await anthropic_client.messages.create(
-                model=config.AI_MODEL,
-                max_tokens=config.AI_MAX_TOKENS,
-                system=system_prompt,
-                messages=messages,
-                tools=TOOL_DEFINITIONS,
-            )
+            api_kwargs = {
+                "model": config.AI_MODEL,
+                "max_tokens": config.AI_MAX_TOKENS,
+                "system": system_prompt,
+                "messages": messages,
+            }
+            if tools_for_call:
+                api_kwargs["tools"] = tools_for_call
+            response = await anthropic_client.messages.create(**api_kwargs)
         except anthropic.APIError as exc:
             logger.exception("Claude API error")
             return ChatResponse(
                 response="I'm having trouble connecting right now. Please try again.",
                 metadata=ChatMetadata(suggestions=DEFAULT_SUGGESTIONS),
             )
+
+        total_input_tokens += response.usage.input_tokens
+        total_output_tokens += response.usage.output_tokens
+        api_call_count += 1
 
         # Check if Claude wants to use tools
         if response.stop_reason != "tool_use":
@@ -244,6 +286,17 @@ async def process_chat(
         final_text = "I processed your request but couldn't generate a text response. Please try rephrasing."
 
     suggestions = _extract_suggestions(final_text, ctx)
+
+    # -- Request summary log -----------------------------------------------
+    duration = time.time() - request_start
+    tools_str = ",".join(set(tools_used)) or "none"
+    logger.info(
+        "CHAT customer=%s tier=%s tools=%s duration=%.1fs "
+        "tokens_in=%d tokens_out=%d api_calls=%d msg_len=%d",
+        customer_id or "anon", tier.value, tools_str, duration,
+        total_input_tokens, total_output_tokens, api_call_count,
+        len(request.message),
+    )
 
     return ChatResponse(
         response=final_text,

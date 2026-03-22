@@ -164,7 +164,7 @@ def build_system_prompt(
             prompt += f"\n\n## Current Context\n{context_block}"
 
     if hierarchy_data and "error" not in hierarchy_data:
-        hierarchy_json = json.dumps(hierarchy_data, indent=2)
+        hierarchy_json = json.dumps(hierarchy_data, separators=(",", ":"))
         prompt += (
             "\n\n## Pre-loaded Customer Hierarchy\n"
             "The following hierarchy data has already been fetched. "

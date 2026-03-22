@@ -35,10 +35,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_hierarchy",
         "description": (
-            "Get the customer's asset hierarchy (estates, regions, sites) "
-            "and their devices. Returns the full tree structure. Call this "
-            "FIRST if you need to resolve a site or device name to an ID. "
-            "Use when user asks about their sites, locations, or overall structure."
+            "Get the customer's asset hierarchy (estates → regions → sites → devices). "
+            "Call FIRST to resolve entity names to IDs."
         ),
         "input_schema": {
             "type": "object",
@@ -54,9 +52,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_site_summary",
         "description": (
-            "Get summary of a specific site including device count, "
-            "online/offline status, total energy, cost, CO₂, and power. "
-            "Use when user asks about a site's status or overview."
+            "Get site summary: device count, online/offline, total energy (kWh), "
+            "cost, CO₂, power. Accepts site asset ID."
         ),
         "input_schema": {
             "type": "object",
@@ -80,9 +77,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_device_telemetry",
         "description": (
-            "Get current or historical telemetry for a specific device. "
-            "Use when user asks about a device's power, energy, status, "
-            "temperature, etc."
+            "Get current or historical telemetry for a device. "
+            "Supports time ranges and aggregation (SUM/AVG/MIN/MAX)."
         ),
         "input_schema": {
             "type": "object",
@@ -126,10 +122,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_energy_savings",
         "description": (
-            "Get energy savings data for a device or all devices at a site. "
-            "Returns saving_pct, energy_saving_wh, cost_saving, "
-            "co2_saving_grams. Use when user asks about energy savings, "
-            "efficiency, or dimming impact."
+            "Get energy savings for a device or all devices at a site. "
+            "Returns saving %, kWh, cost, CO₂."
         ),
         "input_schema": {
             "type": "object",
@@ -158,9 +152,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_alarms",
         "description": (
-            "Get active alarms for a specific entity or all alarms. "
-            "Returns alarm type, severity, device, timestamp. Use when "
-            "user asks about faults, alerts, problems, or alarms."
+            "Get active alarms for an entity or all alarms tenant-wide. "
+            "Supports status filter (ACTIVE/CLEARED/ANY)."
         ),
         "input_schema": {
             "type": "object",
@@ -188,10 +181,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "get_device_attributes",
         "description": (
-            "Get server/shared attributes for a device. Includes "
-            "dashboard_tier, reference_power_watts, co2_per_kwh, "
-            "energy_rate, dim_value (shared). Use for configuration "
-            "or device info queries."
+            "Get server/shared attributes for a device "
+            "(dashboard_tier, reference_power, co2_per_kwh, dim_value, etc.)."
         ),
         "input_schema": {
             "type": "object",
@@ -212,15 +203,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "send_dim_command",
         "description": (
-            "Set the dim level on a lighting controller via shared attributes. "
-            "The MQTT bridge detects the dimLevel attribute change and sends a "
-            "LoRaWAN downlink to the device. Accepts a device UUID or site "
-            "asset UUID — if a site ID is given, the command is sent to ALL "
-            "devices at that site.\n\n"
-            "TWO-STEP FLOW: First call with confirmed=false (default) to get "
-            "the device list and confirmation prompt. Present the device names "
-            "and dim value to the user and wait for their confirmation. Then "
-            "call again with confirmed=true to actually send the command."
+            "Set dim level (0-100) on a device or all devices at a site. "
+            "Two-step: confirmed=false previews, confirmed=true executes."
         ),
         "input_schema": {
             "type": "object",
@@ -251,12 +235,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "send_task_schedule",
         "description": (
-            "Deploy, update, or delete a DALI lighting schedule on a controller. "
-            "Creates time-based automation: lights turn on/off at specific times or sunrise/sunset. "
-            "Each schedule supports up to 4 time slots with different dim levels. "
-            "IMPORTANT: Sunrise/sunset schedules require location_setup to be configured first. "
-            "Always use confirmation flow — first call with confirmed=false to preview, "
-            "then confirmed=true to execute."
+            "Deploy/update/delete a DALI lighting schedule. "
+            "Supports sunrise/sunset times. Two-step confirmation required."
         ),
         "input_schema": {
             "type": "object",
@@ -364,12 +344,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "query_task_schedule",
         "description": (
-            "Query the lighting schedule stored at a specific index on a DALI controller. "
-            "The device stores up to 20 schedules (index 0-19). "
-            "This sends a query command and reads back the response. "
-            "Note: The device must send an uplink before the response arrives "
-            "(LoRaWAN Class A). The response may not be immediately available — "
-            "check the task_query_response attribute."
+            "Query the schedule at a specific index (0-19) on a controller. "
+            "Response arrives via uplink (may take minutes)."
         ),
         "input_schema": {
             "type": "object",
@@ -391,15 +367,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "send_location_setup",
         "description": (
-            "Configure GPS coordinates and timezone on a DALI controller. "
-            "Required before using sunrise/sunset in task schedules. "
-            "Claude should resolve city names to coordinates "
-            "(e.g., 'London' -> 51.5074, -0.1278, tz=0). "
-            "Common locations: London (51.5074, -0.1278, tz=0), "
-            "Amsterdam (52.3676, 4.9041, tz=1), "
-            "Istanbul (41.0082, 28.9784, tz=3), "
-            "Dublin (53.3498, -6.2603, tz=0). "
-            "Always use confirmation flow."
+            "Set GPS coordinates and timezone on a controller. "
+            "Required for sunrise/sunset schedules. Two-step confirmation."
         ),
         "input_schema": {
             "type": "object",
@@ -445,9 +414,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "delete_task_schedule",
         "description": (
-            "Delete a specific lighting schedule from a DALI controller by profile ID. "
-            "Use query_task_schedule first to find the profile_id if the user "
-            "doesn't know it. Always use confirmation flow."
+            "Delete a lighting schedule by profile ID. "
+            "Two-step confirmation required."
         ),
         "input_schema": {
             "type": "object",
@@ -475,9 +443,7 @@ TOOL_DEFINITIONS = [
     {
         "name": "compare_sites",
         "description": (
-            "Compare energy, cost, and savings metrics across multiple "
-            "sites. Use when user asks to compare locations or find "
-            "best/worst performing sites."
+            "Compare energy, cost, and savings across multiple sites in parallel."
         ),
         "input_schema": {
             "type": "object",
@@ -500,6 +466,20 @@ TOOL_DEFINITIONS = [
         },
     },
 ]
+
+
+# ---------------------------------------------------------------------------
+# Tool tier subsets (for smart routing — see guardrails.classify_message)
+# ---------------------------------------------------------------------------
+
+_READ_ONLY_NAMES = {
+    "get_hierarchy", "get_site_summary", "get_device_telemetry",
+    "get_energy_savings", "get_alarms", "get_device_attributes",
+    "compare_sites",
+}
+
+READ_ONLY_TOOLS = [t for t in TOOL_DEFINITIONS if t["name"] in _READ_ONLY_NAMES]
+ALL_TOOLS = TOOL_DEFINITIONS
 
 
 # ---------------------------------------------------------------------------

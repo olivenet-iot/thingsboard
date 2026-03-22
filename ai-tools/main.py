@@ -91,12 +91,16 @@ async def chat_endpoint(request: Request, body: ChatRequest):
 
 @app.get("/api/health")
 async def health():
-    """Health check — includes ThingsBoard connectivity status."""
+    """Health check — includes ThingsBoard and Anthropic key status."""
     tb: TBClient = app.state.tb_client
     tb_ok = await tb.check_connectivity()
+    api_key_ok = bool(
+        config.ANTHROPIC_API_KEY and len(config.ANTHROPIC_API_KEY) > 10
+    )
     return {
-        "status": "ok" if tb_ok else "degraded",
+        "status": "ok" if (tb_ok and api_key_ok) else "degraded",
         "thingsboard": "connected" if tb_ok else "disconnected",
+        "anthropic_key": "configured" if api_key_ok else "missing",
         "model": config.AI_MODEL,
     }
 

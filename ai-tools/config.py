@@ -30,6 +30,7 @@ SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "5001"))
 
 # -- Tool loop safety -----------------------------------------------------
 MAX_TOOL_ITERATIONS: int = 10
+MAX_CHAT_HISTORY_MESSAGES: int = 20  # 10 user-assistant turns
 
 # -- Guardrails -----------------------------------------------------------
 MAX_MESSAGE_LENGTH: int = 2000

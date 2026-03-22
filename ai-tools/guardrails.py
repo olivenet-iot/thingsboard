@@ -4,6 +4,82 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from enum import Enum
+
+
+# ---------------------------------------------------------------------------
+# Message tier classification (for smart tool routing)
+# ---------------------------------------------------------------------------
+
+class MessageTier(str, Enum):
+    OFF_TOPIC = "off_topic"
+    GREETING = "greeting"      # Tier 0 — no tools
+    DATA_QUERY = "data_query"  # Tier 1 — read-only tools (7)
+    COMMAND = "command"         # Tier 2 — all tools (12)
+
+
+# Positive confirmation words
+_POSITIVE_CONFIRMATION = re.compile(
+    r"\b(yes|ok|okay|sure|confirm|confirmed|go\s+ahead|do\s+it|proceed|"
+    r"approve|yep|yeah|absolutely|definitely|affirmative|correct|exactly|right|"
+    r"evet|tamam|onayla|onaylıyorum|olur|yap|gönder|kesinlikle|doğru|devam)\b",
+    re.IGNORECASE,
+)
+
+# Command action verbs (EN + TR)
+_COMMAND_KEYWORDS = re.compile(
+    r"\b(dim|dims|dimm|bright|brightness|"
+    r"set\s+(?:to|the|dim|level|brightness|location|timezone|coordinates?)|"
+    r"change|turn\s+(?:on|off)|switch|schedule|timer|automat|"
+    r"control|configure|adjust|deploy|delete|remove|update|"
+    r"send|execute|apply|activate|deactivate|"
+    # Turkish command verbs
+    r"kıs|kapat|aç|ayarla|değiştir|sil|kaldır|kurulum)\b",
+    re.IGNORECASE,
+)
+
+# Data keywords — topic patterns MINUS greetings/confirmation
+_DATA_KEYWORDS = re.compile(
+    r"\b(lights?|lamps?|led|dali|d4i|fixture|luminaire|controller|"
+    r"driver|dimming|luminous|lux|sunrise|sunset|timetable|program|"
+    r"energy|power|watts?|kwh|wh|consumption|saving|savings|cost|bill|"
+    r"carbon|co2|emission|efficiency|tariff|rate|"
+    r"device|devices|site|sites|online|offline|fault|faults|alarm|alarms|"
+    r"alert|alerts|status|health|temperature|active|inactive|"
+    r"location|gps|coordinate|timezone|latitude|longitude|"
+    r"signconnect|lorawan|lora|gateway|gateways|mqtt|downlink|uplink|sensor|sensors|"
+    r"compare|summary|overview|report|trend|history|dashboard|chart|graph|"
+    r"total|average|aggregate)\b",
+    re.IGNORECASE,
+)
+
+
+def classify_message(
+    message: str,
+    has_pending_confirmation: bool = False,
+) -> MessageTier:
+    """Classify message to determine which tool tier to use.
+
+    Priority: COMMAND > DATA_QUERY > GREETING.
+    Called AFTER is_on_topic() has already rejected off-topic messages.
+    """
+    text = message.strip()
+
+    # Short positive confirmation with pending command → need all tools
+    if has_pending_confirmation and len(text) < 60:
+        if _POSITIVE_CONFIRMATION.search(text):
+            return MessageTier.COMMAND
+
+    # Command action verbs → all tools
+    if _COMMAND_KEYWORDS.search(text):
+        return MessageTier.COMMAND
+
+    # Data/topic keywords → read-only tools
+    if _DATA_KEYWORDS.search(text):
+        return MessageTier.DATA_QUERY
+
+    # Pure greeting, confirmation without pending, meta → no tools
+    return MessageTier.GREETING
 
 # ---------------------------------------------------------------------------
 # Topic restriction
