@@ -57,7 +57,7 @@ self.onInit = function () {
         estate: '', estateNew: '',
         region: '', regionNew: '',
         siteName: '', tier: 'standard',
-        address: '', lat: '', lon: '',
+        address: '', lat: '', lon: '', tzOffset: null,
         co2: '', rate: '',
         currency: '\u00a3', currencyCode: 'GBP',
         countryCode: ''
@@ -566,6 +566,13 @@ self.onInit = function () {
         html += '<div class="cm-form-group"><label>Latitude</label><input class="cm-input" data-site-field="lat" value="' + esc(addSiteForm.lat) + '" placeholder="0.000"></div>';
         html += '<div class="cm-form-group"><label>Longitude</label><input class="cm-input" data-site-field="lon" value="' + esc(addSiteForm.lon) + '" placeholder="0.000"></div>';
         html += '<div class="cm-form-group"><label>Country Code</label><input class="cm-input" data-site-field="countryCode" value="' + esc(addSiteForm.countryCode) + '" placeholder="GB"></div>';
+        html += '</div>';
+
+        // Timezone
+        html += '<div class="cm-form-row-3">';
+        html += '<div class="cm-form-group"><label>Timezone (UTC)</label><input class="cm-input" type="number" step="0.5" data-site-field="tzOffset" value="' + (addSiteForm.tzOffset != null ? addSiteForm.tzOffset : '') + '" placeholder="Auto-detect"></div>';
+        html += '<div class="cm-form-group"></div>';
+        html += '<div class="cm-form-group"></div>';
         html += '</div>';
 
         // CO2 / Rate / Currency
@@ -1225,7 +1232,32 @@ self.onInit = function () {
         addSiteForm.countryCode = cc;
         applyCountryDefaults(cc);
 
+        if (result.lat && result.lon) {
+            fetchTimezoneForSite(result.lat, result.lon);
+        }
+
         render();
+    }
+
+    function fetchTimezoneForSite(lat, lon) {
+        var url = 'https://timeapi.io/api/timezone/coordinate?latitude=' +
+            encodeURIComponent(lat) + '&longitude=' + encodeURIComponent(lon);
+
+        fetchExternal(url, 8000)
+            .then(function (data) {
+                if (data && data.currentUtcOffset && data.currentUtcOffset.seconds !== undefined) {
+                    addSiteForm.tzOffset = data.currentUtcOffset.seconds / 3600;
+                } else if (data && data.standardUtcOffset && data.standardUtcOffset.seconds !== undefined) {
+                    addSiteForm.tzOffset = data.standardUtcOffset.seconds / 3600;
+                } else {
+                    addSiteForm.tzOffset = Math.round(parseFloat(lon) / 15);
+                }
+                render();
+            })
+            .catch(function () {
+                addSiteForm.tzOffset = Math.round(parseFloat(lon) / 15);
+                render();
+            });
     }
 
     function applyCountryDefaults(cc) {
@@ -1395,6 +1427,9 @@ self.onInit = function () {
             if (cc) attrs.country_code = cc;
             if (addSiteForm.currencyCode || cInfo.currency) attrs.currency_code = addSiteForm.currencyCode || cInfo.currency;
             if (addSiteForm.address) attrs.address = addSiteForm.address;
+            if (addSiteForm.tzOffset != null && addSiteForm.tzOffset !== '') {
+                attrs.timezone_offset = parseFloat(addSiteForm.tzOffset);
+            }
 
             return apiPost('/plugins/telemetry/ASSET/' + createdIds.siteId + '/attributes/SERVER_SCOPE', attrs).then(function () {
                 addSiteLog[addSiteLog.length - 1] = { type: 'ok', msg: 'Site attributes saved' };
@@ -1436,7 +1471,7 @@ self.onInit = function () {
             estate: '', estateNew: '',
             region: '', regionNew: '',
             siteName: '', tier: 'standard',
-            address: '', lat: '', lon: '',
+            address: '', lat: '', lon: '', tzOffset: null,
             co2: '', rate: '',
             currency: '\u00a3', currencyCode: 'GBP',
             countryCode: ''
