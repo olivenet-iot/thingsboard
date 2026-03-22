@@ -156,6 +156,7 @@ self.onInit = function () {
             '<th class="dp-th-sort" data-sort="profile">Profile' + sortIcon('profile') + '</th>' +
             '<th class="dp-th-sort" data-sort="created">Created' + sortIcon('created') + '</th>' +
             '<th class="dp-th-sort" data-sort="status">Status' + sortIcon('status') + '</th>' +
+            '<th style="width:32px"></th>' +
             '</tr></thead><tbody>';
 
         for (var i = 0; i < devices.length; i++) {
@@ -179,12 +180,14 @@ self.onInit = function () {
             var statusClass = assigned ? 'dp-status-assigned' : 'dp-status-unassigned';
             var statusText = assigned ? 'Assigned' : 'Unassigned';
 
-            html += '<tr>' +
+            var hasId = d.id ? true : false;
+            html += '<tr' + (hasId ? ' class="dp-row-clickable" data-device-id="' + esc(d.id) + '"' : '') + '>' +
                 '<td>' + esc(name) + '</td>' +
                 '<td class="dp-mono">' + esc(eui) + '</td>' +
                 '<td>' + esc(profile) + '</td>' +
                 '<td>' + esc(createdStr) + '</td>' +
                 '<td><span class="dp-status-badge ' + statusClass + '">' + statusText + '</span></td>' +
+                '<td class="dp-row-chevron">' + (hasId ? '\u203A' : '') + '</td>' +
                 '</tr>';
         }
 
@@ -576,6 +579,12 @@ self.onInit = function () {
             sortHeaders[s].addEventListener('click', handleSort);
         }
 
+        // Row click → navigate to device
+        var rows = container.querySelectorAll('.dp-row-clickable');
+        for (var r = 0; r < rows.length; r++) {
+            rows[r].addEventListener('click', handleRowClick);
+        }
+
         // Form inputs
         var inputs = container.querySelectorAll('.dp-input');
         for (var n = 0; n < inputs.length; n++) {
@@ -695,6 +704,21 @@ self.onInit = function () {
             }
         } catch (e) {
             console.error('[DevicePool] Back navigation failed:', e);
+        }
+    }
+
+    function handleRowClick(e) {
+        if (e.target.closest('[data-action]')) return;
+        var row = e.currentTarget;
+        var devId = row.getAttribute('data-device-id');
+        if (!devId) return;
+        try {
+            var sc = self.ctx.stateController;
+            if (sc && sc.openState) {
+                sc.openState('device', { entityId: { id: devId, entityType: 'DEVICE' } });
+            }
+        } catch (err) {
+            console.error('[DevicePool] Navigate to device failed:', err);
         }
     }
 

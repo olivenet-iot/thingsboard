@@ -222,6 +222,26 @@
     background: #fefce8;
 }
 
+.dp-row-clickable {
+    cursor: pointer;
+}
+
+.dp-row-clickable:hover td {
+    background: #fef9c3;
+}
+
+.dp-row-chevron {
+    color: #94a3b8;
+    font-size: 18px;
+    text-align: center;
+    padding-right: 8px;
+    transition: color 0.15s;
+}
+
+.dp-row-clickable:hover .dp-row-chevron {
+    color: #f59e0b;
+}
+
 .dp-th-sort {
     cursor: pointer;
     user-select: none;
