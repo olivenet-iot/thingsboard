@@ -14,7 +14,7 @@ import sys
 import requests
 
 # -- Config --
-TB_URL = os.getenv("TB_URL", "http://46.225.54.21:8080")
+TB_URL = os.getenv("TB_URL", "https://portal.lumosoft.io")
 TB_USER = os.getenv("TB_USER", "support@lumosoft.io")
 TB_PASS = os.getenv("TB_PASS", "tenant")
 BUNDLE_NAME = "SignConnect"
@@ -59,7 +59,7 @@ def build_descriptor():
         "backgroundColor": "transparent",
         "padding": "0",
         "settings": {
-            "apiUrl": "http://46.225.54.21:5001"
+            "apiUrl": "/svc/chat"
         },
         "title": WIDGET_NAME,
         "dropShadow": False,

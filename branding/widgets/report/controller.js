@@ -18,7 +18,7 @@ self.onInit = function () {
 
     var http = self.ctx.http;
     var settings = self.ctx.settings || {};
-    var reportsApiUrl = settings.reportsApiUrl || 'http://46.225.54.21:5000';
+    var reportsApiUrl = settings.reportsApiUrl || '/svc/reports';
     var defaultSections = settings.defaultSections || 'energy,co2,savings,faults,summary';
     var maxHistoryItems = settings.maxHistoryItems || 10;
 

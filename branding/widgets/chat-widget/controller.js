@@ -5,7 +5,7 @@
    site-energy-summary widgets.
    =================================================================== */
 
-var API_URL_DEFAULT = 'http://46.225.54.21:5001';
+var API_URL_DEFAULT = '/svc/chat';
 var HISTORY_LIMIT = 20;
 var STORAGE_LIMIT = 50;
 var STORAGE_EXPIRY_MS = 86400000; // 24 hours

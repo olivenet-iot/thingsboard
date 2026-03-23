@@ -808,7 +808,7 @@ self.onInit = function () {
     }
 
     function fetchPool() {
-        return fetchExternal('http://46.225.54.21:5002/pool', 10000)
+        return fetchExternal('/svc/register/pool', 10000)
             .then(function (resp) {
                 poolDevices = (resp && resp.devices) ? resp.devices : [];
                 poolFetched = true;

@@ -22,5 +22,5 @@ DEFAULT_JOIN_EUI = os.getenv("DEFAULT_JOIN_EUI", "0000000000000000")
 # Service settings
 SERVICE_PORT = int(os.getenv("SERVICE_PORT", "5002"))
 BRIDGE_SERVICE_NAME = os.getenv("BRIDGE_SERVICE_NAME", "ttn-tb-bridge")
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://46.225.54.21:8080,http://localhost:8080").split(",")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "https://portal.lumosoft.io,http://localhost:8080").split(",")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

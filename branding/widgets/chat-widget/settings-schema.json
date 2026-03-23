@@ -6,7 +6,7 @@
             "apiUrl": {
                 "title": "AI Backend URL",
                 "type": "string",
-                "default": "http://46.225.54.21:5001",
+                "default": "/svc/chat",
                 "description": "Base URL of the SignConnect AI chat backend"
             }
         }

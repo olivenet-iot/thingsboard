@@ -20,7 +20,7 @@ self.onInit = function () {
 
     // ── Constants ────────────────────────────────────────────────
 
-    var REGISTER_API = 'http://46.225.54.21:5002';
+    var REGISTER_API = '/svc/register';
 
     // ── State Variables ─────────────────────────────────────────
 

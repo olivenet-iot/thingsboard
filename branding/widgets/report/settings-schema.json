@@ -6,7 +6,7 @@
             "reportsApiUrl": {
                 "title": "Reports Service URL",
                 "type": "string",
-                "default": "http://46.225.54.21:5000",
+                "default": "/svc/reports",
                 "description": "Base URL of the reports-service Python backend"
             },
             "defaultSections": {

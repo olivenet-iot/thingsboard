@@ -59,7 +59,7 @@ def build_descriptor():
         "backgroundColor": "transparent",
         "padding": "0",
         "settings": {
-            "reportsApiUrl": "http://46.225.54.21:5000",
+            "reportsApiUrl": "/svc/reports",
             "defaultSections": "energy,co2,faults,summary",
             "maxHistoryItems": 10,
             "customerId": "6e1b23e0-fc24-11f0-999c-9b8fab55435e"

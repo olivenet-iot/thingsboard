@@ -14,7 +14,7 @@ import requests
 
 # -- Config -----------------------------------------------------------------
 
-TB_URL = os.environ.get('TB_URL', 'http://46.225.54.21:8080')
+TB_URL = os.environ.get('TB_URL', 'https://portal.lumosoft.io')
 TB_USER = os.environ.get('TB_USER', 'support@lumosoft.io')
 TB_PASS = os.environ.get('TB_PASS', 'tenant')
 
