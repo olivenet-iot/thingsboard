@@ -4,6 +4,7 @@
 // POOL state widget for the Management Dashboard. Shows:
 //   Tab 1: Pool (unassigned devices from register-service)
 //   Tab 2: Register (form to register new LoRaWAN devices)
+//   Tab 3: Gateways (register LoRaWAN gateways in TTS only)
 //
 // Calls external register-service API (not TB API).
 // ===================================================================
@@ -32,6 +33,10 @@ self.onInit = function () {
     var registerRows = [{ name: '', dev_eui: '', join_eui: '0101010101010101', app_key: '2AE60CB235944C98BB5665BF25DD6B16' }];
     var registerStatus = 'idle'; // idle | registering | done
     var registerResults = null;
+
+    var gatewayRows = [{ gateway_id: '', gateway_eui: '' }];
+    var gatewayStatus = 'idle'; // idle | registering | done
+    var gatewayResults = null;
 
     var sortColumn = '';      // 'name' | 'eui' | 'profile' | 'created' | 'status'
     var sortDirection = 'asc'; // 'asc' | 'desc'
@@ -63,12 +68,14 @@ self.onInit = function () {
         return '<div class="dp-tabs">' +
             '<div class="dp-tab' + (activeTab === 'pool' ? ' dp-tab-active' : '') + '" data-tab="pool">Pool</div>' +
             '<div class="dp-tab' + (activeTab === 'register' ? ' dp-tab-active' : '') + '" data-tab="register">Register</div>' +
+            '<div class="dp-tab' + (activeTab === 'gateways' ? ' dp-tab-active' : '') + '" data-tab="gateways">Gateways</div>' +
             '</div>';
     }
 
     function renderActiveTab() {
         if (activeTab === 'pool') return renderPoolTab();
         if (activeTab === 'register') return renderRegisterTab();
+        if (activeTab === 'gateways') return renderGatewaysTab();
         return '';
     }
 
@@ -310,6 +317,238 @@ self.onInit = function () {
 
         html += '</div>';
         return html;
+    }
+
+    // ── Gateways Tab ────────────────────────────────────────────
+
+    function renderGatewaysTab() {
+        if (gatewayStatus === 'registering') {
+            return '<div class="dp-registering-overlay">' +
+                '<div class="dp-spinner"></div>' +
+                '<div class="dp-registering-text">Registering gateways...</div>' +
+                '</div>';
+        }
+
+        var html = '';
+
+        if (gatewayStatus === 'done' && gatewayResults) {
+            html += renderGatewayResults(gatewayResults);
+            html += '<div style="margin-top:12px;">' +
+                '<button class="dp-btn dp-btn-secondary" data-action="gw-register-reset">Register More</button>' +
+                '</div>';
+            return html;
+        }
+
+        html += '<div class="dp-card">';
+        html += '<div class="dp-card-header">';
+        html += '<div class="dp-card-title">Register Gateways</div>';
+        html += '<div style="display:flex;gap:6px;">';
+        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="gw-download-template">&#8681; Template</button>';
+        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="gw-upload-csv">&#8679; Upload CSV</button>';
+        html += '</div>';
+        html += '</div>';
+
+        html += renderGatewayForm();
+
+        html += '</div>';
+        return html;
+    }
+
+    function renderGatewayForm() {
+        var html = '';
+
+        html += '<div class="dp-form-header">' +
+            '<span class="dp-hdr-num"></span>' +
+            '<span class="dp-hdr-id">Gateway ID</span>' +
+            '<span class="dp-hdr-eui">Gateway EUI</span>' +
+            '<span class="dp-hdr-actions"></span>' +
+            '</div>';
+
+        html += '<div class="dp-form-rows">';
+        for (var i = 0; i < gatewayRows.length; i++) {
+            html += renderGatewayFormRow(gatewayRows[i], i);
+        }
+        html += '</div>';
+
+        html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+        html += '<button class="dp-btn dp-btn-secondary dp-btn-sm" data-action="gw-add-row">+ Add Row</button>';
+        html += '<div class="dp-toolbar-spacer"></div>';
+        html += '<button class="dp-btn dp-btn-primary" data-action="gw-register-all"' +
+            (gatewayRows.length === 0 ? ' disabled' : '') + '>Register All</button>';
+        html += '</div>';
+
+        return html;
+    }
+
+    function renderGatewayFormRow(row, index) {
+        return '<div class="dp-form-row">' +
+            '<span class="dp-row-num">' + (index + 1) + '</span>' +
+            '<input class="dp-input dp-input-id" data-field="gateway_id" data-idx="' + index + '" ' +
+            'placeholder="e.g. lumosoft-gw-001" value="' + esc(row.gateway_id) + '" />' +
+            '<input class="dp-input dp-input-eui" data-field="gateway_eui" data-idx="' + index + '" ' +
+            'placeholder="16 HEX" maxlength="16" value="' + esc(row.gateway_eui) + '" />' +
+            '<button class="dp-row-remove" data-action="gw-remove-row" data-idx="' + index + '" title="Remove">&times;</button>' +
+            '</div>';
+    }
+
+    function renderGatewayResults(results) {
+        var items = results.results || [];
+        var successCount = 0;
+        var failCount = 0;
+
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].success) successCount++;
+            else failCount++;
+        }
+
+        var summaryClass = failCount === 0 ? 'dp-result-summary-success' :
+            (successCount === 0 ? 'dp-result-summary-error' : 'dp-result-summary-partial');
+
+        var html = '<div class="dp-results">';
+        html += '<div class="dp-result-summary ' + summaryClass + '">';
+        html += successCount + ' succeeded, ' + failCount + ' failed';
+        html += '</div>';
+
+        for (var j = 0; j < items.length; j++) {
+            var gw = items[j];
+            var ok = gw.success;
+            var name = gw.gateway_id || 'Gateway ' + (j + 1);
+            var msg = gw.message || (ok ? 'Registered' : 'Failed');
+
+            html += '<div class="dp-result-item">' +
+                '<span class="' + (ok ? 'dp-result-ok' : 'dp-result-fail') + '">' + (ok ? '&#10003;' : '&#10007;') + '</span>' +
+                '<span class="dp-result-name">' + esc(name) + '</span>' +
+                '<span class="dp-result-msg">' + esc(msg) + '</span>' +
+                '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function registerGateways() {
+        var valid = [];
+        var gwIdRe = /^[a-z0-9][a-z0-9-]{1,34}[a-z0-9]$/;
+
+        for (var i = 0; i < gatewayRows.length; i++) {
+            var row = gatewayRows[i];
+            var gwId = (row.gateway_id || '').toLowerCase().trim();
+            var gwEui = (row.gateway_eui || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+
+            if (!gwEui || gwEui.length !== 16) {
+                showToast('Row ' + (i + 1) + ': Gateway EUI must be 16 hex characters', 'error');
+                return;
+            }
+            if (!gwIdRe.test(gwId)) {
+                showToast('Row ' + (i + 1) + ': Gateway ID must be 3-36 chars, lowercase alphanumeric + hyphens', 'error');
+                return;
+            }
+
+            valid.push({ gateway_id: gwId, gateway_eui: gwEui });
+        }
+
+        if (valid.length === 0) {
+            showToast('Add at least one gateway to register', 'error');
+            return;
+        }
+
+        gatewayStatus = 'registering';
+        render();
+
+        fetch(REGISTER_API + '/api/gateways/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gateways: valid })
+        })
+            .then(function (resp) {
+                if (!resp.ok) {
+                    return resp.json().then(function (data) {
+                        throw new Error(data.detail || 'HTTP ' + resp.status);
+                    });
+                }
+                return resp.json();
+            })
+            .then(function (data) {
+                gatewayStatus = 'done';
+                gatewayResults = data;
+                render();
+            })
+            .catch(function (err) {
+                console.error('[DevicePool] Gateway registration failed:', err);
+                gatewayStatus = 'idle';
+                showToast('Gateway registration failed: ' + (err.message || err), 'error');
+            });
+    }
+
+    function downloadGatewayTemplate() {
+        var csv = 'gateway_id,gateway_eui\n' +
+            'lumosoft-gw-001,24E124FFFEF12345\n' +
+            'lumosoft-gw-002,24E124FFFEF12346\n';
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'gateway-registration-template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function parseGatewayCSV(text) {
+        var lines = text.trim().split('\n');
+        var rows = [];
+        var errors = [];
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+
+            // Skip header row
+            if (i === 0 && /gateway.?id|gateway.?eui/i.test(line)) continue;
+
+            var parts = line.split(/[,;\t]+/);
+            if (parts.length < 2) {
+                errors.push('Row ' + (i + 1) + ': needs gateway_id and gateway_eui');
+                continue;
+            }
+
+            var gwId = (parts[0] || '').trim().toLowerCase();
+            var gwEui = cleanHexField((parts[1] || '').trim(), 16);
+
+            if (/^0+$/.test(gwEui) || gwEui.length === 0) {
+                errors.push('Row ' + (i + 1) + ': invalid Gateway EUI (need 16 hex chars)');
+                continue;
+            }
+
+            rows.push({ gateway_id: gwId, gateway_eui: gwEui });
+        }
+
+        return { rows: rows, errors: errors };
+    }
+
+    function uploadGatewayCSV() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.csv';
+        input.onchange = function () {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var result = parseGatewayCSV(e.target.result);
+                if (result.errors.length > 0) {
+                    showToast(result.errors[0], 'error');
+                    return;
+                }
+                if (result.rows.length === 0) {
+                    showToast('No valid rows found in CSV', 'error');
+                    return;
+                }
+                gatewayRows = result.rows;
+                render();
+                showToast('Loaded ' + result.rows.length + ' gateways from CSV', 'success');
+            };
+            reader.readAsText(input.files[0]);
+        };
+        input.click();
     }
 
     // ── Toast ───────────────────────────────────────────────────
@@ -666,13 +905,55 @@ self.onInit = function () {
             case 'upload-csv':
                 uploadCSV();
                 break;
+            case 'gw-add-row':
+                gatewayRows.push({ gateway_id: '', gateway_eui: '' });
+                render();
+                break;
+            case 'gw-remove-row':
+                if (!isNaN(idx) && gatewayRows.length > 1) {
+                    gatewayRows.splice(idx, 1);
+                    render();
+                }
+                break;
+            case 'gw-register-all':
+                registerGateways();
+                break;
+            case 'gw-register-reset':
+                gatewayStatus = 'idle';
+                gatewayResults = null;
+                gatewayRows = [{ gateway_id: '', gateway_eui: '' }];
+                render();
+                break;
+            case 'gw-download-template':
+                downloadGatewayTemplate();
+                break;
+            case 'gw-upload-csv':
+                uploadGatewayCSV();
+                break;
         }
     }
 
     function handleInput(e) {
         var field = e.target.getAttribute('data-field');
         var idx = parseInt(e.target.getAttribute('data-idx'), 10);
-        if (field && !isNaN(idx) && registerRows[idx]) {
+        if (!field || isNaN(idx)) return;
+
+        // Gateway fields
+        if ((field === 'gateway_id' || field === 'gateway_eui') && gatewayRows[idx]) {
+            var val = e.target.value;
+            if (field === 'gateway_eui') {
+                val = val.toUpperCase().replace(/[^0-9A-F]/g, '');
+                e.target.value = val;
+            } else if (field === 'gateway_id') {
+                val = val.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                e.target.value = val;
+            }
+            gatewayRows[idx][field] = val;
+            return;
+        }
+
+        // Device fields
+        if (registerRows[idx]) {
             var val = e.target.value;
             if (field === 'dev_eui' || field === 'join_eui' || field === 'app_key') {
                 val = val.toUpperCase().replace(/[^0-9A-F]/g, '');

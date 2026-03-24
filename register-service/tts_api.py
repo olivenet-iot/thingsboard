@@ -1,9 +1,11 @@
+import base64
 import logging
+from urllib.parse import urlparse
 
 import httpx
 
 import config
-from models import DeviceRegistration
+from models import DeviceRegistration, GatewayRegistration
 
 logger = logging.getLogger(__name__)
 
@@ -137,3 +139,101 @@ async def register_device_tts(device: DeviceRegistration, client: httpx.AsyncCli
         return {"success": False, "error": f"AS register error: {e}"}
 
     return {"success": True}
+
+
+async def register_gateway_tts(gateway: GatewayRegistration, client: httpx.AsyncClient) -> dict:
+    """Register a gateway in The Things Stack (2-step: create + set LNS secret)."""
+    headers = {
+        "Authorization": f"Bearer {config.TTS_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    base = config.TTS_BASE_URL
+    org_id = config.TTS_ORGANIZATION
+    gw_id = gateway.gateway_id.lower()
+    gw_eui = gateway.gateway_eui.upper()
+    server_address = urlparse(base).hostname
+
+    # Step 1: Create gateway in organization
+    try:
+        resp = await client.post(
+            f"{base}/api/v3/organizations/{org_id}/gateways",
+            headers=headers,
+            json={
+                "gateway": {
+                    "ids": {
+                        "gateway_id": gw_id,
+                        "eui": gw_eui,
+                    },
+                    "frequency_plan_ids": [config.TTS_GATEWAY_FREQUENCY_PLAN],
+                    "gateway_server_address": server_address,
+                    "require_authenticated_connection": True,
+                    "schedule_downlink_late": False,
+                    "enforce_duty_cycle": True,
+                    "schedule_anytime_delay": "0.530s",
+                    "status_public": False,
+                    "location_public": False,
+                },
+                "collaborator": {
+                    "organization_ids": {
+                        "organization_id": org_id,
+                    },
+                },
+            },
+        )
+        if resp.status_code not in (200, 201):
+            return {"success": False, "error": f"Gateway create failed ({resp.status_code}): {resp.text}"}
+        logger.info("TTS gateway created: %s", gw_id)
+    except Exception as e:
+        return {"success": False, "error": f"Gateway create error: {e}"}
+
+    # Step 2: Set LNS secret
+    try:
+        lns_secret_b64 = base64.b64encode(config.TTS_GATEWAY_LNS_KEY.encode()).decode()
+        resp = await client.put(
+            f"{base}/api/v3/gateways/{gw_id}",
+            headers=headers,
+            json={
+                "gateway": {
+                    "ids": {"gateway_id": gw_id},
+                    "lbs_lns_secret": {
+                        "value": lns_secret_b64,
+                    },
+                },
+                "field_mask": {
+                    "paths": ["lbs_lns_secret"],
+                },
+            },
+        )
+        if resp.status_code not in (200, 201):
+            return {"success": False, "error": f"LNS secret set failed ({resp.status_code}): {resp.text}"}
+        logger.info("TTS LNS secret set: %s", gw_id)
+    except Exception as e:
+        return {"success": False, "error": f"LNS secret error: {e}"}
+
+    return {"success": True}
+
+
+async def list_gateways_tts(client: httpx.AsyncClient) -> list[dict]:
+    """List all gateways in the TTS organization."""
+    headers = {
+        "Authorization": f"Bearer {config.TTS_API_KEY}",
+    }
+    base = config.TTS_BASE_URL
+    org_id = config.TTS_ORGANIZATION
+
+    resp = await client.get(
+        f"{base}/api/v3/organizations/{org_id}/gateways",
+        headers=headers,
+        params={"field_mask": "ids", "limit": 100, "page": 1},
+    )
+    resp.raise_for_status()
+
+    data = resp.json()
+    gateways = []
+    for gw in data.get("gateways", []):
+        ids = gw.get("ids", {})
+        gateways.append({
+            "gateway_id": ids.get("gateway_id", ""),
+            "eui": ids.get("eui", ""),
+        })
+    return gateways

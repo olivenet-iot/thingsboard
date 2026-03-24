@@ -2,6 +2,7 @@ import asyncio
 import csv
 import io
 import logging
+import re
 import secrets
 import subprocess
 from contextlib import asynccontextmanager
@@ -16,13 +17,18 @@ from models import (
     BridgeResponse,
     DeviceRegistration,
     DeviceResult,
+    GatewayListResponse,
+    GatewayRegisterRequest,
+    GatewayRegisterResponse,
+    GatewayRegistration,
+    GatewayResult,
     PoolDevice,
     PoolResponse,
     RegisterRequest,
     RegisterResponse,
 )
 from tb_api import get_pool_devices, get_tb_token, register_device_tb
-from tts_api import register_device_tts
+from tts_api import list_gateways_tts, register_device_tts, register_gateway_tts
 
 logging.basicConfig(level=config.LOG_LEVEL, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -210,6 +216,61 @@ async def bridge_restart():
         return BridgeResponse(status="error", message="Restart timed out")
     except Exception as e:
         return BridgeResponse(status="error", message=str(e))
+
+
+GW_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,34}[a-z0-9]$")
+GW_EUI_RE = re.compile(r"^[0-9A-F]{16}$")
+
+
+async def process_single_gateway(gateway: GatewayRegistration, client: httpx.AsyncClient) -> GatewayResult:
+    """Register one gateway in TTS."""
+    gw_id = gateway.gateway_id.lower().strip()
+    gw_eui = re.sub(r"[^0-9A-Fa-f]", "", gateway.gateway_eui).upper()
+
+    if not GW_EUI_RE.match(gw_eui):
+        return GatewayResult(gateway_id=gw_id, eui=gw_eui, success=False, message="EUI must be 16 hex characters")
+    if not GW_ID_RE.match(gw_id):
+        return GatewayResult(gateway_id=gw_id, eui=gw_eui, success=False, message="ID must be 3-36 chars, lowercase alphanumeric + hyphens, start/end alphanumeric")
+
+    result = await register_gateway_tts(GatewayRegistration(gateway_id=gw_id, gateway_eui=gw_eui), client)
+    if result["success"]:
+        return GatewayResult(gateway_id=gw_id, eui=gw_eui, success=True, message="Registered + LNS secret set")
+    else:
+        return GatewayResult(gateway_id=gw_id, eui=gw_eui, success=False, message=result["error"])
+
+
+@app.post("/api/gateways/register", response_model=GatewayRegisterResponse)
+async def register_gateways(request: GatewayRegisterRequest):
+    """Register gateways in The Things Stack."""
+    if not config.TTS_GATEWAY_LNS_KEY:
+        raise HTTPException(status_code=400, detail="TTS_GATEWAY_LNS_KEY not configured")
+    if not request.gateways:
+        raise HTTPException(status_code=400, detail="No gateways provided")
+
+    logger.info("Registering %d gateway(s)", len(request.gateways))
+    client = app.state.http_client
+
+    tasks = [process_single_gateway(gw, client) for gw in request.gateways]
+    results = await asyncio.gather(*tasks)
+
+    succeeded = sum(1 for r in results if r.success)
+    failed = sum(1 for r in results if not r.success)
+
+    return GatewayRegisterResponse(
+        results=list(results),
+        summary={"total": len(results), "success": succeeded, "failed": failed},
+    )
+
+
+@app.get("/api/gateways/list", response_model=GatewayListResponse)
+async def list_gateways():
+    """List gateways from The Things Stack."""
+    client = app.state.http_client
+    try:
+        gateways = await list_gateways_tts(client)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"TTS API error: {e}")
+    return GatewayListResponse(gateways=gateways, count=len(gateways))
 
 
 @app.get("/health")

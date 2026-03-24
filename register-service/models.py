@@ -51,3 +51,29 @@ class PoolResponse(BaseModel):
 class BridgeResponse(BaseModel):
     status: str
     message: str
+
+
+class GatewayRegistration(BaseModel):
+    gateway_id: str
+    gateway_eui: str
+
+
+class GatewayRegisterRequest(BaseModel):
+    gateways: list[GatewayRegistration]
+
+
+class GatewayResult(BaseModel):
+    gateway_id: str
+    eui: str
+    success: bool
+    message: str
+
+
+class GatewayRegisterResponse(BaseModel):
+    results: list[GatewayResult]
+    summary: dict
+
+
+class GatewayListResponse(BaseModel):
+    gateways: list[dict]
+    count: int
