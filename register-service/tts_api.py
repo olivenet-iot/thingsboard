@@ -170,8 +170,8 @@ async def register_gateway_tts(gateway: GatewayRegistration, client: httpx.Async
                     "schedule_downlink_late": False,
                     "enforce_duty_cycle": True,
                     "schedule_anytime_delay": "0.530s",
-                    "status_public": False,
-                    "location_public": False,
+                    "status_public": True,
+                    "location_public": True,
                 },
                 "collaborator": {
                     "organization_ids": {
