@@ -78,7 +78,7 @@ self.onInit = function () {
     var TILT_THRESHOLD = 10;
 
     // ── Telemetry keys ────────────────────────────────────────────
-    var TELEMETRY_KEYS = ['dim_value', 'status_lamp_on', 'device_type']
+    var TELEMETRY_KEYS = ['dim_value', 'status_lamp_on']
         .concat(FAULT_KEYS).concat(WARNING_KEYS).concat([TILT_KEY]).join(',');
 
     // ── DOM Refs ──────────────────────────────────────────────────
@@ -106,6 +106,17 @@ self.onInit = function () {
         }).catch(function () {
             elDeviceName.textContent = 'Device';
         });
+    }
+
+    // ── Fetch driver type from shared attributes ────────────────
+    function fetchDriverType() {
+        http.get('/api/plugins/telemetry/DEVICE/' + DEVICE_ID
+            + '/values/attributes/SHARED_SCOPE?keys=driver_type').toPromise()
+            .then(function (attrs) {
+                if (attrs && attrs.length > 0 && attrs[0].value) {
+                    elDeviceType.textContent = attrs[0].value;
+                }
+            }).catch(function () { /* keep default */ });
     }
 
     // ── Update Functions ──────────────────────────────────────────
@@ -277,10 +288,6 @@ self.onInit = function () {
             var dimVal = getLatestValue(data, 'dim_value');
             updateLamp(isOn, dimVal !== null ? parseInt(dimVal) : null);
 
-            // Device type
-            var devType = getLatestValue(data, 'device_type');
-            updateDeviceType(devType);
-
             // Faults
             updateFaults(data);
 
@@ -294,6 +301,7 @@ self.onInit = function () {
 
     // ── Initialize ────────────────────────────────────────────────
     fetchDeviceName();
+    fetchDriverType();
     poll();
     pollTimer = setInterval(poll, POLL_MS);
     self._sbPollTimer = pollTimer;
