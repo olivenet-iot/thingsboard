@@ -163,6 +163,26 @@
   background-color: #d97706 !important;
 }
 
+.ses-refresh-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 7px !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  flex-shrink: 0 !important;
+}
+
+.ses-refresh-btn:hover {
+  background: #e2e8f0 !important;
+  color: #f59e0b !important;
+}
+
 /* ── Cards Grid ───────────────────────────────────────────── */
 
 .ses-cards {

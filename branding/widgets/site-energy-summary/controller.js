@@ -352,6 +352,9 @@ self.onInit = function () {
                     + encodeURIComponent(objToBase64(stateArr));
             });
         });
+        container.querySelectorAll('[data-action="refresh"]').forEach(function (btn) {
+            btn.addEventListener('click', function () { reloadData(); });
+        });
     }
 
     function renderHeader() {
@@ -381,6 +384,9 @@ self.onInit = function () {
         html += '<div class="ses-header-right">';
         html += '<span class="ses-tier-badge ' + tierClass + '">' + esc(tierLabel) + '</span>';
         html += '<button class="ses-details-btn" data-action="open-site-details">Site Details \u2192</button>';
+        html += '<button class="ses-refresh-btn" data-action="refresh" title="Refresh">' +
+            '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.49 9A9 9 0 0 0 5.64 5.64L4 4m16 16l-1.64-1.64A9 9 0 0 1 3.51 15"/></svg>' +
+        '</button>';
         html += '</div>';
         html += '</div>';
         return html;
@@ -531,10 +537,9 @@ self.onInit = function () {
     // ── Poll + Refresh Cycle ─────────────────────────────────
 
     function pollAndRender() {
-        Promise.all([
-            pollAllDevices(),
-            fetchAggregates()
-        ]).then(function () {
+        pollAllDevices().then(function () {
+            return fetchAggregates();
+        }).then(function () {
             render();
         }).catch(function () {
             render();
@@ -549,23 +554,24 @@ self.onInit = function () {
         return;
     }
 
-    showLoading();
-
-    Promise.all([
-        fetchDevices(),
-        fetchSiteAttributes()
-    ]).then(function () {
+    function reloadData() {
+        showLoading();
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         return Promise.all([
-            pollAllDevices(),
-            fetchAggregates()
-        ]);
-    }).then(function () {
-        render();
-        pollTimer = setInterval(pollAndRender, POLL_INTERVAL);
-    }).catch(function (err) {
-        showError('Failed to load site data');
-        console.error('[SES] Init error:', err);
-    });
+            fetchDevices(),
+            fetchSiteAttributes()
+        ]).then(function () {
+            return pollAllDevices().then(function () { return fetchAggregates(); });
+        }).then(function () {
+            render();
+            pollTimer = setInterval(pollAndRender, POLL_INTERVAL);
+        }).catch(function (err) {
+            showError('Failed to load site data');
+            console.error('[SES] Init error:', err);
+        });
+    }
+
+    reloadData();
 };
 
 self.onDestroy = function () {
