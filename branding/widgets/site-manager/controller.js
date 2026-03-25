@@ -276,9 +276,14 @@ self.onInit = function () {
     function renderHeader() {
         var siteName = (siteEntity && siteEntity.name) ? siteEntity.name : 'Site';
         var html = '<div class="sm-header">';
+        html += '<div class="sm-header-top">';
         html += '<button class="sm-back-btn" data-action="go-back">' +
             '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>' +
             ' Back</button>';
+        html += '<button class="sm-refresh-btn" data-action="refresh" title="Refresh">' +
+            '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.49 9A9 9 0 0 0 5.64 5.64L4 4m16 16l-1.64-1.64A9 9 0 0 1 3.51 15"/></svg>' +
+        '</button>';
+        html += '</div>';
         if (parentBreadcrumb) {
             html += '<div class="sm-breadcrumb">' + esc(parentBreadcrumb) + '</div>';
         }
@@ -1048,6 +1053,11 @@ self.onInit = function () {
             });
         });
 
+        // Refresh button
+        container.querySelectorAll('[data-action="refresh"]').forEach(function (btn) {
+            btn.addEventListener('click', function () { reloadData(); });
+        });
+
         // Device row clicks
         container.querySelectorAll('[data-action="open-device"]').forEach(function (card) {
             card.addEventListener('click', function () {
@@ -1347,39 +1357,42 @@ self.onInit = function () {
         return;
     }
 
-    showLoading();
+    function reloadData() {
+        showLoading();
+        return Promise.all([
+            apiGet('/asset/' + siteId),
+            apiGet('/plugins/telemetry/ASSET/' + siteId + '/values/attributes/SERVER_SCOPE'),
+            fetchDevices(),
+            fetchBreadcrumb(),
+            fetchDeviceProfiles(),
+            fetchPool()
+        ]).then(function (results) {
+            siteEntity = results[0];
+            siteAttrs = {};
+            if (results[1] && Array.isArray(results[1])) {
+                results[1].forEach(function (a) { siteAttrs[a.key] = a.value; });
+            }
+            // Fetch customer name and prepend to breadcrumb
+            if (siteEntity && siteEntity.customerId && siteEntity.customerId.id &&
+                siteEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
+                return apiGet('/customer/' + siteEntity.customerId.id).then(function (c) {
+                    if (c && c.title) {
+                        parentCustomerName = c.title;
+                        parentBreadcrumb = parentBreadcrumb
+                            ? (c.title + ' > ' + parentBreadcrumb)
+                            : c.title;
+                    }
+                }).catch(function () {});
+            }
+        }).then(function () {
+            render();
+        }).catch(function (err) {
+            console.error('[SM] Init error:', err);
+            showError('Failed to load site data. Check console for details.');
+        });
+    }
 
-    Promise.all([
-        apiGet('/asset/' + siteId),
-        apiGet('/plugins/telemetry/ASSET/' + siteId + '/values/attributes/SERVER_SCOPE'),
-        fetchDevices(),
-        fetchBreadcrumb(),
-        fetchDeviceProfiles(),
-        fetchPool()
-    ]).then(function (results) {
-        siteEntity = results[0];
-        siteAttrs = {};
-        if (results[1] && Array.isArray(results[1])) {
-            results[1].forEach(function (a) { siteAttrs[a.key] = a.value; });
-        }
-        // Fetch customer name and prepend to breadcrumb
-        if (siteEntity && siteEntity.customerId && siteEntity.customerId.id &&
-            siteEntity.customerId.id !== '13814000-1dd2-11b2-8080-808080808080') {
-            return apiGet('/customer/' + siteEntity.customerId.id).then(function (c) {
-                if (c && c.title) {
-                    parentCustomerName = c.title;
-                    parentBreadcrumb = parentBreadcrumb
-                        ? (c.title + ' > ' + parentBreadcrumb)
-                        : c.title;
-                }
-            }).catch(function () {});
-        }
-    }).then(function () {
-        render();
-    }).catch(function (err) {
-        console.error('[SM] Init error:', err);
-        showError('Failed to load site data. Check console for details.');
-    });
+    reloadData();
 };
 
 // ═══ LIFECYCLE ════════════════════════════════════════════════

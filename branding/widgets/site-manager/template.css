@@ -82,6 +82,31 @@
     margin-bottom: 20px;
 }
 
+.sm-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sm-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sm-refresh-btn:hover {
+    background: #e2e8f0;
+    color: #f59e0b;
+}
+
 .sm-breadcrumb {
     font-size: 11px;
     color: #94a3b8;
