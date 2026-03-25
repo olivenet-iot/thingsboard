@@ -920,7 +920,8 @@ self.onInit = function () {
     function renderAlarmsTab() {
         var html = '<div class="so-meta-grid">';
 
-        // Notification Toggles
+        // Left column — Notification Toggles
+        html += '<div class="so-meta-col-left">';
         html += '<div class="so-meta-card">' +
             '<div class="so-meta-card-title">' +
                 '<div class="so-meta-icon so-meta-icon-red"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg></div>' +
@@ -937,8 +938,10 @@ self.onInit = function () {
                 '</div>' +
             '</div>' +
         '</div>';
+        html += '</div>';
 
-        // Recipients
+        // Right column — Recipients
+        html += '<div class="so-meta-col-right">';
         html += '<div class="so-meta-card">' +
             '<div class="so-meta-card-title">' +
                 '<div class="so-meta-icon so-meta-icon-green"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></div>' +
@@ -950,6 +953,7 @@ self.onInit = function () {
                 '<div class="so-meta-hint">One email per line. All recipients receive fault and watchdog notifications.</div>' +
             '</div>' +
         '</div>';
+        html += '</div>';
 
         html += '</div>';
 
