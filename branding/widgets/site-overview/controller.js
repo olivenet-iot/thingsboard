@@ -322,7 +322,7 @@ self.onInit = function () {
                 statBox('Online', online, 'green') +
                 (faulted > 0 ? statBox('Faults', faulted, 'red') : '') +
                 statBox('Power', Math.round(totalPower) + '<span class="so-stat-unit">W</span>', '') +
-                statBox('Today', totalEnergy.toFixed(1) + '<span class="so-stat-unit">kWh</span>', '') +
+                statBox('Today', totalEnergy.toFixed(2) + '<span class="so-stat-unit">kWh</span>', '') +
             '</div>' +
         '</div>';
     }
@@ -2072,13 +2072,13 @@ self.onInit = function () {
     // Initial load: fetch devices + attributes → render → start polling
     Promise.all([fetchDevices(), fetchSiteAttributes()])
         .then(function () {
-            return Promise.all([pollAllDevices(), fetchTodayEnergy()]);
+            return pollAllDevices().then(function () { return fetchTodayEnergy(); });
         })
         .then(function () {
             render();
             // Start polling
             pollTimer = setInterval(function () {
-                Promise.all([pollAllDevices(), fetchTodayEnergy()]).then(function () {
+                pollAllDevices().then(function () { return fetchTodayEnergy(); }).then(function () {
                     if (activeTab === 'devices') render();
                 });
             }, POLL_INTERVAL);
