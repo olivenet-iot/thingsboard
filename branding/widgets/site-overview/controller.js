@@ -251,6 +251,30 @@ self.onInit = function () {
             .catch(function () { siteAttrs = {}; });
     }
 
+    // ── Fetch Device Shared Attributes (driver_type, driver_count) ─
+
+    function fetchDeviceSharedAttrs() {
+        if (devices.length === 0) return Promise.resolve();
+        var promises = devices.map(function (dev) {
+            return apiGet('/plugins/telemetry/DEVICE/' + dev.id + '/values/attributes/SHARED_SCOPE?keys=driver_type,driver_count')
+                .then(function (attrs) {
+                    if (attrs && Array.isArray(attrs)) {
+                        attrs.forEach(function (a) {
+                            if (a.key === 'driver_type') dev.driverType = a.value || '';
+                            if (a.key === 'driver_count') dev.driverCount = parseInt(a.value, 10) || 1;
+                        });
+                    }
+                    if (dev.driverCount === undefined) dev.driverCount = 1;
+                    if (dev.driverType === undefined) dev.driverType = '';
+                })
+                .catch(function () {
+                    dev.driverType = dev.driverType || '';
+                    dev.driverCount = dev.driverCount || 1;
+                });
+        });
+        return Promise.all(promises);
+    }
+
     // ── Save Site Attributes ──────────────────────────────────
 
     function saveSiteAttributes(attrs) {
@@ -278,6 +302,8 @@ self.onInit = function () {
         html += renderTabs();
         if (activeTab === 'devices') {
             html += renderDevicesTab();
+        } else if (activeTab === 'controller') {
+            html += renderControllerTab();
         } else if (activeTab === 'schedule') {
             html += renderScheduleTab();
         } else if (activeTab === 'site-info') {
@@ -340,6 +366,7 @@ self.onInit = function () {
     function renderTabs() {
         return '<div class="so-tab-bar">' +
             tab('devices', 'Devices (' + devices.length + ')') +
+            tab('controller', 'Controller Settings') +
             tab('schedule', 'Schedule') +
             tab('site-info', 'Site Information') +
             tab('alarms', 'Alarm Settings') +
@@ -425,6 +452,44 @@ self.onInit = function () {
         '</div>';
     }
 
+    // ── Controller Settings Tab ────────────────────────────────
+
+    function renderControllerTab() {
+        if (devices.length === 0) {
+            return '<div class="so-empty">' +
+                '<div class="so-empty-icon">&#9881;</div>' +
+                '<div class="so-empty-text">No controllers assigned to this site</div>' +
+            '</div>';
+        }
+
+        var html = '<div class="so-ctrl-table-wrap">';
+        html += '<table class="so-ctrl-table">';
+        html += '<thead><tr>' +
+            '<th>Device Name</th>' +
+            '<th>Driver Type</th>' +
+            '<th>Number of Drivers</th>' +
+            '<th></th>' +
+        '</tr></thead>';
+        html += '<tbody>';
+        devices.forEach(function (dev) {
+            html += '<tr data-ctrl-device="' + dev.id + '">';
+            html += '<td class="so-ctrl-name">' + esc(dev.name) + '</td>';
+            html += '<td class="so-ctrl-type">' + (dev.driverType ? esc(dev.driverType) : '<em class="so-meta-empty">Not set</em>') + '</td>';
+            html += '<td>';
+            html += '<select class="so-ctrl-select" data-ctrl-driver-count="' + dev.id + '">';
+            for (var i = 1; i <= 10; i++) {
+                html += '<option value="' + i + '"' + (dev.driverCount === i ? ' selected' : '') + '>' + i + '</option>';
+            }
+            html += '</select>';
+            html += '</td>';
+            html += '<td class="so-ctrl-status" id="ctrl-status-' + dev.id + '"></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '</div>';
+        return html;
+    }
+
     // ── Site Info Tab ─────────────────────────────────────────
 
     function renderSiteInfoTab() {
@@ -464,12 +529,6 @@ self.onInit = function () {
 
         // Right column
         html += '<div class="so-meta-col-right">';
-
-        // LED & Driver Info
-        html += metaCard('LED & Driver', 'bulb', [
-            metaField('led_type', 'LED Type', siteAttrs.led_type || ''),
-            metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
-        ]);
 
         // Site Contact
         html += metaCard('Site Contact', 'user', [
@@ -1930,6 +1989,35 @@ self.onInit = function () {
             });
         });
 
+        // Controller Settings — auto-save driver_count
+        container.querySelectorAll('[data-ctrl-driver-count]').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+                var devId = sel.getAttribute('data-ctrl-driver-count');
+                var val = parseInt(sel.value, 10) || 1;
+                var statusEl = container.querySelector('#ctrl-status-' + devId);
+                if (statusEl) statusEl.textContent = '...';
+                apiPost('/plugins/telemetry/DEVICE/' + devId + '/attributes/SHARED_SCOPE', {
+                    driver_count: val
+                }).then(function () {
+                    // Update local state
+                    devices.forEach(function (d) { if (d.id === devId) d.driverCount = val; });
+                    if (statusEl) {
+                        statusEl.textContent = '\u2713';
+                        statusEl.className = 'so-ctrl-status so-ctrl-saved';
+                        setTimeout(function () {
+                            if (statusEl) { statusEl.textContent = ''; statusEl.className = 'so-ctrl-status'; }
+                        }, 2000);
+                    }
+                }).catch(function (err) {
+                    console.error('[SITE] driver_count save failed for ' + devId, err);
+                    if (statusEl) {
+                        statusEl.textContent = '\u2717';
+                        statusEl.className = 'so-ctrl-status so-ctrl-error';
+                    }
+                });
+            });
+        });
+
         // Address autocomplete bindings
         bindAddressEvents();
 
@@ -2076,7 +2164,10 @@ self.onInit = function () {
     // Initial load: fetch devices + attributes → render → start polling
     Promise.all([fetchDevices(), fetchSiteAttributes()])
         .then(function () {
-            return pollAllDevices().then(function () { return fetchTodayEnergy(); });
+            return Promise.all([
+                pollAllDevices().then(function () { return fetchTodayEnergy(); }),
+                fetchDeviceSharedAttrs()
+            ]);
         })
         .then(function () {
             render();

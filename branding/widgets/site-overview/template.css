@@ -547,6 +547,85 @@ input.so-meta-input {
     margin-top: 2px;
 }
 
+/* ── Controller Settings Table ───────────────────────────────── */
+
+.so-ctrl-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.so-ctrl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.so-ctrl-table thead {
+    background: #f8fafc;
+}
+
+.so-ctrl-table th {
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: #64748b;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.so-ctrl-table th:last-child { width: 32px; }
+
+.so-ctrl-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.so-ctrl-table tbody tr:last-child td { border-bottom: none; }
+
+.so-ctrl-table tbody tr:hover { background: #fafbfc; }
+
+.so-ctrl-name {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.so-ctrl-type {
+    color: #475569;
+}
+
+.so-ctrl-select {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 5px 10px;
+    background: #f8fafc;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.so-ctrl-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: #fff;
+}
+
+.so-ctrl-status {
+    font-size: 14px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.so-ctrl-saved { color: #059669; font-weight: 700; }
+.so-ctrl-error { color: #dc2626; font-weight: 700; }
+
 /* ── Alarm Toggle ────────────────────────────────────────────── */
 
 .so-toggle {
