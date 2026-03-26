@@ -30,6 +30,7 @@ self.onInit = function () {
     var deleteState = 'idle';
     var unassignState = 'idle';
     var deviceProfiles = {}; // {name → id} map
+    var deviceDriverCount = 1;
 
     // ── Resolve Device ID ───────────────────────────────────────
 
@@ -243,6 +244,13 @@ self.onInit = function () {
             html += renderMetaRow('Profile', deviceProfile ? deviceProfile.name : '-');
         }
 
+        // Number of Drivers (shared attribute)
+        if (isEditing) {
+            html += renderMetaRowNumberInput('Number of Drivers', 'edit-driver-count', deviceDriverCount, 1, 10);
+        } else {
+            html += renderMetaRow('Number of Drivers', deviceDriverCount);
+        }
+
         // Customer
         var customerName = '-';
         if (deviceEntity && deviceEntity.customerTitle) {
@@ -293,6 +301,15 @@ self.onInit = function () {
                '<div class="dm-meta-label">' + esc(label) + '</div>' +
                '<div class="dm-meta-value">' +
                '<input type="text" class="dm-input" id="' + inputId + '" value="' + esc(value) + '" />' +
+               '</div></div>';
+    }
+
+    function renderMetaRowNumberInput(label, inputId, value, min, max) {
+        return '<div class="dm-meta-row">' +
+               '<div class="dm-meta-label">' + esc(label) + '</div>' +
+               '<div class="dm-meta-value">' +
+               '<input type="number" class="dm-input" id="' + inputId + '" value="' + value + '"' +
+               ' min="' + min + '" max="' + max + '" />' +
                '</div></div>';
     }
 
@@ -452,6 +469,10 @@ self.onInit = function () {
         var profileSelect = container.querySelector('#edit-profile');
         var newLabel = labelInput ? labelInput.value.trim() : (deviceEntity.label || '');
         var newProfileId = profileSelect ? profileSelect.value : null;
+        var driverCountInput = container.querySelector('#edit-driver-count');
+        var newDriverCount = driverCountInput ? parseInt(driverCountInput.value, 10) : deviceDriverCount;
+        if (isNaN(newDriverCount) || newDriverCount < 1) newDriverCount = 1;
+        if (newDriverCount > 10) newDriverCount = 10;
 
         isSaving = true;
         render();
@@ -472,6 +493,11 @@ self.onInit = function () {
                 });
             }
         }).then(function () {
+            return apiPost('/plugins/telemetry/DEVICE/' + deviceId + '/attributes/SHARED_SCOPE', {
+                driver_count: newDriverCount
+            });
+        }).then(function () {
+            deviceDriverCount = newDriverCount;
             isEditing = false;
             isSaving = false;
             render();
@@ -515,7 +541,7 @@ self.onInit = function () {
         }).then(function () {
             // Step 5: Clear provision SHARED_SCOPE attributes
             return apiDelete('/plugins/telemetry/DEVICE/' + deviceId +
-                '/SHARED_SCOPE?keys=provision_tier,provision_lat,provision_lon,provision_tz,provision_status');
+                '/SHARED_SCOPE?keys=provision_tier,provision_lat,provision_lon,provision_tz,provision_status,driver_count');
         }).then(function () {
             // Navigate back to parent state
             try {
@@ -563,6 +589,15 @@ self.onInit = function () {
                 deviceEntity.customerTitle = c.title;
             }).catch(function () {}));
         }
+        followUp.push(
+            apiGet('/plugins/telemetry/DEVICE/' + deviceId + '/values/attributes/SHARED_SCOPE?keys=driver_count')
+                .then(function (attrs) {
+                    if (attrs && attrs.length > 0 && attrs[0].value !== undefined) {
+                        deviceDriverCount = parseInt(attrs[0].value, 10) || 1;
+                    }
+                })
+                .catch(function () { /* keep default */ })
+        );
         return Promise.all(followUp);
     }).then(function () {
         render();
