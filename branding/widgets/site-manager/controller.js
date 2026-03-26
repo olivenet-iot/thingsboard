@@ -888,7 +888,6 @@ self.onInit = function () {
             // Provision attributes (SHARED_SCOPE — bridge receives via MQTT)
             return apiPost('/plugins/telemetry/DEVICE/' + newDeviceId + '/attributes/SHARED_SCOPE', {
                 driver_type: (profileName && profileName.toLowerCase().indexOf('d4i') !== -1) ? 'd4i' : 'dali2',
-                driver_count: parseInt(siteAttrs.driver_count, 10) || 1,
                 provision_lat: parseFloat(siteAttrs.latitude) || 0,
                 provision_lon: parseFloat(siteAttrs.longitude) || 0,
                 provision_tz: parseFloat(siteAttrs.tzOffset) || 0,
@@ -982,7 +981,6 @@ self.onInit = function () {
             // Provision attributes (SHARED_SCOPE — bridge receives via MQTT)
             return apiPost('/plugins/telemetry/DEVICE/' + assignedDeviceId + '/attributes/SHARED_SCOPE', {
                 driver_type: (profileName && profileName.toLowerCase().indexOf('d4i') !== -1) ? 'd4i' : 'dali2',
-                driver_count: parseInt(siteAttrs.driver_count, 10) || 1,
                 provision_lat: parseFloat(siteAttrs.latitude) || 0,
                 provision_lon: parseFloat(siteAttrs.longitude) || 0,
                 provision_tz: parseFloat(siteAttrs.tzOffset) || 0,

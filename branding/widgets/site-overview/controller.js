@@ -469,7 +469,6 @@ self.onInit = function () {
         html += metaCard('LED & Driver', 'bulb', [
             metaField('led_type', 'LED Type', siteAttrs.led_type || ''),
             metaField('driver_type', 'Driver Type', siteAttrs.driver_type || ''),
-            metaField('driver_count', 'Number of Drivers', siteAttrs.driver_count || '1'),
         ]);
 
         // Site Contact
@@ -1971,20 +1970,6 @@ self.onInit = function () {
                                     { energy_rate: rateVal }
                                 ).catch(function (err) {
                                     console.warn('[SITE] energy_rate propagate failed for ' + dev.id, err);
-                                });
-                            });
-                        }
-                    }
-                    // Propagate driver_count to all child devices (SHARED_SCOPE — bridge reads via MQTT)
-                    if (attrs.driver_count !== undefined && attrs.driver_count !== '') {
-                        var dcVal = parseInt(attrs.driver_count, 10);
-                        if (!isNaN(dcVal) && dcVal >= 1 && dcVal <= 10) {
-                            devices.forEach(function (dev) {
-                                apiPost(
-                                    '/plugins/telemetry/DEVICE/' + dev.id + '/attributes/SHARED_SCOPE',
-                                    { driver_count: dcVal }
-                                ).catch(function (err) {
-                                    console.warn('[SITE] driver_count propagate failed for ' + dev.id, err);
                                 });
                             });
                         }
