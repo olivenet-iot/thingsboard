@@ -497,6 +497,15 @@ self.onInit = function () {
                 driver_count: newDriverCount
             });
         }).then(function () {
+            // Also update parent site's SERVER_SCOPE so site_overview stays in sync
+            if (parentSite) {
+                return apiPost('/plugins/telemetry/ASSET/' + parentSite.id + '/attributes/SERVER_SCOPE', {
+                    driver_count: newDriverCount
+                }).catch(function (err) {
+                    console.warn('[DM] driver_count site propagate failed:', err);
+                });
+            }
+        }).then(function () {
             deviceDriverCount = newDriverCount;
             isEditing = false;
             isSaving = false;
